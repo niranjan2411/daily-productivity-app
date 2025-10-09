@@ -5,6 +5,7 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const MongoStore = require('connect-mongo'); // 1. Import connect-mongo
 
 const User = require('./models/User');
 const StudyLog = require('./models/StudyLog');
@@ -22,29 +23,35 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
+
+// 2. Configure session to use MongoStore for persistence
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({ 
+    mongoUrl: process.env.MONGODB_URI 
+  }),
   cookie: { 
-    maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days in milliseconds
+    maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
     httpOnly: true 
   }
 }));
 
-// Middleware to prevent caching of authenticated pages
 const noCache = (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   next();
 };
 
-// Default route now points to /login
 app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
   }
   res.redirect('/login');
 });
+
+// ... The rest of your routes do not need to be changed ...
+// (signup, login, logout, dashboard, etc.)
 
 app.get('/signup', (req, res) => {
   res.render('signup', { error: null });
@@ -53,19 +60,15 @@ app.get('/signup', (req, res) => {
 app.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.render('signup', { error: 'Email already registered' });
     }
-
     const user = new User({ name, email, password });
     await user.save();
-    
     req.session.userId = user._id;
     res.redirect('/dashboard');
-  } catch (error)
- {
+  } catch (error) {
     console.error(error);
     res.render('signup', { error: 'Server error occurred' });
   }
@@ -78,17 +81,14 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email });
     if (!user) {
       return res.render('login', { error: 'Invalid email or password' });
     }
-
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.render('login', { error: 'Invalid email or password' });
     }
-
     req.session.userId = user._id;
     res.redirect('/dashboard');
   } catch (error) {
@@ -103,29 +103,23 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// Applying authentication and no-cache middleware to protected routes
 app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const todayLog = await StudyLog.findOne({
       userId: req.session.userId,
       date: today
     });
-
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
     const recentLogs = await StudyLog.find({
       userId: req.session.userId,
       date: { $gte: thirtyDaysAgo }
     }).sort({ date: -1 });
-
     const { totalHoursRange = 'alltime' } = req.query; 
     const totalHoursMatch = { userId: user._id };
-    
     let startDate = null;
     const now = new Date();
     switch (totalHoursRange) {
@@ -139,16 +133,13 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
         startDate = new Date(new Date().setMonth(now.getMonth() - 6));
         break;
     }
-
     if (startDate) {
       totalHoursMatch.date = { $gte: startDate };
     }
-    
     const totalHoursAgg = await StudyLog.aggregate([
       { $match: totalHoursMatch },
       { $group: { _id: null, total: { $sum: '$hours' } } }
     ]);
-
     res.render('dashboard', {
       user,
       todayHours: todayLog ? todayLog.hours : 0,
@@ -170,12 +161,10 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
       currentMonth.setHours(0, 0, 0, 0);
       const nextMonth = new Date(currentMonth);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
-  
       const logs = await StudyLog.find({
         userId: req.session.userId,
         date: { $gte: currentMonth, $lt: nextMonth }
       });
-  
       res.render('calendar', { user, logs, currentMonth, error: null });
     } catch (error) {
       console.error(error);
@@ -188,14 +177,10 @@ app.post('/add-study-log', authenticateUser, noCache, async (req, res) => {
       const { date, hours } = req.body;
       const logDate = new Date(date);
       logDate.setHours(0, 0, 0, 0);
-
-      // Server-side validation for future dates is now removed.
-
       const existingLog = await StudyLog.findOne({
         userId: req.session.userId,
         date: logDate
       });
-  
       if (existingLog) {
         existingLog.hours = parseFloat(hours);
         await existingLog.save();
@@ -207,7 +192,6 @@ app.post('/add-study-log', authenticateUser, noCache, async (req, res) => {
         });
         await newLog.save();
       }
-  
       res.redirect('/calendar');
     } catch (error) {
       console.error(error);
@@ -221,27 +205,21 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       thirtyDaysAgo.setHours(0, 0, 0, 0);
-  
       const logs = await StudyLog.find({
         userId: req.session.userId,
         date: { $gte: thirtyDaysAgo }
       }).sort({ date: 1 });
-  
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       sevenDaysAgo.setHours(0, 0, 0, 0);
-  
       const weekLogs = await StudyLog.find({
         userId: req.session.userId,
         date: { $gte: sevenDaysAgo }
       });
-  
       const weekAverage = weekLogs.length > 0
         ? weekLogs.reduce((sum, log) => sum + log.hours, 0) / weekLogs.length
         : 0;
-  
       const monthTotal = logs.reduce((sum, log) => sum + log.hours, 0);
-  
       res.render('analytics', {
         user,
         logs,
@@ -270,7 +248,6 @@ app.post('/update-goal', authenticateUser, noCache, async (req, res) => {
       const user = await User.findById(req.session.userId);
       user.dailyGoalHours = parseFloat(dailyGoalHours);
       await user.save();
-  
       res.render('settings', { user, success: 'Goal updated successfully', error: null });
     } catch (error) {
       console.error(error);
