@@ -23,11 +23,9 @@
     
     <div class="add-log-form">
       <h2>Add/Update Study Hours</h2>
-
       <% if (error) { %>
         <div class="error" style="margin-bottom: 20px;"><%= error %></div>
       <% } %>
-
       <form action="/add-study-log" method="POST">
         <div class="form-row">
           <div class="form-group">
@@ -44,7 +42,29 @@
     </div>
 
     <div class="calendar-view">
-      <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) %></h2>
+      <% 
+        // --- NEW: Logic for month navigation links ---
+        const prevMonth = new Date(currentMonth);
+        prevMonth.setMonth(prevMonth.getMonth() - 1);
+        const prevMonthString = prevMonth.toISOString().slice(0, 10);
+
+        const nextMonth = new Date(currentMonth);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        const nextMonthString = nextMonth.toISOString().slice(0, 10);
+
+        // Disable "Next" button if the next month is in the future
+        const today = new Date();
+        const isFutureMonth = nextMonth.getFullYear() > today.getFullYear() || 
+                             (nextMonth.getFullYear() === today.getFullYear() && nextMonth.getMonth() > today.getMonth());
+      %>
+
+      <div class="calendar-header">
+        <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
+        <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) %></h2>
+        <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
+           class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
+      </div>
+
       <div class="calendar-grid">
         <% 
           const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -79,15 +99,13 @@
 
   <script>
     const today = new Date();
-    // Format today's date as YYYY-MM-DD for the max attribute
     const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-11
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const todayString = `${yyyy}-${mm}-${dd}`;
-
     const dateInput = document.getElementById('date');
-    dateInput.value = todayString; // Set default value to today
-    dateInput.setAttribute('max', todayString); // Set max selectable date to today
+    dateInput.value = todayString;
+    dateInput.setAttribute('max', todayString);
   </script>
 </body>
 </html>
