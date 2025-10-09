@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+.middle{
+  text-align: center;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #121212; /* Dark background */
@@ -59,6 +63,18 @@ body {
   max-width: 500px;
   margin: 100px auto;
   border: 1px solid #333;
+}
+.form-box-sm {
+  background: #fdc500;
+  color: black;
+  font-size: small;
+  padding: 3px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  max-width: 500px;
+  margin: 4px auto;
+  border: 1px solid #333;
+  margin-left: 5px;
 }
 
 .form-box h1 {

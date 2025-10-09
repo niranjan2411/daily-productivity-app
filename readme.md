@@ -6,7 +6,6 @@ A full-stack web application built with Node.js, Express, and MongoDB to help us
 
 ---
 
-![Productivity Tracker Dashboard](https://i.imgur.com/8Q62z0b.png)
 
 ## About The Project
 
@@ -68,6 +67,3 @@ Follow these instructions to get a local copy of the project up and running on y
     ```
     The application will be available at `http://localhost:3000`.
 
-## Deployment
-
-This application is configured for easy deployment on **Vercel**. Simply import your GitHub repository into a Vercel project, add the `MONGODB_URI` and `SESSION_SECRET` as environment variables in the project settings, and deploy.

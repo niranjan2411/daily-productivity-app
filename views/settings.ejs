@@ -19,10 +19,19 @@
   </nav>
 
   <div class="container">
-    <h1>Settings</h1>
+    <h1 style="text-align: center;">Settings</h1>
+    
+    <div class="user-info form-box">
+        <h2>Account Information</h2>
+        <br>
+        <p><strong>Name:</strong> <%= user.name %></p>
+        <p><strong>Email:</strong> <%= user.email %></p>
+        <p><strong>Member Since:</strong> <%= user.createdAt.toLocaleDateString() %></p>
+      </div>
     
     <div class="form-box">
       <h2>Update Daily Goal</h2>
+      <br>
       <% if (success) { %>
         <div class="success"><%= success %></div>
       <% } %>
@@ -30,6 +39,7 @@
         <div class="error"><%= error %></div>
       <% } %>
       
+
       <form action="/update-goal" method="POST">
         <div class="form-group">
           <label for="dailyGoalHours">Daily Goal (Hours)</label>
@@ -45,13 +55,8 @@
         </div>
         <button type="submit" class="btn">Update Goal</button>
       </form>
-
-      <div class="user-info">
-        <h3>Account Information</h3>
-        <p><strong>Name:</strong> <%= user.name %></p>
-        <p><strong>Email:</strong> <%= user.email %></p>
-        <p><strong>Member Since:</strong> <%= user.createdAt.toLocaleDateString() %></p>
-      </div>
+      
+      
     </div>
   </div>
 </body>
