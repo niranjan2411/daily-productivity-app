@@ -36,7 +36,12 @@
       <div class="stat-card">
         <h3>Total Hours</h3>
         <p class="stat-number"><%= totalHours.toFixed(1) %>h</p>
-        <span>All time</span>
+        <select id="total-hours-range" class="total-hours-selector">
+          <option value="7days" <%= totalHoursRange === '7days' ? 'selected' : '' %>>Past 7 days</option>
+          <option value="1month" <%= totalHoursRange === '1month' ? 'selected' : '' %>>Past 1 month</option>
+          <option value="6months" <%= totalHoursRange === '6months' ? 'selected' : '' %>>Past 6 months</option>
+          <option value="alltime" <%= totalHoursRange === 'alltime' ? 'selected' : '' %>>All time</option>
+        </select>
       </div>
 
       <div class="stat-card">
@@ -80,5 +85,13 @@
       <a href="/calendar" class="btn">Add Study Hours</a>
     </div>
   </div>
+
+  <script>
+    document.getElementById('total-hours-range').addEventListener('change', function() {
+      const selectedRange = this.value;
+      window.location.href = `/dashboard?totalHoursRange=${selectedRange}`;
+    });
+  </script>
+
 </body>
 </html>

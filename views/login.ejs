@@ -12,9 +12,6 @@
       <h1>Welcome Back</h1>
       <% if (error) { %>
         <div class="error"><%= error %></div>
-        <% if (error.includes('not verified')) { %>
-          <a href="/verify-otp" class="btn" style="margin-bottom: 15px;">Verify Now</a>
-        <% } %>
       <% } %>
       <form action="/login" method="POST">
         <div class="form-group">
@@ -27,7 +24,6 @@
         </div>
         <button type="submit" class="btn">Login</button>
       </form>
-      <p class="link-text"><a href="/forgot-password">Forgot Password?</a></p>
       <p class="link-text">Don't have an account? <a href="/signup">Sign up here</a></p>
     </div>
   </div>

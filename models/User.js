@@ -19,18 +19,6 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  otp: {
-    type: String,
-    default: null
-  },
-  otpExpiry: {
-    type: Date,
-    default: null
-  },
   dailyGoalHours: {
     type: Number,
     default: 5
