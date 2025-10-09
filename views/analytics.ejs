@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - Productivity Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <h2>Productivity Tracker</h2>
+    <div class="nav-links">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/calendar">Calendar</a>
+      <a href="/analytics" class="active">Analytics</a>
+      <a href="/settings">Settings</a>
+      <a href="/logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Your Analytics</h1>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Weekly Average</h3>
+        <p class="stat-number"><%= weekAverage %>h</p>
+      </div>
+      <div class="stat-card">
+        <h3>Monthly Total</h3>
+        <p class="stat-number"><%= monthTotal %>h</p>
+      </div>
+      <div class="stat-card">
+        <h3>Daily Goal</h3>
+        <p class="stat-number"><%= user.dailyGoalHours %>h</p>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h2>Last 30 Days Progress</h2>
+      <canvas id="progressChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    const logs = <%- JSON.stringify(logs) %>;
+    
+    const labels = logs.map(log => new Date(log.date).toLocaleDateString());
+    const data = logs.map(log => log.hours);
+    
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Study Hours',
+          data: data,
+          borderColor: '#4CAF50',
+          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+          tension: 0.4,
+          fill: true
+        }, {
+          label: 'Daily Goal',
+          data: Array(labels.length).fill(<%= user.dailyGoalHours %>),
+          borderColor: '#FF5722',
+          borderDash: [5, 5],
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            display: true
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

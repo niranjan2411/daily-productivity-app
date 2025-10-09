@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - Productivity Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <h2>Productivity Tracker</h2>
+    <div class="nav-links">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/calendar">Calendar</a>
+      <a href="/analytics">Analytics</a>
+      <a href="/settings" class="active">Settings</a>
+      <a href="/logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Settings</h1>
+    
+    <div class="form-box">
+      <h2>Update Daily Goal</h2>
+      <% if (success) { %>
+        <div class="success"><%= success %></div>
+      <% } %>
+      <% if (error) { %>
+        <div class="error"><%= error %></div>
+      <% } %>
+      
+      <form action="/update-goal" method="POST">
+        <div class="form-group">
+          <label for="dailyGoalHours">Daily Goal (Hours)</label>
+          <input 
+            type="number" 
+            id="dailyGoalHours" 
+            name="dailyGoalHours" 
+            value="<%= user.dailyGoalHours %>" 
+            step="0.5" 
+            min="0.5" 
+            max="24" 
+            required>
+        </div>
+        <button type="submit" class="btn">Update Goal</button>
+      </form>
+
+      <div class="user-info">
+        <h3>Account Information</h3>
+        <p><strong>Name:</strong> <%= user.name %></p>
+        <p><strong>Email:</strong> <%= user.email %></p>
+        <p><strong>Member Since:</strong> <%= user.createdAt.toLocaleDateString() %></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

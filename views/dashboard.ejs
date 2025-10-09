@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Productivity Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <h2>Productivity Tracker</h2>
+    <div class="nav-links">
+      <a href="/dashboard" class="active">Dashboard</a>
+      <a href="/calendar">Calendar</a>
+      <a href="/analytics">Analytics</a>
+      <a href="/settings">Settings</a>
+      <a href="/logout">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1>Welcome, <%= user.name %>!</h1>
+      <p>Track your daily productivity and reach your goals</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Today's Hours</h3>
+        <p class="stat-number <%= todayHours >= user.dailyGoalHours ? 'green' : 'red' %>">
+          <%= todayHours.toFixed(1) %>h
+        </p>
+        <span>Goal: <%= user.dailyGoalHours %>h</span>
+      </div>
+
+      <div class="stat-card">
+        <h3>Total Hours</h3>
+        <p class="stat-number"><%= totalHours.toFixed(1) %>h</p>
+        <span>All time</span>
+      </div>
+
+      <div class="stat-card">
+        <h3>Recent Logs</h3>
+        <p class="stat-number"><%= recentLogs.length %></p>
+        <span>Last 30 days</span>
+      </div>
+    </div>
+
+    <div class="recent-activity">
+      <h2>Recent Activity</h2>
+      <% if (recentLogs.length > 0) { %>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Hours</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recentLogs.slice(0, 10).forEach(log => { %>
+              <tr>
+                <td><%= log.date.toLocaleDateString() %></td>
+                <td><%= log.hours.toFixed(1) %>h</td>
+                <td>
+                  <span class="badge <%= log.hours >= user.dailyGoalHours ? 'badge-green' : 'badge-red' %>">
+                    <%= log.hours >= user.dailyGoalHours ? 'Goal Met' : 'Below Goal' %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p>No activity recorded yet. Start tracking your productivity!</p>
+      <% } %>
+    </div>
+
+    <div class="quick-action">
+      <a href="/calendar" class="btn">Add Study Hours</a>
+    </div>
+  </div>
+</body>
+</html>
