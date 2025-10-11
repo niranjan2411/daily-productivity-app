@@ -64,6 +64,16 @@ body {
   margin: 100px auto;
   border: 1px solid #333;
 }
+.form-box-new {
+  background: #1e1e1e;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  max-width: 500px;
+  margin: 40px auto;
+  border: 1px solid #333;
+}
+
 .form-box-sm {
   background: #fdc500;
   color: black;
@@ -108,6 +118,20 @@ body {
 .form-group input:focus {
   outline: none;
   border-color: #fdc500; /* Accent color */
+}
+
+.password-match {
+  border-color: #4CAF50 !important;
+}
+
+.password-mismatch {
+  border-color: #FF5722 !important;
+}
+
+.password-match-message {
+  color: #FF5722;
+  font-size: 12px;
+  margin-top: 5px;
 }
 
 .btn {

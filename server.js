@@ -64,7 +64,13 @@ app.get('/signup', (req, res) => {
 app.post('/signup', authLimiter, [
   body('name').trim().escape(),
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 })
+  body('password').isLength({ min: 6 }),
+  body('confirmPassword').custom((value, { req }) => {
+    if (value !== req.body.password) {
+      throw new Error('Passwords do not match');
+    }
+    return true;
+  })
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -79,8 +85,6 @@ app.post('/signup', authLimiter, [
     const user = new User({ name, email, password });
     await user.save();
     req.session.userId = user._id;
-
-    // Save the session before redirecting
     req.session.save((err) => {
       if (err) {
         console.error(err);
@@ -88,7 +92,6 @@ app.post('/signup', authLimiter, [
       }
       res.redirect('/dashboard');
     });
-
   } catch (error) {
     console.error(error);
     res.render('signup', { error: 'Server error occurred', errors: [] });
@@ -113,8 +116,6 @@ app.post('/login', authLimiter, [
     return res.render('login', { error: 'Invalid email or password' });
   }
   req.session.userId = user._id;
-
-  // **THE FIX:** Save the session manually before redirecting.
   req.session.save((err) => {
     if (err) {
       console.error(err);
@@ -311,6 +312,39 @@ app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
     console.error(error);
     const user = await User.findById(req.session.userId);
     res.render('settings', { user, success: null, error: 'Error clearing data' });
+  }
+});
+
+app.post('/update-password', authenticateUser, noCache, [
+  body('newPassword').isLength({ min: 6 }),
+  body('confirmNewPassword').custom((value, { req }) => {
+    if (value !== req.body.newPassword) {
+      throw new Error('Passwords do not match');
+    }
+    return true;
+  })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const user = await User.findById(req.session.userId);
+    return res.render('settings', { user, success: null, error: 'New passwords do not match' });
+  }
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.session.userId);
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.render('settings', { user, success: null, error: 'Incorrect current password' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+    res.render('settings', { user, success: 'Password updated successfully', error: null });
+  } catch (error) {
+    console.error(error);
+    const user = await User.findById(req.session.userId);
+    res.render('settings', { user, success: null, error: 'Error updating password' });
   }
 });
 

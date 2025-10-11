@@ -26,10 +26,52 @@
           <label for="password">Password</label>
           <input type="password" id="password" name="password" minlength="6" required>
         </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" minlength="6" required disabled>
+          <div id="password-match-message" class="password-match-message" style="display: none;">Passwords do not match</div>
+        </div>
         <button type="submit" class="btn">Sign Up</button>
       </form>
       <p class="link-text">Already have an account? <a href="/login">Login here</a></p>
     </div>
   </div>
+
+  <script>
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const passwordMatchMessage = document.getElementById('password-match-message');
+
+    passwordInput.addEventListener('input', () => {
+      if (passwordInput.value.length > 0) {
+        confirmPasswordInput.disabled = false;
+      } else {
+        confirmPasswordInput.disabled = true;
+      }
+      validatePasswords();
+    });
+
+    confirmPasswordInput.addEventListener('input', validatePasswords);
+
+    function validatePasswords() {
+      if (confirmPasswordInput.value.length > 0 && passwordInput.value !== confirmPasswordInput.value) {
+        passwordMatchMessage.style.display = 'block';
+        passwordInput.classList.add('password-mismatch');
+        confirmPasswordInput.classList.add('password-mismatch');
+        passwordInput.classList.remove('password-match');
+        confirmPasswordInput.classList.remove('password-match');
+      } else if (confirmPasswordInput.value.length > 0 && passwordInput.value === confirmPasswordInput.value) {
+        passwordMatchMessage.style.display = 'none';
+        passwordInput.classList.remove('password-mismatch');
+        confirmPasswordInput.classList.remove('password-mismatch');
+        passwordInput.classList.add('password-match');
+        confirmPasswordInput.classList.add('password-match');
+      } else {
+        passwordMatchMessage.style.display = 'none';
+        passwordInput.classList.remove('password-mismatch', 'password-match');
+        confirmPasswordInput.classList.remove('password-mismatch', 'password-match');
+      }
+    }
+  </script>
 </body>
 </html>
