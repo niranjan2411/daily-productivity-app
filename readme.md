@@ -2,7 +2,7 @@
 
 A full-stack web application built with Node.js, Express, and MongoDB to help users track their daily study hours, visualize their progress, and achieve their productivity goals.
 
-**Live Demo:** [**https://daily-productivity-app-eight.vercel.app/login**](https://daily-productivity-app-eight.vercel.app/login)
+**Live Demo:** [**https://tracku.me/login**](https://tracku.me/login)
 
 ---
 

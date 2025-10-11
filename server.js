@@ -5,7 +5,9 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const MongoStore = require('connect-mongo'); // 1. Import connect-mongo
+const MongoStore = require('connect-mongo');
+const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
 
 const User = require('./models/User');
 const StudyLog = require('./models/StudyLog');
@@ -24,7 +26,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// 2. Configure session to use MongoStore for persistence
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -33,7 +34,7 @@ app.use(session({
     mongoUrl: process.env.MONGODB_URI 
   }),
   cookie: { 
-    maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+    maxAge: 10 * 24 * 60 * 60 * 1000,
     httpOnly: true 
   }
 }));
@@ -43,6 +44,12 @@ const noCache = (req, res, next) => {
   next();
 };
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
 app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
@@ -50,27 +57,41 @@ app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// ... The rest of your routes do not need to be changed ...
-// (signup, login, logout, dashboard, etc.)
-
 app.get('/signup', (req, res) => {
-  res.render('signup', { error: null });
+  res.render('signup', { error: null, errors: [] });
 });
 
-app.post('/signup', async (req, res) => {
+app.post('/signup', authLimiter, [
+  body('name').trim().escape(),
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 6 })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.render('signup', { error: 'Invalid data provided', errors: errors.array() });
+  }
   try {
     const { name, email, password } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.render('signup', { error: 'Email already registered' });
+      return res.render('signup', { error: 'Email already registered', errors: [] });
     }
     const user = new User({ name, email, password });
     await user.save();
     req.session.userId = user._id;
-    res.redirect('/dashboard');
+
+    // Save the session before redirecting
+    req.session.save((err) => {
+      if (err) {
+        console.error(err);
+        return res.render('signup', { error: 'Server error occurred', errors: [] });
+      }
+      res.redirect('/dashboard');
+    });
+
   } catch (error) {
     console.error(error);
-    res.render('signup', { error: 'Server error occurred' });
+    res.render('signup', { error: 'Server error occurred', errors: [] });
   }
 });
 
@@ -78,23 +99,29 @@ app.get('/login', (req, res) => {
   res.render('login', { error: null });
 });
 
-app.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.render('login', { error: 'Invalid email or password' });
-    }
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.render('login', { error: 'Invalid email or password' });
-    }
-    req.session.userId = user._id;
-    res.redirect('/dashboard');
-  } catch (error) {
-    console.error(error);
-    res.render('login', { error: 'Server error occurred' });
+app.post('/login', authLimiter, [
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 6 })
+], async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.render('login', { error: 'Invalid email or password' });
   }
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) {
+    return res.render('login', { error: 'Invalid email or password' });
+  }
+  req.session.userId = user._id;
+
+  // **THE FIX:** Save the session manually before redirecting.
+  req.session.save((err) => {
+    if (err) {
+      console.error(err);
+      return res.render('login', { error: 'Server error occurred' });
+    }
+    res.redirect('/dashboard');
+  });
 });
 
 app.get('/logout', (req, res) => {
@@ -106,6 +133,11 @@ app.get('/logout', (req, res) => {
 app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
+    if (!user) {
+        return req.session.destroy(() => {
+          res.redirect('/login');
+        });
+      }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayLog = await StudyLog.findOne({
@@ -172,7 +204,14 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     }
 });
   
-app.post('/add-study-log', authenticateUser, noCache, async (req, res) => {
+app.post('/add-study-log', authenticateUser, noCache, [
+  body('date').isISO8601().toDate(),
+  body('hours').isFloat({ min: 0, max: 24 })
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).send('Invalid data provided');
+    }
     try {
       const { date, hours } = req.body;
       const logDate = new Date(date);
@@ -242,7 +281,14 @@ app.get('/settings', authenticateUser, noCache, async (req, res) => {
     }
 });
   
-app.post('/update-goal', authenticateUser, noCache, async (req, res) => {
+app.post('/update-goal', authenticateUser, noCache, [
+  body('dailyGoalHours').isFloat({ min: 0.5, max: 24 })
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const user = await User.findById(req.session.userId);
+      return res.render('settings', { user, success: null, error: 'Invalid goal value' });
+    }
     try {
       const { dailyGoalHours } = req.body;
       const user = await User.findById(req.session.userId);
@@ -254,6 +300,18 @@ app.post('/update-goal', authenticateUser, noCache, async (req, res) => {
       const user = await User.findById(req.session.userId);
       res.render('settings', { user, success: null, error: 'Error updating goal' });
     }
+});
+
+app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
+  try {
+    await StudyLog.deleteMany({ userId: req.session.userId });
+    const user = await User.findById(req.session.userId);
+    res.render('settings', { user, success: 'All study data has been cleared', error: null });
+  } catch (error) {
+    console.error(error);
+    const user = await User.findById(req.session.userId);
+    res.render('settings', { user, success: null, error: 'Error clearing data' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

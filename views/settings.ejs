@@ -39,7 +39,6 @@
         <div class="error"><%= error %></div>
       <% } %>
       
-
       <form action="/update-goal" method="POST">
         <div class="form-group">
           <label for="dailyGoalHours">Daily Goal (Hours)</label>
@@ -55,8 +54,16 @@
         </div>
         <button type="submit" class="btn">Update Goal</button>
       </form>
-      
-      
+    </div>
+
+    <div class="form-box">
+      <h2>Clear Account Data</h2>
+      <br>
+      <p>This will permanently delete all of your study logs. Your account will not be deleted. Please be certain.</p>
+      <br>
+      <form action="/clear-account-data" method="POST" onsubmit="return confirm('Are you sure you want to clear all your study data? This action cannot be undone.');">
+        <button type="submit" class="btn" style="background-color: #FF5722;">Clear All Data</button>
+      </form>
     </div>
   </div>
 </body>
