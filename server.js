@@ -219,7 +219,7 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
 });
   
 app.post('/add-study-log', authenticateUser, noCache, [
-  body('date').isISO8601().toDate(),
+  body('date').isISO8601(), // Validate the date format, but don't convert it to a Date object here
   body('hours').isFloat({ min: 0, max: 24 })
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -227,13 +227,17 @@ app.post('/add-study-log', authenticateUser, noCache, [
       return res.status(400).send('Invalid data provided');
     }
     try {
-      const { date, hours } = req.body;
-      const logDate = new Date(date);
-      logDate.setHours(0, 0, 0, 0);
+      const { date, hours } = req.body; // 'date' is a string like "2025-10-10"
+      
+      // --- FIX: Create the date in UTC to prevent any timezone shifting ---
+      const [year, month, day] = date.split('-').map(Number);
+      const logDate = new Date(Date.UTC(year, month - 1, day));
+
       const existingLog = await StudyLog.findOne({
         userId: req.session.userId,
         date: logDate
       });
+
       if (existingLog) {
         existingLog.hours = parseFloat(hours);
         await existingLog.save();
@@ -358,6 +362,84 @@ app.post('/update-password', authenticateUser, noCache, [
     console.error(error);
     const user = await User.findById(req.session.userId);
     res.render('settings', { user, success: null, error: 'Error updating password' });
+  }
+});
+
+app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
+  try {
+    const user = await User.findById(req.session.userId);
+    const { chart, month, startDate, endDate } = req.query;
+    const userId = req.session.userId;
+
+    // Helper to create a date range match for a specific month
+    let monthMatch = {};
+    if (month) {
+        const [year, monthIndex] = month.split('-').map(Number);
+        const startOfMonth = new Date(Date.UTC(year, monthIndex - 1, 1));
+        const endOfMonth = new Date(Date.UTC(year, monthIndex, 1));
+        monthMatch = { date: { $gte: startOfMonth, $lt: endOfMonth } };
+    }
+
+    switch (chart) {
+      case 'monthly':
+        const [year, monthIndex] = month.split('-').map(Number);
+        const startOfMonth = new Date(Date.UTC(year, monthIndex - 1, 1));
+        const endOfMonth = new Date(Date.UTC(year, monthIndex, 1));
+        const monthLogs = await StudyLog.find({
+          userId,
+          date: { $gte: startOfMonth, $lt: endOfMonth }
+        }).sort({ date: 'asc' });
+        return res.json(monthLogs);
+
+      // NEW: Handles the custom date range bar chart
+      case 'dateRange':
+        if (!startDate || !endDate) {
+          return res.status(400).json({ error: 'Start and end dates are required.' });
+        }
+        const rangeLogs = await StudyLog.find({
+          userId,
+          date: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        }).sort({ date: 'asc' });
+        return res.json(rangeLogs);
+        
+      // MODIFIED: Now filters by the selected month
+      case 'dayOfWeek':
+        const dayOfWeekData = await StudyLog.aggregate([
+          { $match: { userId: new mongoose.Types.ObjectId(userId), ...monthMatch } },
+          {
+            $group: {
+              _id: { $dayOfWeek: { date: "$date", timezone: "UTC" } }, // 1=Sun, 2=Mon...
+              avgHours: { $avg: '$hours' }
+            }
+          },
+          { $sort: { '_id': 1 } }
+        ]);
+        return res.json(dayOfWeekData);
+
+      // MODIFIED: Now filters by the selected month
+      case 'goalAchievement':
+        const achievementData = await StudyLog.aggregate([
+          { $match: { userId: new mongoose.Types.ObjectId(userId), ...monthMatch } },
+          {
+            $group: {
+              _id: null,
+              met: {
+                $sum: { $cond: [{ $gte: ['$hours', user.dailyGoalHours] }, 1, 0] }
+              },
+              notMet: {
+                $sum: { $cond: [{ $lt: ['$hours', user.dailyGoalHours] }, 1, 0] }
+              }
+            }
+          }
+        ]);
+        return res.json(achievementData[0] || { met: 0, notMet: 0 });
+
+      default:
+        return res.status(400).json({ error: 'Invalid chart type' });
+    }
+  } catch (error) {
+    console.error('API Analytics Error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

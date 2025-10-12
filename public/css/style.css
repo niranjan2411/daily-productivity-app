@@ -524,3 +524,120 @@ table th {
     font-size: 1.5rem;
   }
 }
+
+
+
+.chart-container1{
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 20px 20px 60px 20px; 
+  border-radius: 10px;
+  margin-bottom: 30px; /* Ensures consistent space BELOW each chart */
+  position: relative;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  max-height: 450px; /* Prevents charts from becoming too tall on desktop */
+  width: 100%;
+}
+.chart-container2{
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 20px 20px 120px 20px; 
+  border-radius: 10px;
+  margin-bottom: 30px; 
+  position: relative;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  max-height: 600px; 
+  width: 100%;
+}
+.chart-container3{
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 20px 20px 100px 20px; 
+  border-radius: 10px;
+  margin-bottom: 30px; /* Ensures consistent space BELOW each chart */
+  position: relative;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  max-height: 450px; /* Prevents charts from becoming too tall on desktop */
+  width: 100%;
+}
+.chart-container4{
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 20px 20px 40px 20px; 
+  border-radius: 10px;
+  margin-bottom: 30px; /* Ensures consistent space BELOW each chart */
+  position: relative;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  max-height: 450px; /* Prevents charts from becoming too tall on desktop */
+  width: 100%;
+}
+
+/* --- Chart Controls Styling --- */
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap; 
+}
+
+.chart-controls label {
+  font-weight: 600;
+  color: #bbb;
+}
+
+input[type="month"], input[type="date"] {
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  padding: 8px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 14px;
+  color-scheme: dark;
+}
+
+
+
+@media (max-width: 768px) {
+  .chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap; 
+}
+  
+  .stats-grid {
+    grid-template-columns: 1fr; 
+  }
+
+
+  .chart-container1,.chart-container2,.chart-container3
+   {
+    aspect-ratio: 4 / 3;
+    padding: 10px;
+  }
+  .chart-container4
+   {
+    aspect-ratio: 1 / 1;
+    padding: 10px;
+  }
+.chart-container1 canvas,
+.chart-container2 canvas
+.chart-container4 canvas {
+    padding: 10px 15px 10px 15px;
+  }
+
+  .chart-container3 canvas{
+    height: 10px;
+    box-sizing: border-box;
+  }
+
+  .chart-controls {
+    gap: 10px;
+  }
+  
+}
