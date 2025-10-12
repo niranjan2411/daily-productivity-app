@@ -10,9 +10,9 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #121212; /* Dark background */
+  background: #121212;
   min-height: 100vh;
-  color: #e0e0e0; /* Light text color for dark background */
+  color: #e0e0e0;
 }
 
 .container {
@@ -22,7 +22,7 @@ body {
 }
 
 .navbar {
-  background: #1e1e1e; /* Darker card background */
+  background: #1e1e1e;
   padding: 15px 20px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.5);
   margin-bottom: 30px;
@@ -33,7 +33,7 @@ body {
 }
 
 .navbar h2 {
-  color: #fdc500; /* Accent color */
+  color: #fdc500;
 }
 
 .nav-links {
@@ -51,8 +51,8 @@ body {
 
 .nav-links a:hover,
 .nav-links a.active {
-  background: #fdc500; /* Accent color */
-  color: #121212; /* Dark text on accent background */
+  background: #fdc500;
+  color: #121212;
 }
 
 .form-box {
@@ -89,7 +89,7 @@ body {
 
 .form-box h1 {
   margin-bottom: 20px;
-  color: #fdc500; /* Accent color */
+  color: #fdc500;
   text-align: center;
 }
 
@@ -117,7 +117,7 @@ body {
 
 .form-group input:focus {
   outline: none;
-  border-color: #fdc500; /* Accent color */
+  border-color: #fdc500;
 }
 
 .password-match {
@@ -137,8 +137,8 @@ body {
 .btn {
   width: 100%;
   padding: 12px;
-  background: #fdc500; /* Accent color */
-  color: #121212; /* Dark text on accent background */
+  background: #fdc500;
+  color: #121212;
   border: none;
   border-radius: 5px;
   font-size: 16px;
@@ -149,7 +149,25 @@ body {
   display: inline-block;
   text-align: center;
 }
-
+.btn1 {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  color: #ffffff;
+  border: 2px solid #fdc500;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+.btn1:hover {
+  color: #121212;
+  background: #e4b300;
+}
 .btn:hover {
   background: #e4b300;
 }
@@ -179,7 +197,7 @@ body {
 }
 
 .link-text a {
-  color: #fdc500; /* Accent color */
+  color: #fdc500;
   text-decoration: none;
   font-weight: 600;
 }
@@ -219,7 +237,7 @@ body {
 .stat-number {
   font-size: 36px;
   font-weight: bold;
-  color: #fdc500; /* Accent color */
+  color: #fdc500;
   margin: 10px 0;
 }
 
@@ -251,7 +269,7 @@ body {
 
 .recent-activity h2 {
   margin-bottom: 20px;
-  color: #fdc500; /* Accent color */
+  color: #fdc500;
 }
 
 table {
@@ -292,6 +310,10 @@ table th {
 .quick-action {
   text-align: center;
   margin-top: 20px;
+}
+
+.quick-action.full-width {
+  margin-bottom: 20px;
 }
 
 .add-log-form {
@@ -402,7 +424,6 @@ table th {
   background: #2a2a2a;
 }
 
-/* --- NEW: Styles for Calendar Navigation --- */
 .calendar-header {
   display: flex;
   justify-content: space-between;
@@ -432,12 +453,9 @@ table th {
 .month-nav.disabled {
   color: #555;
   cursor: not-allowed;
-  pointer-events: none; /* Disables click events */
+  pointer-events: none;
 }
-/* --- End of New Styles --- */
 
-
-/* --- CHART STYLES --- */
 .chart-container {
   background: #1e1e1e;
   border: 1px solid #333;
@@ -481,163 +499,261 @@ input[type="month"], input[type="date"] {
   color-scheme: dark;
 }
 
-
-/* --- RESPONSIVE STYLES --- */
-@media (max-width: 768px) {
-  .navbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .nav-links {
-    display: flex;
-    flex-wrap: wrap; 
-    gap: 10px;
-    margin-top: 15px;
-    width: 100%;
-  }
-  
-  .nav-links a {
-    flex-grow: 1;
-    text-align: center;
-  }
-
-  .form-box {
-    margin: 40px auto;
-    padding: 25px;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .calendar-view {
-    padding: 15px;
-  }
-
-  .calendar-grid {
-    gap: 5px;
-  }
-
-  .day-number {
-    font-size: 0.9rem;
-  }
-
-  .day-hours {
-    font-size: 1.2rem;
-  }
-
-  .chart-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .chart-wrapper {
-    aspect-ratio: 4 / 3;
-  }
-
-  /* UNIFY the last two charts with the top charts on mobile */
-  .chart-grid .chart-wrapper {
-    aspect-ratio: 4 / 3 !important; /* Use important to override desktop styles */
-  }
+/* --- ACHIEVEMENT PAGE STYLES --- */
+.achievement-category {
+  color: #fdc500;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #333;
 }
 
-@media (min-width: 992px) {
-  .chart-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .chart-grid .chart-wrapper {
-    aspect-ratio: 1 / 1;
-  }
+.achievement-subcategory {
+    color: #ccc;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    font-size: 1.2em;
 }
 
-@media (max-width: 480px) {
-  .container {
-    padding: 10px;
-  }
-
-  .navbar h2 {
-    font-size: 1.2rem;
-  }
-
-  .form-box h1 {
-    font-size: 1.5rem;
-  }
-
-  .calendar-grid {
-    gap: 3px;
-  }
-
-  .calendar-day {
-    padding: 4px;
-    min-width: 0;
-  }
-
-  .day-number {
-    font-size: 0.8rem;
-  }
-
-  .day-hours {
-    font-size: 0.8rem;
-  }
-
-  .calendar-header h2 {
-    font-size: 1.2rem;
-  }
-
-  .month-nav {
-    font-size: 1.5rem;
-  }
-
-  .chart-wrapper {
-    aspect-ratio: 1 / 1;
-  }
-  
-  .chart-grid .chart-wrapper {
-    aspect-ratio: 1 / 1 !important;
-  }
-}
-
-/* --- CSS For the Bottom Two Charts --- */
-
-/* Base styles for the grid container */
-.chart-grid {
+.achievements-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
 }
 
-/* Base styles for the items within the grid */
-.chart-container-grid-item {
+.achievement-card {
   background: #1e1e1e;
-  border: 1px solid #333;
+  border: 2px solid #333;
   padding: 20px;
   border-radius: 10px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.3s ease;
+  filter: grayscale(80%);
+  opacity: 0.6;
 }
 
-/* --- Responsive Layout for the Grid --- */
+.achievement-card.achieved {
+  filter: grayscale(0%);
+  opacity: 1;
+  background: linear-gradient(45deg, #2a2a2a, #1e1e1e);
+  border-color: #fdc500;
+  box-shadow: 0 0 15px rgba(253, 197, 0, 0.2);
+}
 
-/* For tablets and mobile, stack the charts in a single column */
-@media (max-width: 991px) {
-  .chart-grid {
-    grid-template-columns: 1fr;
+.achievement-icon {
+  font-size: 3rem;
+  color: #fdc500;
+  flex-shrink: 0;
+}
+
+.achievement-details {
+  text-align: left;
+  flex-grow: 1;
+}
+
+.achievement-card h3 {
+  color: #e0e0e0;
+  margin: 0 0 5px 0;
+}
+
+.achievement-card.achieved h3 {
+    color: #fdc500;
+}
+
+.achievement-card p {
+  color: #aaa;
+  font-size: 0.9em;
+  margin: 0;
+}
+
+.achievement-goal-value {
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 5px;
+}
+
+.achievement-card .view-achievement-btn {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.9em;
+    flex-shrink: 0;
+}
+
+/* --- POP-UP & CONFETTI STYLES --- */
+.achievement-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.achievement-popup-content {
+  background: #ffffff;
+  color: #333;
+  padding: 30px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  transform: scale(0.9);
+  animation: popup-appear 0.3s ease-out forwards;
+  max-width: 320px;
+  width: 90%;
+}
+
+@keyframes popup-appear {
+    to {
+        transform: scale(1);
+    }
+}
+
+.achievement-popup-content .popup-header {
+    font-weight: 600;
+    font-size: 1.5em;
+    color: #111;
+    margin-bottom: 20px;
+}
+
+.popup-icon {
+    font-size: 4rem;
+    color: #f0b90b;
+    margin-bottom: 15px;
+}
+
+.achievement-popup-content h3 {
+    font-size: 1.4em;
+    color: #222;
+    margin: 0 0 10px 0;
+}
+
+.achievement-popup-content p {
+    color: #666;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.popup-goal-value {
+    font-style: italic;
+    color: #888;
+    margin-bottom: 25px !important;
+    font-size: 0.9em;
+}
+
+.btn-popup {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(145deg, #f0b90b, #dca10a);
+    color: #121212;
+    border: none;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(240, 185, 11, 0.3);
+}
+
+.btn-popup:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 185, 11, 0.4);
+}
+
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.confetti-emoji {
+  position: absolute;
+  top: -5vh;
+  animation: fall 5s linear forwards;
+  opacity: 1;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(105vh) rotate(360deg);
+    opacity: 0;
   }
 }
 
-/* For desktops, display side-by-side in two columns */
+/* --- PROGRESS BAR STYLES --- */
+.progress-container {
+    width: 100%;
+    background-color: #333;
+    border-radius: 20px;
+    margin-top: 10px;
+    height: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #fdc500;
+    border-radius: 20px;
+    transition: width 0.5s ease-in-out;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75em;
+    font-weight: bold;
+    color: #ffffff;
+    mix-blend-mode: difference;
+}
+
+/* --- RESPONSIVE STYLES --- */
+@media (max-width: 768px) {
+  .navbar { flex-direction: column; align-items: flex-start; }
+  .nav-links { flex-wrap: wrap; gap: 10px; margin-top: 15px; width: 100%; }
+  .nav-links a { flex-grow: 1; text-align: center; }
+  .form-box { margin: 40px auto; padding: 25px; }
+  .form-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .calendar-view { padding: 15px; }
+  .calendar-grid { gap: 5px; }
+  .day-number { font-size: 0.9rem; }
+  .day-hours { font-size: 1.2rem; }
+  .chart-controls { flex-direction: column; align-items: stretch; }
+  .chart-wrapper { aspect-ratio: 4 / 3; }
+  .chart-grid .chart-wrapper { aspect-ratio: 4 / 3 !important; }
+}
+
 @media (min-width: 992px) {
-  .chart-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  /* Make the charts in the grid square on desktop */
-  .chart-grid .chart-wrapper {
-    aspect-ratio: 1 / 1;
-  }
+  .chart-grid { grid-template-columns: 1fr 1fr; }
+  .chart-grid .chart-wrapper { aspect-ratio: 1 / 1; }
 }
+
+@media (max-width: 480px) {
+  .container { padding: 10px; }
+  .navbar h2 { font-size: 1.2rem; }
+  .form-box h1 { font-size: 1.5rem; }
+  .calendar-grid { gap: 3px; }
+  .calendar-day { padding: 4px; min-width: 0; }
+  .day-number { font-size: 0.8rem; }
+  .day-hours { font-size: 0.8rem; }
+  .calendar-header h2 { font-size: 1.2rem; }
+  .month-nav { font-size: 1.5rem; }
+  .chart-wrapper { aspect-ratio: 1 / 1; }
+  .chart-grid .chart-wrapper { aspect-ratio: 1 / 1 !important; }
+}
+

@@ -11,10 +11,13 @@ const { body, validationResult } = require('express-validator');
 
 const User = require('./models/User');
 const StudyLog = require('./models/StudyLog');
+const Achievement = require('./models/Achievement');
 const { authenticateUser } = require('./middleware/auth');
+const { achievementsList, router: achievementRouter } = require('./routes/achievements');
 
 const app = express();
 
+// --- Database Connection & Middleware ---
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.error('MongoDB connection error:', err));
@@ -30,13 +33,8 @@ app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ 
-    mongoUrl: process.env.MONGODB_URI 
-  }),
-  cookie: { 
-    maxAge: 10 * 24 * 60 * 60 * 1000,
-    httpOnly: true 
-  }
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+  cookie: { maxAge: 10 * 24 * 60 * 60 * 1000, httpOnly: true }
 }));
 
 const noCache = (req, res, next) => {
@@ -50,11 +48,45 @@ const authLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 
+app.use('/api/achievements', achievementRouter);
+
+
+// --- Core Routes ---
+
 app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
   }
   res.redirect('/login');
+});
+
+app.get('/login', (req, res) => {
+  res.render('login', { error: null });
+});
+
+app.post('/login', authLimiter, [
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 6 })
+], async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user || !(await user.comparePassword(password))) {
+    return res.render('login', { error: 'Invalid email or password' });
+  }
+  req.session.userId = user._id;
+  req.session.save((err) => {
+    if (err) {
+      console.error(err);
+      return res.render('login', { error: 'Server error occurred' });
+    }
+    res.redirect('/dashboard');
+  });
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/login');
+  });
 });
 
 app.get('/signup', (req, res) => {
@@ -76,14 +108,16 @@ app.post('/signup', authLimiter, [
   if (!errors.isEmpty()) {
     return res.render('signup', { error: 'Invalid data provided', errors: errors.array() });
   }
+
   try {
     const { name, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    if (await User.findOne({ email })) {
       return res.render('signup', { error: 'Email already registered', errors: [] });
     }
+
     const user = new User({ name, email, password });
     await user.save();
+
     req.session.userId = user._id;
     req.session.save((err) => {
       if (err) {
@@ -98,39 +132,6 @@ app.post('/signup', authLimiter, [
   }
 });
 
-app.get('/login', (req, res) => {
-  res.render('login', { error: null });
-});
-
-app.post('/login', authLimiter, [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 })
-], async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.render('login', { error: 'Invalid email or password' });
-  }
-  const isMatch = await user.comparePassword(password);
-  if (!isMatch) {
-    return res.render('login', { error: 'Invalid email or password' });
-  }
-  req.session.userId = user._id;
-  req.session.save((err) => {
-    if (err) {
-      console.error(err);
-      return res.render('login', { error: 'Server error occurred' });
-    }
-    res.redirect('/dashboard');
-  });
-});
-
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
-});
-
 app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -138,20 +139,20 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
         return req.session.destroy(() => {
           res.redirect('/login');
         });
-      }
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayLog = await StudyLog.findOne({
-      userId: req.session.userId,
-      date: today
-    });
+    const todayLog = await StudyLog.findOne({ userId: req.session.userId, date: today });
+
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentLogs = await StudyLog.find({
       userId: req.session.userId,
       date: { $gte: thirtyDaysAgo }
     }).sort({ date: -1 });
-    const { totalHoursRange = 'alltime' } = req.query; 
+    
+    const { totalHoursRange = 'alltime' } = req.query;
     const totalHoursMatch = { userId: user._id };
     let startDate = null;
     const now = new Date();
@@ -173,12 +174,13 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
       { $match: totalHoursMatch },
       { $group: { _id: null, total: { $sum: '$hours' } } }
     ]);
+    
     res.render('dashboard', {
       user,
       todayHours: todayLog ? todayLog.hours : 0,
       recentLogs,
       totalHours: totalHoursAgg.length > 0 ? totalHoursAgg[0].total : 0,
-      totalHoursRange: totalHoursRange
+      totalHoursRange: totalHoursRange,
     });
   } catch (error) {
     console.error(error);
@@ -186,25 +188,24 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   }
 });
 
+
+// --- Dynamic Achievement Logic & Other Routes ---
+
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
-      
-      // --- CORRECTED DATE LOGIC ---
       let currentMonth;
       if (req.query.month) {
-        // Creates date in UTC to avoid timezone shifts
         const [year, month] = req.query.month.split('-').map(Number);
         currentMonth = new Date(Date.UTC(year, month - 1, 1));
       } else {
         currentMonth = new Date();
-        currentMonth.setUTCDate(1); // Set to the first day of the current month
+        currentMonth.setUTCDate(1);
       }
       currentMonth.setUTCHours(0, 0, 0, 0);
       
       const nextMonth = new Date(currentMonth);
       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
-      // --- END OF CORRECTION ---
 
       const logs = await StudyLog.find({
         userId: req.session.userId,
@@ -218,8 +219,36 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     }
 });
   
+const reevaluateAchievements = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) return;
+    const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
+    const userAchievements = await Achievement.find({ userId });
+    const achievedIds = new Set(userAchievements.map(a => a.achievementId));
+
+    for (const achievement of achievementsList) {
+        const isAchievedInDB = achievedIds.has(achievement.id);
+        const userQualifies = achievement.check(allLogs, user);
+
+        if (userQualifies && !isAchievedInDB) {
+            await Achievement.create({
+                userId,
+                achievementId: achievement.id,
+                name: achievement.name,
+                description: achievement.description,
+                achieved: true,
+                dateAchieved: new Date(),
+                notified: false,
+                goalValueOnAchieved: achievement.type === 'goal' ? user.dailyGoalHours : undefined,
+            });
+        } else if (!userQualifies && isAchievedInDB) {
+            await Achievement.deleteOne({ userId, achievementId: achievement.id });
+        }
+    }
+};
+
 app.post('/add-study-log', authenticateUser, noCache, [
-  body('date').isISO8601(), // Validate the date format, but don't convert it to a Date object here
+  body('date').isISO8601(),
   body('hours').isFloat({ min: 0, max: 24 })
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -227,35 +256,96 @@ app.post('/add-study-log', authenticateUser, noCache, [
       return res.status(400).send('Invalid data provided');
     }
     try {
-      const { date, hours } = req.body; // 'date' is a string like "2025-10-10"
-      
-      // --- FIX: Create the date in UTC to prevent any timezone shifting ---
+      const { date, hours } = req.body;
       const [year, month, day] = date.split('-').map(Number);
       const logDate = new Date(Date.UTC(year, month - 1, day));
-
-      const existingLog = await StudyLog.findOne({
-        userId: req.session.userId,
-        date: logDate
-      });
-
-      if (existingLog) {
-        existingLog.hours = parseFloat(hours);
-        await existingLog.save();
-      } else {
-        const newLog = new StudyLog({
-          userId: req.session.userId,
-          date: logDate,
-          hours: parseFloat(hours),
-        });
-        await newLog.save();
-      }
+      await StudyLog.findOneAndUpdate(
+        { userId: req.session.userId, date: logDate },
+        { hours: parseFloat(hours) },
+        { upsert: true, new: true }
+      );
+      await reevaluateAchievements(req.session.userId);
       res.redirect('/calendar');
     } catch (error) {
       console.error(error);
       res.status(500).send('Server error');
     }
 });
-  
+
+app.post('/update-goal', authenticateUser, noCache, [
+  body('dailyGoalHours').isFloat({ min: 0.5, max: 24 })
+], async (req, res) => {
+    const errors = validationResult(req);
+    const user = await User.findById(req.session.userId);
+    if (!errors.isEmpty()) {
+      return res.render('settings', { user, success: null, error: 'Invalid goal value' });
+    }
+    try {
+      user.dailyGoalHours = parseFloat(req.body.dailyGoalHours);
+      await user.save();
+      await reevaluateAchievements(req.session.userId);
+      res.render('settings', { user, success: 'Goal updated successfully', error: null });
+    } catch (error) {
+      console.error(error);
+      res.render('settings', { user, success: null, error: 'Error updating goal' });
+    }
+});
+
+const calculateLongestStreak = (logs) => {
+    if (!logs || logs.length === 0) return 0;
+    if (logs.length === 1) return 1;
+    let maxStreak = 0;
+    let currentStreak = 1;
+    for (let i = 1; i < logs.length; i++) {
+        const prevDate = logs[i - 1].date;
+        const currentDate = logs[i].date;
+        const diffInDays = (currentDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
+        if (diffInDays === 1) {
+            currentStreak++;
+        } else if (diffInDays > 1) {
+            maxStreak = Math.max(maxStreak, currentStreak);
+            currentStreak = 1;
+        }
+    }
+    return Math.max(maxStreak, currentStreak);
+};
+
+app.get('/achievements', authenticateUser, noCache, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const user = await User.findById(userId);
+    const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
+    const consistencyLogs = allLogs.filter(log => log.hours > 0);
+    const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
+    const longestConsistencyStreak = calculateLongestStreak(consistencyLogs);
+    const longestGoalStreak = calculateLongestStreak(goalLogs);
+    const achievedDocs = await Achievement.find({ userId });
+    const achievedIds = new Set(achievedDocs.map(a => a.achievementId));
+    const allAchievements = achievementsList.map(ach => {
+      const isAchieved = achievedIds.has(ach.id);
+      const doc = isAchieved ? achievedDocs.find(d => d.achievementId === ach.id) : null;
+      return {
+        ...ach,
+        achieved: isAchieved,
+        goalValueOnAchieved: doc ? doc.goalValueOnAchieved : null,
+      };
+    });
+    const completed = allAchievements.filter(a => a.achieved);
+    const yetToCompleteConsistency = allAchievements.filter(a => !a.achieved && a.type === 'consistency');
+    const yetToCompleteGoal = allAchievements.filter(a => !a.achieved && a.type === 'goal');
+    res.render('achievements', { 
+        completed, 
+        yetToCompleteConsistency, 
+        yetToCompleteGoal,
+        longestConsistencyStreak,
+        longestGoalStreak
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+
 app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
@@ -298,33 +388,14 @@ app.get('/settings', authenticateUser, noCache, async (req, res) => {
       res.status(500).send('Server error');
     }
 });
-  
-app.post('/update-goal', authenticateUser, noCache, [
-  body('dailyGoalHours').isFloat({ min: 0.5, max: 24 })
-], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      const user = await User.findById(req.session.userId);
-      return res.render('settings', { user, success: null, error: 'Invalid goal value' });
-    }
-    try {
-      const { dailyGoalHours } = req.body;
-      const user = await User.findById(req.session.userId);
-      user.dailyGoalHours = parseFloat(dailyGoalHours);
-      await user.save();
-      res.render('settings', { user, success: 'Goal updated successfully', error: null });
-    } catch (error) {
-      console.error(error);
-      const user = await User.findById(req.session.userId);
-      res.render('settings', { user, success: null, error: 'Error updating goal' });
-    }
-});
 
 app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
   try {
-    await StudyLog.deleteMany({ userId: req.session.userId });
-    const user = await User.findById(req.session.userId);
-    res.render('settings', { user, success: 'All study data has been cleared', error: null });
+    const userId = req.session.userId;
+    await StudyLog.deleteMany({ userId });
+    await Achievement.deleteMany({ userId });
+    const user = await User.findById(userId);
+    res.render('settings', { user, success: 'All study data and achievements have been cleared', error: null });
   } catch (error) {
     console.error(error);
     const user = await User.findById(req.session.userId);
@@ -342,106 +413,25 @@ app.post('/update-password', authenticateUser, noCache, [
   })
 ], async (req, res) => {
   const errors = validationResult(req);
+  const user = await User.findById(req.session.userId);
   if (!errors.isEmpty()) {
-    const user = await User.findById(req.session.userId);
     return res.render('settings', { user, success: null, error: 'New passwords do not match' });
   }
   try {
     const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.session.userId);
-
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) {
       return res.render('settings', { user, success: null, error: 'Incorrect current password' });
     }
-
     user.password = newPassword;
     await user.save();
     res.render('settings', { user, success: 'Password updated successfully', error: null });
   } catch (error) {
     console.error(error);
-    const user = await User.findById(req.session.userId);
     res.render('settings', { user, success: null, error: 'Error updating password' });
   }
 });
 
-app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
-  try {
-    const user = await User.findById(req.session.userId);
-    const { chart, month, startDate, endDate } = req.query;
-    const userId = req.session.userId;
-
-    // Helper to create a date range match for a specific month
-    let monthMatch = {};
-    if (month) {
-        const [year, monthIndex] = month.split('-').map(Number);
-        const startOfMonth = new Date(Date.UTC(year, monthIndex - 1, 1));
-        const endOfMonth = new Date(Date.UTC(year, monthIndex, 1));
-        monthMatch = { date: { $gte: startOfMonth, $lt: endOfMonth } };
-    }
-
-    switch (chart) {
-      case 'monthly':
-        const [year, monthIndex] = month.split('-').map(Number);
-        const startOfMonth = new Date(Date.UTC(year, monthIndex - 1, 1));
-        const endOfMonth = new Date(Date.UTC(year, monthIndex, 1));
-        const monthLogs = await StudyLog.find({
-          userId,
-          date: { $gte: startOfMonth, $lt: endOfMonth }
-        }).sort({ date: 'asc' });
-        return res.json(monthLogs);
-
-      // NEW: Handles the custom date range bar chart
-      case 'dateRange':
-        if (!startDate || !endDate) {
-          return res.status(400).json({ error: 'Start and end dates are required.' });
-        }
-        const rangeLogs = await StudyLog.find({
-          userId,
-          date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-        }).sort({ date: 'asc' });
-        return res.json(rangeLogs);
-        
-      // MODIFIED: Now filters by the selected month
-      case 'dayOfWeek':
-        const dayOfWeekData = await StudyLog.aggregate([
-          { $match: { userId: new mongoose.Types.ObjectId(userId), ...monthMatch } },
-          {
-            $group: {
-              _id: { $dayOfWeek: { date: "$date", timezone: "UTC" } }, // 1=Sun, 2=Mon...
-              avgHours: { $avg: '$hours' }
-            }
-          },
-          { $sort: { '_id': 1 } }
-        ]);
-        return res.json(dayOfWeekData);
-
-      // MODIFIED: Now filters by the selected month
-      case 'goalAchievement':
-        const achievementData = await StudyLog.aggregate([
-          { $match: { userId: new mongoose.Types.ObjectId(userId), ...monthMatch } },
-          {
-            $group: {
-              _id: null,
-              met: {
-                $sum: { $cond: [{ $gte: ['$hours', user.dailyGoalHours] }, 1, 0] }
-              },
-              notMet: {
-                $sum: { $cond: [{ $lt: ['$hours', user.dailyGoalHours] }, 1, 0] }
-              }
-            }
-          }
-        ]);
-        return res.json(achievementData[0] || { met: 0, notMet: 0 });
-
-      default:
-        return res.status(400).json({ error: 'Invalid chart type' });
-    }
-  } catch (error) {
-    console.error('API Analytics Error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
