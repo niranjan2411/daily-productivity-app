@@ -189,15 +189,28 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
-      const currentMonth = req.query.month ? new Date(req.query.month) : new Date();
-      currentMonth.setDate(1);
-      currentMonth.setHours(0, 0, 0, 0);
+      
+      // --- CORRECTED DATE LOGIC ---
+      let currentMonth;
+      if (req.query.month) {
+        // Creates date in UTC to avoid timezone shifts
+        const [year, month] = req.query.month.split('-').map(Number);
+        currentMonth = new Date(Date.UTC(year, month - 1, 1));
+      } else {
+        currentMonth = new Date();
+        currentMonth.setUTCDate(1); // Set to the first day of the current month
+      }
+      currentMonth.setUTCHours(0, 0, 0, 0);
+      
       const nextMonth = new Date(currentMonth);
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+      // --- END OF CORRECTION ---
+
       const logs = await StudyLog.find({
         userId: req.session.userId,
         date: { $gte: currentMonth, $lt: nextMonth }
       });
+
       res.render('calendar', { user, logs, currentMonth, error: null });
     } catch (error) {
       console.error(error);

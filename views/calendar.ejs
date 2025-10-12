@@ -23,7 +23,8 @@
     <h1>Study Hour Calendar</h1>
     <br>
     
-    <div class="add-log-form">
+    
+<div class="add-log-form">
       <h2>Add/Update Study Hours</h2>
       <% if (error) { %>
         <div class="error" style="margin-bottom: 20px;"><%= error %></div>
@@ -33,7 +34,8 @@
           <div class="form-group">
             <label for="date">Date</label>
             <input type="date" id="date" name="date" required>
-          </div>
+   
+       </div>
           <div class="form-group">
             <label for="hours">Hours Studied</label>
             <input type="number" id="hours" name="hours" step="0.5" min="0" max="24" required>
@@ -44,44 +46,51 @@
     </div>
 
     <div class="calendar-view">
-      <% 
-        // --- NEW: Logic for month navigation links ---
-        const prevMonth = new Date(currentMonth);
-        prevMonth.setMonth(prevMonth.getMonth() - 1);
-        const prevMonthString = prevMonth.toISOString().slice(0, 10);
+      
+<% 
+        // --- FINAL CORRECTED LOGIC ---
+        const getMonthString = (date) => {
+          const year = date.getUTCFullYear();
+          const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+          return `${year}-${month}`;
+        };
 
-        const nextMonth = new Date(currentMonth);
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        const nextMonthString = nextMonth.toISOString().slice(0, 10);
+const prevMonthDate = new Date(currentMonth);
+        prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
+        const prevMonthString = getMonthString(prevMonthDate);
 
-        // Disable "Next" button if the next month is in the future
-        const today = new Date();
-        const isFutureMonth = nextMonth.getFullYear() > today.getFullYear() || 
-                             (nextMonth.getFullYear() === today.getFullYear() && nextMonth.getMonth() > today.getMonth());
-      %>
+const nextMonthDate = new Date(currentMonth);
+        nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+        const nextMonthString = getMonthString(nextMonthDate);
+        
+const today = new Date();
+        const isFutureMonth = nextMonthDate.getUTCFullYear() > today.getUTCFullYear() || 
+                             (nextMonthDate.getUTCFullYear() === today.getUTCFullYear() && nextMonthDate.getUTCMonth() > today.getUTCMonth());
+%>
 
       <div class="calendar-header">
         <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
-        <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) %></h2>
+        <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
         <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
            class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
       </div>
 
       <div class="calendar-grid">
         <% 
-          const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-          for (let day = 1; day <= daysInMonth; day++) {
-            const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-            const log = logs.find(l => l.date.getDate() === day);
+   const daysInMonth = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0).getDate();
+for (let day = 1; day <= daysInMonth; day++) {
+            // This is the main correction: define 'log' first before using it.
+            const log = logs.find(l => new Date(l.date).getUTCDate() === day);
             const hasLog = log !== undefined;
-            const metGoal = hasLog && log.hours >= user.dailyGoalHours;
+const metGoal = hasLog && log.hours >= user.dailyGoalHours;
         %>
           <div class="calendar-day <%= hasLog ? (metGoal ? 'goal-met' : 'below-goal') : '' %>">
             <div class="day-number"><%= day %></div>
             <% if (hasLog) { %>
               <div class="day-hours" style="border: 1px solid white;border-radius: 10%; padding:5px "><%= log.hours.toFixed(1) %>h</div>
             <% } %>
-          </div>
+ 
+         </div>
         <% } %>
       </div>
     </div>
@@ -94,18 +103,19 @@
         <span class="legend-color below-goal"></span> Below Goal
       </div>
       <div class="legend-item">
-        <span class="legend-color no-data"></span> No Data
+       
+ <span class="legend-color no-data"></span> No Data
       </div>
     </div>
   </div>
 
   <script>
     const today = new Date();
-    const yyyy = today.getFullYear();
+const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const todayString = `${yyyy}-${mm}-${dd}`;
-    const dateInput = document.getElementById('date');
+const dateInput = document.getElementById('date');
     dateInput.value = todayString;
     dateInput.setAttribute('max', todayString);
   </script>
