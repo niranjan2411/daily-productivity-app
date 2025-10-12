@@ -334,6 +334,11 @@ table th {
   justify-content: center;
   align-items: center;
   background: #2a2a2a;
+  transition: transform 0.2s;
+}
+
+.calendar-day:hover {
+    transform: translateY(-3px);
 }
 
 .calendar-day.goal-met {
@@ -347,13 +352,15 @@ table th {
 }
 
 .day-number {
+  font-size: 1.1rem;
   font-weight: bold;
   margin-bottom: 5px;
 }
 
 .day-hours {
-  font-size: 14px;
-  color: #ccc;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #e0e0e0;
 }
 
 .legend {
@@ -469,6 +476,14 @@ table th {
   .calendar-grid {
     gap: 5px;
   }
+
+  .day-number {
+    font-size: 0.9rem;
+  }
+
+  .day-hours {
+    font-size: 1.2rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -498,7 +513,7 @@ table th {
   }
 
   .day-hours {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
   }
 
   .calendar-header h2 {

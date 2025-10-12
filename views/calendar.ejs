@@ -79,7 +79,7 @@
           <div class="calendar-day <%= hasLog ? (metGoal ? 'goal-met' : 'below-goal') : '' %>">
             <div class="day-number"><%= day %></div>
             <% if (hasLog) { %>
-              <div class="day-hours"><%= log.hours.toFixed(1) %>h</div>
+              <div class="day-hours" style="border: 1px solid white;border-radius: 10%; padding:5px "><%= log.hours.toFixed(1) %>h</div>
             <% } %>
           </div>
         <% } %>
