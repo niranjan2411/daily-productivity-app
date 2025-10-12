@@ -436,7 +436,53 @@ table th {
 }
 /* --- End of New Styles --- */
 
-/* --- Mobile Responsive Design --- */
+
+/* --- CHART STYLES --- */
+.chart-container {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.chart-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap; 
+  margin-bottom: 15px;
+}
+
+.chart-controls label {
+  font-weight: 600;
+  color: #bbb;
+}
+
+input[type="month"], input[type="date"] {
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  padding: 8px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 14px;
+  color-scheme: dark;
+}
+
+
+/* --- RESPONSIVE STYLES --- */
 @media (max-width: 768px) {
   .navbar {
     flex-direction: column;
@@ -484,6 +530,30 @@ table th {
   .day-hours {
     font-size: 1.2rem;
   }
+
+  .chart-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .chart-wrapper {
+    aspect-ratio: 4 / 3;
+  }
+
+  /* UNIFY the last two charts with the top charts on mobile */
+  .chart-grid .chart-wrapper {
+    aspect-ratio: 4 / 3 !important; /* Use important to override desktop styles */
+  }
+}
+
+@media (min-width: 992px) {
+  .chart-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chart-grid .chart-wrapper {
+    aspect-ratio: 1 / 1;
+  }
 }
 
 @media (max-width: 480px) {
@@ -523,121 +593,51 @@ table th {
   .month-nav {
     font-size: 1.5rem;
   }
-}
 
-
-
-.chart-container1{
-  background: #1e1e1e;
-  border: 1px solid #333;
-  padding: 20px 20px 60px 20px; 
-  border-radius: 10px;
-  margin-bottom: 30px; /* Ensures consistent space BELOW each chart */
-  position: relative;
-  height: auto;
-  aspect-ratio: 16 / 10;
-  max-height: 450px; /* Prevents charts from becoming too tall on desktop */
-  width: 100%;
-}
-.chart-container2{
-  background: #1e1e1e;
-  border: 1px solid #333;
-  padding: 20px 20px 120px 20px; 
-  border-radius: 10px;
-  margin-bottom: 30px; 
-  position: relative;
-  height: auto;
-  aspect-ratio: 16 / 10;
-  max-height: 600px; 
-  width: 100%;
-}
-.chart-container3{
-  background: #1e1e1e;
-  border: 1px solid #333;
-  padding: 20px 20px 100px 20px; 
-  border-radius: 10px;
-  margin-bottom: 30px; /* Ensures consistent space BELOW each chart */
-  position: relative;
-  height: auto;
-  aspect-ratio: 16 / 10;
-  max-height: 450px; /* Prevents charts from becoming too tall on desktop */
-  width: 100%;
-}
-.chart-container4{
-  background: #1e1e1e;
-  border: 1px solid #333;
-  padding: 20px 20px 40px 20px; 
-  border-radius: 10px;
-  margin-bottom: 30px; /* Ensures consistent space BELOW each chart */
-  position: relative;
-  height: auto;
-  aspect-ratio: 16 / 10;
-  max-height: 450px; /* Prevents charts from becoming too tall on desktop */
-  width: 100%;
-}
-
-/* --- Chart Controls Styling --- */
-.chart-controls {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap; 
-}
-
-.chart-controls label {
-  font-weight: 600;
-  color: #bbb;
-}
-
-input[type="month"], input[type="date"] {
-  background-color: #333;
-  color: #e0e0e0;
-  border: 1px solid #555;
-  padding: 8px;
-  border-radius: 5px;
-  font-family: inherit;
-  font-size: 14px;
-  color-scheme: dark;
-}
-
-
-
-@media (max-width: 768px) {
-  .chart-controls {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-wrap: wrap; 
-}
-  
-  .stats-grid {
-    grid-template-columns: 1fr; 
-  }
-
-
-  .chart-container1,.chart-container2,.chart-container3
-   {
-    aspect-ratio: 4 / 3;
-    padding: 10px;
-  }
-  .chart-container4
-   {
+  .chart-wrapper {
     aspect-ratio: 1 / 1;
-    padding: 10px;
-  }
-.chart-container1 canvas,
-.chart-container2 canvas
-.chart-container4 canvas {
-    padding: 10px 15px 10px 15px;
-  }
-
-  .chart-container3 canvas{
-    height: 10px;
-    box-sizing: border-box;
-  }
-
-  .chart-controls {
-    gap: 10px;
   }
   
+  .chart-grid .chart-wrapper {
+    aspect-ratio: 1 / 1 !important;
+  }
+}
+
+/* --- CSS For the Bottom Two Charts --- */
+
+/* Base styles for the grid container */
+.chart-grid {
+  display: grid;
+  gap: 20px;
+}
+
+/* Base styles for the items within the grid */
+.chart-container-grid-item {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 20px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Responsive Layout for the Grid --- */
+
+/* For tablets and mobile, stack the charts in a single column */
+@media (max-width: 991px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* For desktops, display side-by-side in two columns */
+@media (min-width: 992px) {
+  .chart-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  /* Make the charts in the grid square on desktop */
+  .chart-grid .chart-wrapper {
+    aspect-ratio: 1 / 1;
+  }
 }
