@@ -50,7 +50,6 @@ const authLimiter = rateLimit({
 
 app.use('/api/achievements', achievementRouter);
 
-
 // --- Core Routes ---
 
 app.get('/', (req, res) => {
@@ -377,6 +376,58 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
       console.error(error);
       res.status(500).send('Server error');
     }
+});
+
+app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
+  try {
+      const userId = req.session.userId;
+      const { chart, startDate, endDate, month } = req.query;
+      let data;
+
+      switch (chart) {
+          case 'dateRange':
+              data = await StudyLog.find({
+                  userId,
+                  date: { $gte: new Date(startDate), $lte: new Date(endDate) }
+              }).sort({ date: 'asc' });
+              break;
+          case 'monthly':
+              const [year, monthNum] = month.split('-').map(Number);
+              const firstDay = new Date(Date.UTC(year, monthNum - 1, 1));
+              const lastDay = new Date(Date.UTC(year, monthNum, 0));
+              data = await StudyLog.find({
+                  userId,
+                  date: { $gte: firstDay, $lte: lastDay }
+              }).sort({ date: 'asc' });
+              break;
+          case 'dayOfWeek':
+               const [yearD, monthNumD] = month.split('-').map(Number);
+               const firstDayD = new Date(Date.UTC(yearD, monthNumD - 1, 1));
+               const lastDayD = new Date(Date.UTC(yearD, monthNumD, 0));
+              data = await StudyLog.aggregate([
+                  { $match: { userId: new mongoose.Types.ObjectId(userId), date: { $gte: firstDayD, $lte: lastDayD } } },
+                  { $group: { _id: { $dayOfWeek: "$date" }, avgHours: { $avg: "$hours" } } },
+                   { $sort: { _id: 1 } }
+              ]);
+              break;
+          case 'goalAchievement':
+               const [yearG, monthNumG] = month.split('-').map(Number);
+               const firstDayG = new Date(Date.UTC(yearG, monthNumG - 1, 1));
+               const lastDayG = new Date(Date.UTC(yearG, monthNumG, 0));
+              const user = await User.findById(userId);
+              const logs = await StudyLog.find({ userId, date: { $gte: firstDayG, $lte: lastDayG } });
+              const met = logs.filter(log => log.hours >= user.dailyGoalHours).length;
+              const notMet = logs.length - met;
+              data = { met, notMet };
+              break;
+          default:
+              return res.status(400).json({ error: 'Invalid chart type' });
+      }
+      res.json(data);
+  } catch (error) {
+      console.error('Analytics API error:', error);
+      res.status(500).json({ error: 'Server error' });
+  }
 });
   
 app.get('/settings', authenticateUser, noCache, async (req, res) => {
