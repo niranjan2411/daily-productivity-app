@@ -131,6 +131,48 @@ app.post('/signup', authLimiter, [
   }
 });
 
+const calculateLongestStreak = (logs) => {
+    if (!logs || logs.length === 0) return 0;
+    if (logs.length === 1) return 1;
+    let maxStreak = 0;
+    let currentStreak = 1;
+    for (let i = 1; i < logs.length; i++) {
+        const prevDate = logs[i - 1].date;
+        const currentDate = logs[i].date;
+        const diffInDays = (currentDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
+        if (diffInDays === 1) {
+            currentStreak++;
+        } else if (diffInDays > 1) {
+            maxStreak = Math.max(maxStreak, currentStreak);
+            currentStreak = 1;
+        }
+    }
+    return Math.max(maxStreak, currentStreak);
+};
+
+const calculateCurrentStreak = (logs) => {
+    if (!logs || logs.length === 0) return 0;
+
+    let currentStreak = 0;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Create a set of dates for quick lookup
+    const logDates = new Set(logs.map(log => log.date.getTime()));
+
+    let currentDate = yesterday;
+    while (logDates.has(currentDate.getTime())) {
+        currentStreak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+    }
+
+    return currentStreak;
+};
+
+
 app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -151,6 +193,16 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
       date: { $gte: thirtyDaysAgo }
     }).sort({ date: -1 });
     
+    const allLogs = await StudyLog.find({ userId: req.session.userId }).sort({ date: 'asc' });
+
+    const consistencyLogs = allLogs.filter(log => log.hours > 0);
+    const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
+
+    const currentConsistencyStreak = calculateCurrentStreak(consistencyLogs);
+    const currentGoalStreak = calculateCurrentStreak(goalLogs);
+    const maxConsistencyStreak = calculateLongestStreak(consistencyLogs);
+    const maxGoalStreak = calculateLongestStreak(goalLogs);
+
     const { totalHoursRange = 'alltime' } = req.query;
     const totalHoursMatch = { userId: user._id };
     let startDate = null;
@@ -182,7 +234,11 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
       recentLogs,
       totalHours: totalHoursAgg.length > 0 ? totalHoursAgg[0].total : 0,
       totalHoursRange: totalHoursRange,
-      achievementCount
+      achievementCount,
+      currentConsistencyStreak,
+      currentGoalStreak,
+      maxConsistencyStreak,
+      maxGoalStreak
     });
   } catch (error) {
     console.error(error);
@@ -294,25 +350,6 @@ app.post('/update-goal', authenticateUser, noCache, [
       res.render('settings', { user, success: null, error: 'Error updating goal' });
     }
 });
-
-const calculateLongestStreak = (logs) => {
-    if (!logs || logs.length === 0) return 0;
-    if (logs.length === 1) return 1;
-    let maxStreak = 0;
-    let currentStreak = 1;
-    for (let i = 1; i < logs.length; i++) {
-        const prevDate = logs[i - 1].date;
-        const currentDate = logs[i].date;
-        const diffInDays = (currentDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
-        if (diffInDays === 1) {
-            currentStreak++;
-        } else if (diffInDays > 1) {
-            maxStreak = Math.max(maxStreak, currentStreak);
-            currentStreak = 1;
-        }
-    }
-    return Math.max(maxStreak, currentStreak);
-};
 
 app.get('/achievements', authenticateUser, noCache, async (req, res) => {
   try {

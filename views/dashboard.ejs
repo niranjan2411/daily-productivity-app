@@ -22,12 +22,30 @@
   <div class="container">
     <div class="dashboard-header">
       <h1>Welcome, <%= user.name %>!</h1>
-    
       <p>Track your daily productivity and reach your goals</p>
     </div>
 
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Current Consistency</h3>
+            <p class="stat-number"><%= currentConsistencyStreak %> days</p>
+        </div>
+        <div class="stat-card">
+            <h3>Current Goal Streak</h3>
+            <p class="stat-number"><%= currentGoalStreak %> days</p>
+        </div>
+        <div class="stat-card">
+            <h3>Max Consistency</h3>
+            <p class="stat-number"><%= maxConsistencyStreak %> days</p>
+        </div>
+        <div class="stat-card">
+            <h3>Max Goal Streak</h3>
+            <p class="stat-number"><%= maxGoalStreak %> days</p>
+        </div>
+    </div>
+
     <div class="quick-action full-width">
-      <a href="/achievements" class="btn1">My Achievements 
+      <a href="/achievements" class="btn1">My Achievements
         <% if (achievementCount > 0) { %>
           <span class="notification-badge"><%= achievementCount %></span>
         <% } %>
@@ -37,28 +55,23 @@
     <div class="stats-grid">
       <div class="stat-card">
         <h3>Today's Hours</h3>
-        <p class="stat-number <%= todayHours >= user.dailyGoalHours ?
- 'green' : 'red' %>">
+        <p class="stat-number <%= todayHours >= user.dailyGoalHours ? 'green' : 'red' %>">
           <%= todayHours.toFixed(1) %>h
         </p>
         <span>Goal: <%= user.dailyGoalHours %>h</span>
-        <a href="/settings" style="color: white;
- margin-left: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+        <a href="/settings" style="color: white; margin-left: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
           <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
         </svg></a>
       </div>
 
-   
-       <div class="stat-card">
+      <div class="stat-card">
         <h3>Total Hours</h3>
         <p class="stat-number"><%= totalHours.toFixed(1) %>h</p>
         <select id="total-hours-range" class="total-hours-selector">
           <option value="7days" <%= totalHoursRange === '7days' ? 'selected' : '' %>>Past 7 days</option>
           <option value="1month" <%= totalHoursRange === '1month' ? 'selected' : '' %>>Past 1 month</option>
-          <option value="6months" <%= totalHoursRange === '6months' ?
- 'selected' : '' %>>Past 6 months</option>
-          <option value="alltime" <%= totalHoursRange === 'alltime' ?
- 'selected' : '' %>>All time</option>
+          <option value="6months" <%= totalHoursRange === '6months' ? 'selected' : '' %>>Past 6 months</option>
+          <option value="alltime" <%= totalHoursRange === 'alltime' ? 'selected' : '' %>>All time</option>
         </select>
       </div>
 
@@ -73,8 +86,7 @@
       <h2>Recent Activity</h2>
       <% if (recentLogs.length > 0) { %>
         <table>
-   
-           <thead>
+          <thead>
             <tr>
               <th>Date</th>
               <th>Hours</th>
@@ -82,25 +94,21 @@
             </tr>
           </thead>
           <tbody>
-       
-      <% recentLogs.slice(0, 10).forEach(log => { %>
+            <% recentLogs.slice(0, 10).forEach(log => { %>
               <tr>
                 <td><%= log.date.toLocaleDateString() %></td>
                 <td><%= log.hours.toFixed(1) %>h</td>
                 <td>
-                  <span class="badge <%= log.hours >= user.dailyGoalHours 
- ? 'badge-green' : 'badge-red' %>">
+                  <span class="badge <%= log.hours >= user.dailyGoalHours ? 'badge-green' : 'badge-red' %>">
                     <%= log.hours >= user.dailyGoalHours ? 'Goal Met' : 'Below Goal' %>
                   </span>
                 </td>
               </tr>
             <% }) %>
-    
-              </tbody>
+          </tbody>
         </table>
       <% } else { %>
-        <p>No activity recorded yet.
- Start tracking your productivity!</p>
+        <p>No activity recorded yet. Start tracking your productivity!</p>
       <% } %>
     </div>
 
@@ -115,6 +123,6 @@
       const selectedRange = this.value;
       window.location.href = `/dashboard?totalHoursRange=${selectedRange}`;
     });
- </script>
+  </script>
 </body>
 </html>
