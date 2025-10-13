@@ -26,6 +26,7 @@
 
     <div class="stats-grid">
  
+
      <div class="stat-card">
         <h3>Weekly Average</h3>
         <p class="stat-number"><%= weekAverage %>h</p>
@@ -39,6 +40,7 @@
         <p class="stat-number"><%= user.dailyGoalHours %>h</p>
       </div>
   
+
   </div>
 
     <div class="chart-container">
@@ -55,9 +57,11 @@
         <label for="start-date">Start Date:</label>
         <input type="date" id="start-date">
         <label for="end-date">End Date:</label>
-        <input type="date" id="end-date">
+ 
+       <input type="date" id="end-date">
       
-  <button id="generate-range-chart" class="btn" style="width: auto; padding: 8px 16px;">Generate Chart</button>
+  <button id="generate-range-chart" class="btn" style="width: auto;
+ padding: 8px 16px;">Generate Chart</button>
       </div>
       <br>
       <div class="chart-wrapper">
@@ -72,7 +76,8 @@
         <label for="month-picker">Select Month:</label>
         <input type="month" id="month-picker">
       </div>
-      <div class="chart-wrapper">
+      <div 
+ class="chart-wrapper">
         <canvas id="monthlyChart"></canvas>
       </div>
     </div>
@@ -87,7 +92,8 @@
       </div>
       
       <div class="chart-container-grid-item">
-        <h2 id="goalAchievementTitle">Goal Achievement Rate</h2>
+        <h2 id="goalAchievementTitle">Goal Achievement 
+ Rate</h2>
         <div class="chart-wrapper">
           <canvas id="goalAchievementChart"></canvas>
         </div>
@@ -99,79 +105,87 @@
   <script>
     // --- Chart instances and global settings ---
     const dailyGoal = <%= user.dailyGoalHours %>;
-    let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart;
+ let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart;
 
     // --- 1. Renders the "Last 30 Days" chart ---
     function render30DayChart() {
         const ctx = document.getElementById('progressChart').getContext('2d');
-        const logs = <%- JSON.stringify(logs) %>;
+ const logs = <%- JSON.stringify(logs) %>;
         const labels = logs.map(log => new Date(log.date).toLocaleDateString());
         const data = logs.map(log => log.hours);
-
-    if (progressChart) progressChart.destroy();
+ if (progressChart) progressChart.destroy();
         progressChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Study Hours',
-                    data: data,
+           
+         data: data,
                     borderColor: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.2)',
                     tension: 0.4,
-                    fill: true
-                    }, 
+                    fill: true,
+                    borderDash: [5, 5]
+   
+                 }, 
                     {
                     label: 'Daily Goal',
                     data: Array(labels.length).fill(dailyGoal),
-                    borderColor: '#FF5722',
+                   
+  borderColor: '#FF5722',
                     borderDash: [5, 5],
                     pointRadius: 0
                 }]
             },
             options: {
-                responsive: true,
+              
+   responsive: true,
                 maintainAspectRatio: false,
     
             scales: { y: { beginAtZero: true } }
             }
         });
-}
+ }
 
 
     // --- 2. Renders the "Custom Date Range" bar chart ---
     async function renderDateRangeChart(startDate, endDate) {
     if (!startDate || !endDate) return;
-      const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
+ const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
       const data = await response.json();
     if (dateRangeChart) dateRangeChart.destroy();
       const ctx = document.getElementById('dateRangeChart').getContext('2d');
-        dateRangeChart = new Chart(ctx, {
+ dateRangeChart = new Chart(ctx, {
           type: 'bar',
           data: {
             labels: data.map(log => new Date(log.date).toLocaleDateString('en-CA', {timeZone: 'UTC'})), // YYYY-MM-DD
             datasets: [{
                 label: 'Study Hours',
                 data: data.map(log => log.hours),
-        
+    
+     
         // --- FIX: Conditional bar color based on daily goal ---
                 backgroundColor: (context) => {
                     const value = context.raw;
                     return value < dailyGoal ? 'rgba(255, 87, 34, 0.6)' : 'rgba(76, 175, 80, 0.6)';
-       
+   
+     
          },
                 borderColor: (context) => {
                     const value = context.raw;
                     return value < dailyGoal ? '#FF5722' : '#4CAF50';
                 },
-      
+  
+     
           borderWidth: 1
             }, {
                 type: 'line',
                 label: 'Daily Goal',
                 data: Array(data.length).fill(dailyGoal),
                 borderColor: '#fdc500', 
-      
+  
+     
           borderDash: [5,5], 
                 borderWidth: 2, 
                 pointRadius: 0,
@@ -179,22 +193,23 @@
             }]
         },
         options: { 
-      
+  
+     
       responsive: true, 
             maintainAspectRatio: false, 
             scales: { y: { beginAtZero: true } } 
         }
     });
-}
+ }
 
     // --- 3. Renders the "Monthly Deep Dive" chart ---
     async function renderMonthlyChart(month) {
       const response = await fetch(`/api/analytics?chart=monthly&month=${month}`);
-      const data = await response.json();
+ const data = await response.json();
         if (monthlyChart) monthlyChart.destroy();
 
       const ctx = document.getElementById('monthlyChart').getContext('2d');
-        monthlyChart = new Chart(ctx, {
+ monthlyChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: data.map(log => new Date(log.date).toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' })),
@@ -203,39 +218,43 @@
             data: data.map(log => log.hours),
             borderColor: '#4CAF50',
      
+ 
        backgroundColor: 'rgba(76, 175, 80, 0.2)',
             fill: true,
             pointStyle: data.map(log => log.hours < dailyGoal ? 'crossRot' : 'circle'),
             pointRadius: data.map(log => log.hours < dailyGoal ? 7 : 4),
             pointBorderColor: data.map(log => log.hours < dailyGoal ? '#FF5722' : '#4CAF50'),
             pointBackgroundColor: 
+
             data.map(log => log.hours < dailyGoal ? '#FF5722' : '#4CAF50'),
-            pointBorderWidth: 2
+            pointBorderWidth: 2,
+            borderDash: [5, 5]
           }, {
             label: 'Daily Goal',
             data: Array(data.length).fill(dailyGoal),
             borderColor: '#FF5722',
             borderDash: [5, 5],
-            pointRadius: 0,
+  
+           pointRadius: 0,
  
          }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
-}
+ }
 
     // --- 4. Renders the "Day of the Week" bar chart for the selected month ---
     async function renderDayOfWeekChart(month) {
       if (dayOfWeekChart) dayOfWeekChart.destroy();
-      const response = await fetch(`/api/analytics?chart=dayOfWeek&month=${month}`);
+ const response = await fetch(`/api/analytics?chart=dayOfWeek&month=${month}`);
       const data = await response.json();
       
       const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const chartData = Array(7).fill(0);
+ const chartData = Array(7).fill(0);
       data.forEach(item => { chartData[item._id - 1] = item.avgHours.toFixed(2); });
 
       const ctx = document.getElementById('dayOfWeekChart').getContext('2d');
-      dayOfWeekChart = new Chart(ctx, {
+ dayOfWeekChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: dayLabels,
@@ -243,29 +262,31 @@
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
      
+ 
  });
       const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
       document.getElementById('dayOfWeekTitle').innerText = `Productivity by Day (${monthName})`;
-}
+ }
 
     // --- 5. Renders the "Goal Achievement" chart for the selected month ---
     async function renderGoalAchievementChart(month) {
         if (goalAchievementChart) goalAchievementChart.destroy();
-        const response = await fetch(`/api/analytics?chart=goalAchievement&month=${month}`);
+ const response = await fetch(`/api/analytics?chart=goalAchievement&month=${month}`);
         const data = await response.json();
         const ctx = document.getElementById('goalAchievementChart').getContext('2d');
-        goalAchievementChart = new Chart(ctx, {
+ goalAchievementChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['Goal Met', 'Below Goal'],
                 datasets: [{ data: [data.met, data.notMet], backgroundColor: ['#4CAF50', '#FF5722'], borderColor: '#1e1e1e', borderWidth: 4 }]
             },
           
+ 
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
         });
-        const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
+ const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
         document.getElementById('goalAchievementTitle').innerText = `Goal Achievement (${monthName})`;
-}
+ }
 
     // --- Event Listeners and Initial Rendering ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -279,7 +300,8 @@
       monthPicker.value = currentMonthStr;
       monthPicker.max = currentMonthStr;
 
-      const startDateInput = document.getElementById('start-date');
+      const startDateInput 
+ = document.getElementById('start-date');
       const endDateInput = document.getElementById('end-date');
       endDateInput.value = todayStr;
       endDateInput.max = todayStr;
@@ -292,7 +314,7 @@
       
       monthPicker.addEventListener('change', (e) => {
         const selectedMonth = e.target.value;
-        renderMonthlyChart(selectedMonth);
+ renderMonthlyChart(selectedMonth);
         renderDayOfWeekChart(selectedMonth);
         renderGoalAchievementChart(selectedMonth);
       });
@@ -306,7 +328,7 @@
             alert('Please select a valid start and end date.');
         }
     });
-});
+ });
   </script>
 </body>
 </html>

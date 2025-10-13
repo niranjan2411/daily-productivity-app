@@ -531,16 +531,34 @@ input[type="month"], input[type="date"] {
   align-items: center;
   gap: 20px;
   transition: all 0.3s ease;
+}
+
+.achievement-card .achievement-icon {
   filter: grayscale(80%);
   opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.achievement-card .achievement-details h3,
+.achievement-card .achievement-details p {
+    opacity: 0.6;
+    transition: all 0.3s ease;
 }
 
 .achievement-card.achieved {
-  filter: grayscale(0%);
-  opacity: 1;
   background: linear-gradient(45deg, #2a2a2a, #1e1e1e);
   border-color: #fdc500;
   box-shadow: 0 0 15px rgba(253, 197, 0, 0.2);
+}
+
+.achievement-card.achieved .achievement-icon {
+    filter: grayscale(0%);
+    opacity: 1;
+}
+
+.achievement-card.achieved .achievement-details h3,
+.achievement-card.achieved .achievement-details p {
+    opacity: 1;
 }
 
 .achievement-icon {
