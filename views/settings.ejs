@@ -23,7 +23,8 @@
     <h1 style="text-align: center;">Settings</h1>
     
     <div class="user-info form-box-new">
-        <h2>Account Information</h2>
+  
+      <h2>Account Information</h2>
         <br>
         <p><strong>Name:</strong> <%= user.name %></p>
         <p><strong>Email:</strong> <%= user.email %></p>
@@ -34,7 +35,8 @@
       <h2>Update Daily Goal</h2>
       <br>
       <% if (success && success.includes('Goal')) { %>
-        <div class="success"><%= success %></div>
+        <div class="success"><%= 
+ success %></div>
       <% } %>
       <% if (error && error.includes('goal')) { %>
         <div class="error"><%= error %></div>
@@ -45,6 +47,7 @@
           <label for="dailyGoalHours">Daily Goal (Hours)</label>
           <input 
             type="number" 
+
             id="dailyGoalHours" 
             name="dailyGoalHours" 
             value="<%= user.dailyGoalHours %>" 
@@ -52,7 +55,8 @@
             min="0.5" 
             max="24" 
             required>
-        </div>
+        
+ </div>
         <button type="submit" class="btn">Update Goal</button>
       </form>
     </div>
@@ -63,7 +67,8 @@
       <% if (success && success.includes('Password')) { %>
         <div class="success"><%= success %></div>
       <% } %>
-      <% if (error && (error.includes('password') || error.includes('passwords'))) { %>
+      <% if (error && (error.includes('password') ||
+ error.includes('passwords'))) { %>
         <div class="error"><%= error %></div>
       <% } %>
       <form action="/update-password" method="POST">
@@ -73,7 +78,8 @@
         </div>
         <div class="form-group">
           <label for="newPassword">New Password</label>
-          <input type="password" id="newPassword" name="newPassword" minlength="6" required>
+      
+     <input type="password" id="newPassword" name="newPassword" minlength="6" required>
         </div>
         <div class="form-group">
           <label for="confirmNewPassword">Confirm New Password</label>
@@ -82,7 +88,8 @@
         </div>
         <button type="submit" class="btn">Update Password</button>
       </form>
-    </div>
+   
+ </div>
 
     <div class="form-box-new">
       <h2>Clear Account Data</h2>
@@ -93,7 +100,8 @@
       <% if (error && error.includes('clearing')) { %>
         <div class="error"><%= error %></div>
       <% } %>
-      <p>This will permanently delete all of your study logs. Your account will not be deleted. Please be certain.</p>
+      <p>This will permanently delete all of your study logs.
+ Your account will not be deleted. Please be certain.</p>
       <br>
       <form action="/clear-account-data" method="POST" onsubmit="return confirm('Are you sure you want to clear all your study data? This action cannot be undone.');">
         <button type="submit" class="btn" style="background-color: #FF5722;">Clear All Data</button>
@@ -103,7 +111,7 @@
 
   <script>
     const newPasswordInput = document.getElementById('newPassword');
-    const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+ const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
     const passwordMatchMessageUpdate = document.getElementById('password-match-message-update');
 
     newPasswordInput.addEventListener('input', () => {
@@ -114,26 +122,25 @@
       }
       validateNewPasswords();
     });
-
-    confirmNewPasswordInput.addEventListener('input', validateNewPasswords);
+ confirmNewPasswordInput.addEventListener('input', validateNewPasswords);
 
     function validateNewPasswords() {
       if (confirmNewPasswordInput.value.length > 0 && newPasswordInput.value !== confirmNewPasswordInput.value) {
         passwordMatchMessageUpdate.style.display = 'block';
-        newPasswordInput.classList.add('password-mismatch');
+ newPasswordInput.classList.add('password-mismatch');
         confirmNewPasswordInput.classList.add('password-mismatch');
         newPasswordInput.classList.remove('password-match');
         confirmNewPasswordInput.classList.remove('password-match');
       } else if (confirmNewPasswordInput.value.length > 0 && newPasswordInput.value === confirmNewPasswordInput.value) {
         passwordMatchMessageUpdate.style.display = 'none';
-        newPasswordInput.classList.remove('password-mismatch');
+ newPasswordInput.classList.remove('password-mismatch');
         confirmNewPasswordInput.classList.remove('password-mismatch');
         newPasswordInput.classList.add('password-match');
         confirmNewPasswordInput.classList.add('password-match');
       } else {
         passwordMatchMessageUpdate.style.display = 'none';
         newPasswordInput.classList.remove('password-mismatch', 'password-match');
-        confirmNewPasswordInput.classList.remove('password-mismatch', 'password-match');
+ confirmNewPasswordInput.classList.remove('password-mismatch', 'password-match');
       }
     }
   </script>

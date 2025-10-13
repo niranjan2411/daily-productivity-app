@@ -23,7 +23,8 @@
   <div class="container">
     <h1 class="middle">My Achievements</h1>
 
-    <% if (completed.length > 0) { %>
+    <% if (completed.length > 
+ 0) { %>
       <h2 class="achievement-category">Completed</h2>
       <div class="achievements-grid">
         <% completed.forEach(achievement => { %>
@@ -31,23 +32,27 @@
             <div class="achievement-icon"><%- achievement.icon %></div>
             <div class="achievement-details">
                 <h3><%= achievement.name %></h3>
-                <p><%= achievement.description %></p>
+              
+   <p><%= achievement.description %></p>
                 <% if (achievement.type === 'goal' && achievement.goalValueOnAchieved) { %>
                   <p class="achievement-goal-value">Achieved with a goal of <%= achievement.goalValueOnAchieved %> hours/day</p>
                 <% } %>
             </div>
             <button class="btn view-achievement-btn" 
+
                     data-name="<%= achievement.name %>" 
                     data-description="<%= achievement.description %>"
                     data-type="<%= achievement.type %>"
                     data-goal-value="<%= achievement.goalValueOnAchieved %>"
-                    data-icon='<%- achievement.icon %>'>View</button> 
+           
+         data-icon='<%- achievement.icon %>'>View</button> 
           </div>
         <% }) %>
       </div>
     <% } %>
 
-    <% if (yetToCompleteConsistency.length > 0 || yetToCompleteGoal.length > 0) { %>
+    <% if (yetToCompleteConsistency.length > 0 ||
+ yetToCompleteGoal.length > 0) { %>
       <h2 class="achievement-category">Yet to Complete</h2>
       
       <% if (yetToCompleteConsistency.length > 0) { %>
@@ -56,50 +61,63 @@
           <% yetToCompleteConsistency.forEach(achievement => { %>
             <% const progress = Math.min(100, (longestConsistencyStreak / achievement.requiredDays) * 100); %>
             <div class="achievement-card">
+ 
               <div class="achievement-icon"><%- achievement.icon %></div>
               <div class="achievement-details">
                 <h3><%= achievement.name %></h3>
                 <p><%= achievement.description %></p>
                 <div class="progress-container">
-                  <div class="progress-bar" style="width: <%= progress %>%;"></div>
+                
+   <div class="progress-bar" style="width: <%= progress %>%;"></div>
                   <span class="progress-text"><%= longestConsistencyStreak %> / <%= achievement.requiredDays %> Days</span>
                 </div>
               </div>
             </div>
           <% }) %>
         </div>
-      <% } %>
+     
+   <% } %>
 
       <% if (yetToCompleteGoal.length > 0) { %>
         <h3 class="achievement-subcategory">Goal Streaks</h3>
         <div class="achievements-grid">
           <% yetToCompleteGoal.forEach(achievement => { %>
-            <% const progress = Math.min(100, (longestGoalStreak / achievement.requiredDays) * 100); %>
+            <% const progress = Math.min(100, (longestGoalStreak / achievement.requiredDays) * 100);
+ %>
             <div class="achievement-card">
               <div class="achievement-icon"><%- achievement.icon %></div>
                <div class="achievement-details">
                 <h3><%= achievement.name %></h3>
                 <p><%= achievement.description %></p>
                 <div class="progress-container">
+ 
                   <div class="progress-bar" style="width: <%= progress %>%;"></div>
                   <span class="progress-text"><%= longestGoalStreak %> / <%= achievement.requiredDays %> Days</span>
                 </div>
               </div>
             </div>
-          <% }) %>
+          
+ <% }) %>
         </div>
       <% } %>
     <% } %>
   </div>
 
+  <script>
+    const achievementsList = <%- JSON.stringify(achievementsList) %>;
+  </script>
   <script src="/js/achievements.js"></script>
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAndShowAchievements();
+    });
+
     document.querySelectorAll('.view-achievement-btn').forEach(button => {
       button.addEventListener('click', () => {
         const name = button.getAttribute('data-name');
         const description = button.getAttribute('data-description');
         const type = button.getAttribute('data-type');
-        const goalValue = button.getAttribute('data-goal-value');
+ const goalValue = button.getAttribute('data-goal-value');
         const icon = button.getAttribute('data-icon');
         showAchievementPopup(name, description, type, goalValue, icon);
       });

@@ -163,6 +163,7 @@ body {
   text-decoration: none;
   display: inline-block;
   text-align: center;
+  position: relative;
 }
 .btn1:hover {
   color: #121212;
@@ -721,6 +722,19 @@ input[type="month"], input[type="date"] {
     mix-blend-mode: difference;
 }
 
+.notification-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #FF5722;
+  color: white;
+  border-radius: 50%;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid #121212;
+}
+
 /* --- RESPONSIVE STYLES --- */
 @media (max-width: 768px) {
   .navbar { flex-direction: column; align-items: flex-start; }
@@ -756,4 +770,3 @@ input[type="month"], input[type="date"] {
   .chart-wrapper { aspect-ratio: 1 / 1; }
   .chart-grid .chart-wrapper { aspect-ratio: 1 / 1 !important; }
 }
-

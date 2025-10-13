@@ -174,12 +174,15 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
       { $group: { _id: null, total: { $sum: '$hours' } } }
     ]);
     
+    const achievementCount = await Achievement.countDocuments({ userId: req.session.userId, notified: false });
+
     res.render('dashboard', {
       user,
       todayHours: todayLog ? todayLog.hours : 0,
       recentLogs,
       totalHours: totalHoursAgg.length > 0 ? totalHoursAgg[0].total : 0,
       totalHoursRange: totalHoursRange,
+      achievementCount
     });
   } catch (error) {
     console.error(error);
@@ -230,16 +233,18 @@ const reevaluateAchievements = async (userId) => {
         const userQualifies = achievement.check(allLogs, user);
 
         if (userQualifies && !isAchievedInDB) {
-            await Achievement.create({
-                userId,
-                achievementId: achievement.id,
-                name: achievement.name,
-                description: achievement.description,
-                achieved: true,
-                dateAchieved: new Date(),
-                notified: false,
-                goalValueOnAchieved: achievement.type === 'goal' ? user.dailyGoalHours : undefined,
-            });
+            await Achievement.findOneAndUpdate(
+                { userId, achievementId: achievement.id },
+                {
+                    name: achievement.name,
+                    description: achievement.description,
+                    achieved: true,
+                    dateAchieved: new Date(),
+                    notified: false,
+                    goalValueOnAchieved: achievement.type === 'goal' ? user.dailyGoalHours : undefined,
+                },
+                { upsert: true, new: true }
+            );
         } else if (!userQualifies && isAchievedInDB) {
             await Achievement.deleteOne({ userId, achievementId: achievement.id });
         }
@@ -283,7 +288,7 @@ app.post('/update-goal', authenticateUser, noCache, [
       user.dailyGoalHours = parseFloat(req.body.dailyGoalHours);
       await user.save();
       await reevaluateAchievements(req.session.userId);
-      res.render('settings', { user, success: 'Goal updated successfully', error: null });
+      res.redirect('/settings?success=true');
     } catch (error) {
       console.error(error);
       res.render('settings', { user, success: null, error: 'Error updating goal' });
@@ -337,7 +342,8 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
         yetToCompleteConsistency, 
         yetToCompleteGoal,
         longestConsistencyStreak,
-        longestGoalStreak
+        longestGoalStreak,
+        achievementsList
     });
   } catch (error) {
     console.error(error);
@@ -433,7 +439,8 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
 app.get('/settings', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
-      res.render('settings', { user, success: null, error: null });
+      const success = req.query.success === 'true' ? 'Goal updated successfully' : null;
+      res.render('settings', { user, success, error: null});
     } catch (error) {
       console.error(error);
       res.status(500).send('Server error');

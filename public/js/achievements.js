@@ -36,7 +36,7 @@ function showPartyConfetti() {
   confettiContainer.className = 'confetti-container';
   document.body.appendChild(confettiContainer);
 
-  const emojis = ['🎉', '🎊', '✨', '🏆', '🌟'];
+  const emojis = ['🏆', '🎉', '✨', '🌟', '🏅'];
   for (let i = 0; i < 50; i++) {
     const confetti = document.createElement('div');
     confetti.className = 'confetti-emoji';
@@ -52,14 +52,12 @@ function showPartyConfetti() {
   }, 4000);
 }
 
-
-document.addEventListener('DOMContentLoaded', () => {
+function checkAndShowAchievements() {
   fetch('/api/achievements/check')
     .then(response => response.json())
     .then(data => {
       if (data.newAchievements && data.newAchievements.length > 0) {
         data.newAchievements.forEach((achievement, index) => {
-          // Find the matching achievement definition to get the icon
           const definition = achievementsList.find(a => a.id === achievement.achievementId);
           const iconHTML = definition ? definition.icon : '';
           
@@ -71,8 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
               achievement.goalValueOnAchieved,
               iconHTML
             );
-          }, index * 5000);
+          }, index * 4000);
         });
       }
     });
-});
+}
