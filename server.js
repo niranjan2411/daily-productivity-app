@@ -50,6 +50,39 @@ const authLimiter = rateLimit({
 
 app.use('/api/achievements', achievementRouter);
 
+// --- DYNAMIC XP & Leveling Logic ---
+const XP_PER_HOUR = 10;
+const XP_FOR_GOAL = 50;
+const XP_FOR_ACHIEVEMENT = 100;
+const XP_PER_LEVEL = 1000; // New constant for level calculation
+
+const calculateXpAndLevel = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) return { xp: 0, level: 1 };
+
+    // 1. Calculate XP from study hours and goals met
+    const allLogs = await StudyLog.find({ userId });
+    let xpFromLogs = 0;
+    allLogs.forEach(log => {
+        xpFromLogs += log.hours * XP_PER_HOUR;
+        if (log.hours >= user.dailyGoalHours) {
+            xpFromLogs += XP_FOR_GOAL;
+        }
+    });
+
+    // 2. Calculate XP from achievements
+    const achievements = await Achievement.find({ userId, achieved: true });
+    const xpFromAchievements = achievements.length * XP_FOR_ACHIEVEMENT;
+
+    const totalXp = Math.round(xpFromLogs + xpFromAchievements);
+    
+    // Updated level calculation
+    const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
+
+    return { xp: totalXp, level: Math.min(level, 100) }; // Cap level at 100
+};
+
+
 // --- Core Routes ---
 
 app.get('/', (req, res) => {
@@ -160,7 +193,6 @@ const calculateCurrentStreak = (logs) => {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // Create a set of dates for quick lookup
     const logDates = new Set(logs.map(log => log.date.getTime()));
 
     let currentDate = yesterday;
@@ -181,6 +213,11 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
           res.redirect('/login');
         });
     }
+
+    // Dynamically calculate XP and Level
+    const { xp, level } = await calculateXpAndLevel(req.session.userId);
+    user.xp = xp;
+    user.level = level;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -252,6 +289,12 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
+
+      // Dynamically calculate XP and Level for display
+      const { xp, level } = await calculateXpAndLevel(req.session.userId);
+      user.xp = xp;
+      user.level = level;
+
       let currentMonth;
       if (req.query.month) {
         const [year, month] = req.query.month.split('-').map(Number);
@@ -319,6 +362,7 @@ app.post('/add-study-log', authenticateUser, noCache, [
       const { date, hours } = req.body;
       const [year, month, day] = date.split('-').map(Number);
       const logDate = new Date(Date.UTC(year, month - 1, day));
+      
       await StudyLog.findOneAndUpdate(
         { userId: req.session.userId, date: logDate },
         { hours: parseFloat(hours) },
@@ -335,8 +379,13 @@ app.post('/add-study-log', authenticateUser, noCache, [
 app.post('/update-goal', authenticateUser, noCache, [
   body('dailyGoalHours').isFloat({ min: 0.5, max: 24 })
 ], async (req, res) => {
-    const errors = validationResult(req);
     const user = await User.findById(req.session.userId);
+    // Re-calculate XP for rendering the settings page with an error if validation fails
+    const { xp, level } = await calculateXpAndLevel(req.session.userId);
+    user.xp = xp;
+    user.level = level;
+
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.render('settings', { user, success: null, error: 'Invalid goal value' });
     }
@@ -355,6 +404,12 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
   try {
     const userId = req.session.userId;
     const user = await User.findById(userId);
+
+    // Dynamically calculate XP and Level for display
+    const { xp, level } = await calculateXpAndLevel(userId);
+    user.xp = xp;
+    user.level = level;
+
     const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
     const consistencyLogs = allLogs.filter(log => log.hours > 0);
     const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
@@ -375,6 +430,7 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
     const yetToCompleteConsistency = allAchievements.filter(a => !a.achieved && a.type === 'consistency');
     const yetToCompleteGoal = allAchievements.filter(a => !a.achieved && a.type === 'goal');
     res.render('achievements', { 
+        user,
         completed, 
         yetToCompleteConsistency, 
         yetToCompleteGoal,
@@ -391,6 +447,12 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
 app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
+
+      // Dynamically calculate XP and Level for display
+      const { xp, level } = await calculateXpAndLevel(req.session.userId);
+      user.xp = xp;
+      user.level = level;
+
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -476,6 +538,9 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
 app.get('/settings', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
+      const { xp, level } = await calculateXpAndLevel(req.session.userId);
+      user.xp = xp;
+      user.level = level;
       const success = req.query.success === 'true' ? 'Goal updated successfully' : null;
       res.render('settings', { user, success, error: null});
     } catch (error) {
@@ -489,7 +554,13 @@ app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
     const userId = req.session.userId;
     await StudyLog.deleteMany({ userId });
     await Achievement.deleteMany({ userId });
-    const user = await User.findById(userId);
+    
+    const user = await User.findById(req.session.userId);
+    // Recalculate XP (which will be 0) to render the page
+    const { xp, level } = await calculateXpAndLevel(req.session.userId);
+    user.xp = xp;
+    user.level = level;
+
     res.render('settings', { user, success: 'All study data and achievements have been cleared', error: null });
   } catch (error) {
     console.error(error);
@@ -507,8 +578,12 @@ app.post('/update-password', authenticateUser, noCache, [
     return true;
   })
 ], async (req, res) => {
-  const errors = validationResult(req);
   const user = await User.findById(req.session.userId);
+  const { xp, level } = await calculateXpAndLevel(req.session.userId);
+  user.xp = xp;
+  user.level = level;
+
+  const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.render('settings', { user, success: null, error: 'New passwords do not match' });
   }

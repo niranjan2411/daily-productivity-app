@@ -788,3 +788,100 @@ input[type="month"], input[type="date"] {
   .chart-wrapper { aspect-ratio: 1 / 1; }
   .chart-grid .chart-wrapper { aspect-ratio: 1 / 1 !important; }
 }
+
+/* Add these new styles to the end of public/css/style.css */
+
+.user-stats-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e1e1e;
+  padding: 10px 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: 1px solid #333;
+}
+
+.level-display {
+  font-weight: bold;
+  color: #e0e0e0;
+  background-color: #333;
+  padding: 8px 15px;
+  border-radius: 20px;
+}
+
+.xp-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.xp-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2a2a2a;
+  padding: 8px 15px;
+  border-radius: 20px;
+  border: 1px solid #444;
+  color: #fdc500;
+  font-weight: bold;
+}
+
+.info-icon {
+  position: relative;
+  cursor: pointer;
+  color: #bbb;
+  display: flex;
+  align-items: center;
+}
+
+.info-icon .tooltip {
+  visibility: hidden;
+  width: 240px;
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: 150%;
+  right: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+  border: 1px solid #555;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.info-icon:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.tooltip p {
+  margin: 0 0 5px 0;
+  color: #fdc500;
+  font-size: 0.9em;
+}
+
+.tooltip ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tooltip ul li {
+  font-size: 0.85em;
+  color: #e0e0e0;
+  margin-bottom: 3px;
+}
+
+/* Responsive adjustments for the stats bar */
+@media (max-width: 480px) {
+    .user-stats-bar {
+      flex-direction: column;
+      gap: 10px;
+    }
+}
+

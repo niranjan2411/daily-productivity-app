@@ -19,11 +19,42 @@
     </div>
   </nav>
 
-  <div class="container">
+  
     <div class="dashboard-header">
       <h1>Welcome, <%= user.name %>!</h1>
       <p>Track your daily productivity and reach your goals</p>
     </div>
+
+    <div class="container" style="margin-top: -15px;">
+    <div class="user-stats-bar">
+      <div class="level-display">
+        Level <%= user.level %>
+      </div>
+      <div class="xp-container">
+          <div class="xp-counter">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
+                  <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+              </svg>
+              <span><%= user.xp %> XP</span>
+          </div>
+          <div class="info-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16">
+                  <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+              </svg>
+              <div class="tooltip">
+                  <p><strong>XP and Level Calculation Rules:</strong></p>
+                <ul>
+                    <li>+10 XP per hour studied</li>
+                    <li>+50 XP bonus for meeting daily goal</li>
+                    <li>+100 XP for each new achievement</li>
+                    <li>(Level 1: 0 - 999 XP; Level 2: 1000 - 1999 XP; Level 3: 2000 - 2999 XP; ...and so on.)</li>
+                    <h6>*Award yourself after each level</h6>
+                </ul>
+              </div>
+          </div>
+      </div>
+    </div>
+
 
     <div class="stats-grid">
         <div class="stat-card">
@@ -64,7 +95,7 @@
         </svg></a>
       </div>
 
-      <div class="stat-card">
+       <div class="stat-card">
         <h3>Total Hours</h3>
         <p class="stat-number"><%= totalHours.toFixed(1) %>h</p>
         <select id="total-hours-range" class="total-hours-selector">
@@ -86,7 +117,7 @@
       <h2>Recent Activity</h2>
       <% if (recentLogs.length > 0) { %>
         <table>
-          <thead>
+           <thead>
             <tr>
               <th>Date</th>
               <th>Hours</th>
@@ -94,7 +125,7 @@
             </tr>
           </thead>
           <tbody>
-            <% recentLogs.slice(0, 10).forEach(log => { %>
+           <% recentLogs.slice(0, 10).forEach(log => { %>
               <tr>
                 <td><%= log.date.toLocaleDateString() %></td>
                 <td><%= log.hours.toFixed(1) %>h</td>
@@ -105,7 +136,7 @@
                 </td>
               </tr>
             <% }) %>
-          </tbody>
+           </tbody>
         </table>
       <% } else { %>
         <p>No activity recorded yet. Start tracking your productivity!</p>
