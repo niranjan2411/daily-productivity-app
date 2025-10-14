@@ -789,8 +789,7 @@ input[type="month"], input[type="date"] {
   .chart-grid .chart-wrapper { aspect-ratio: 1 / 1 !important; }
 }
 
-/* Add these new styles to the end of public/css/style.css */
-
+/* --- User Stats Bar --- */
 .user-stats-bar {
   display: flex;
   justify-content: space-between;
@@ -802,18 +801,26 @@ input[type="month"], input[type="date"] {
   border: 1px solid #333;
 }
 
+/* MODIFIED: Made level box colourful */
 .level-display {
   font-weight: bold;
-  color: #e0e0e0;
-  background-color: #333;
+  color: #121212;
+  background: linear-gradient(45deg, #fdc500, #ff8c00);
   padding: 8px 15px;
   border-radius: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
+/* MODIFIED: Added hover effects to make it look clickable */
 .xp-container {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.xp-counter:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(253, 197, 0, 0.3);
 }
 
 .xp-counter {
@@ -877,11 +884,107 @@ input[type="month"], input[type="date"] {
   margin-bottom: 3px;
 }
 
-/* Responsive adjustments for the stats bar */
+/* MODIFIED: Centered items for mobile view */
 @media (max-width: 480px) {
     .user-stats-bar {
       flex-direction: column;
-      gap: 10px;
+      gap: 15px;
+      align-items: center;
+      padding: 15px;
     }
 }
 
+/* --- XP History Popup --- */
+.xp-popup {
+  display: none;
+  position: fixed;
+  z-index: 1001;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px);
+}
+
+.xp-popup-content {
+  background-color: #1e1e1e;
+  margin: 10% auto;
+  padding: 30px;
+  border: 1px solid #fdc500;
+  width: 80%;
+  max-width: 600px;
+  border-radius: 10px;
+  position: relative;
+  box-shadow: 0 5px 25px rgba(253, 197, 0, 0.2);
+}
+
+.xp-popup-close {
+  color: #aaa;
+  position: absolute;
+  top: 15px;
+  right: 25px;
+  font-size: 35px;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.xp-popup-close:hover,
+.xp-popup-close:focus {
+  color: #fdc500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.xp-popup-content h2 {
+  color: #fdc500;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.xp-history-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 15px;
+}
+
+.xp-history-list h3 {
+    color: #fdc500;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.xp-history-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.xp-history-list li {
+  background-color: #2a2a2a;
+  padding: 12px;
+  border-radius: 5px;
+  margin-bottom: 8px;
+  font-size: 0.95em;
+  border-left: 3px solid #fdc500;
+}
+
+.xp-history-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.xp-history-list::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 10px;
+}
+
+.xp-history-list::-webkit-scrollbar-thumb {
+  background: #fdc500;
+  border-radius: 10px;
+}
+
+.xp-history-list::-webkit-scrollbar-thumb:hover {
+  background: #e4b300;
+}

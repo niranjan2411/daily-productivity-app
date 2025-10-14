@@ -1,8 +1,0 @@
-<p><strong>XP and Level Calculation Rules:</strong></p>
-                <ul>
-                    <li>+10 XP per hour studied</li>
-                    <li>+50 XP bonus for meeting daily goal</li>
-                    <li>+100 XP for each new achievement</li>
-                    <li>(Level 1: 0 - 999 XP; Level 2: 1000 - 1999 XP; Level 3: 2000 - 2999 XP; ...and so on.)</li>
-                    <h6>*Award yourself after each level</h6>
-                </ul>

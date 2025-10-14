@@ -283,6 +283,33 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   }
 });
 
+app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const user = await User.findById(userId);
+
+    const achievements = await Achievement.find({ userId, achieved: true }).sort({ dateAchieved: 'desc' });
+    const studyLogs = await StudyLog.find({ userId }).sort({ date: 'desc' });
+
+    const achievementHistory = achievements.map(ach => {
+      return `+${XP_FOR_ACHIEVEMENT} XP: Achievement unlocked - "${ach.name}"`;
+    });
+
+    const logHistory = [];
+    studyLogs.forEach(log => {
+      logHistory.push(`+${log.hours * XP_PER_HOUR} XP: Studied for ${log.hours} hours on ${log.date.toLocaleDateString()}`);
+      if (log.hours >= user.dailyGoalHours) {
+        logHistory.push(`+${XP_FOR_GOAL} XP: Daily goal met on ${log.date.toLocaleDateString()}`);
+      }
+    });
+
+    res.json({ achievements: achievementHistory, logs: logHistory });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error fetching XP history' });
+  }
+});
+
 
 // --- Dynamic Achievement Logic & Other Routes ---
 

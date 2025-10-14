@@ -30,8 +30,8 @@
       <div class="level-display">
         Level <%= user.level %>
       </div>
-      <div class="xp-container">
-          <div class="xp-counter">
+      <div class="xp-container" id="xp-container">
+          <div class="xp-counter" id="xp-counter">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
                   <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
               </svg>
@@ -43,14 +43,23 @@
               </svg>
               <div class="tooltip">
                   <p><strong>XP and Level Calculation Rules:</strong></p>
-                <ul>
+                  <ul>
                     <li>+10 XP per hour studied</li>
                     <li>+50 XP bonus for meeting daily goal</li>
                     <li>+100 XP for each new achievement</li>
-                    <li>(Level 1: 0 - 999 XP; Level 2: 1000 - 1999 XP; Level 3: 2000 - 2999 XP; ...and so on.)</li>
+                    <li>(Level 1: 0 - 999 XP; Level 2: 1000 - 1999 XP; ...and so on.)</li>
                     <h6>*Award yourself after each level</h6>
                 </ul>
               </div>
+          </div>
+      </div>
+    </div>
+
+    <div id="xp-history-popup" class="xp-popup">
+      <div class="xp-popup-content">
+        <span class="xp-popup-close" id="xp-popup-close">&times;</span>
+        <h2>XP Credit History</h2>
+        <div id="xp-history-list" class="xp-history-list">
           </div>
       </div>
     </div>
@@ -66,7 +75,7 @@
             <p class="stat-number"><%= currentGoalStreak %> days</p>
         </div>
         <div class="stat-card">
-            <h3>Max Consistency</h3>
+             <h3>Max Consistency</h3>
             <p class="stat-number"><%= maxConsistencyStreak %> days</p>
         </div>
         <div class="stat-card">
@@ -95,7 +104,8 @@
         </svg></a>
       </div>
 
-       <div class="stat-card">
+   
+        <div class="stat-card">
         <h3>Total Hours</h3>
         <p class="stat-number"><%= totalHours.toFixed(1) %>h</p>
         <select id="total-hours-range" class="total-hours-selector">
@@ -117,7 +127,7 @@
       <h2>Recent Activity</h2>
       <% if (recentLogs.length > 0) { %>
         <table>
-           <thead>
+            <thead>
             <tr>
               <th>Date</th>
               <th>Hours</th>
@@ -125,7 +135,7 @@
             </tr>
           </thead>
           <tbody>
-           <% recentLogs.slice(0, 10).forEach(log => { %>
+          <% recentLogs.slice(0, 10).forEach(log => { %>
               <tr>
                 <td><%= log.date.toLocaleDateString() %></td>
                 <td><%= log.hours.toFixed(1) %>h</td>
@@ -136,7 +146,7 @@
                 </td>
               </tr>
             <% }) %>
-           </tbody>
+            </tbody>
         </table>
       <% } else { %>
         <p>No activity recorded yet. Start tracking your productivity!</p>
@@ -153,6 +163,56 @@
     document.getElementById('total-hours-range').addEventListener('change', function() {
       const selectedRange = this.value;
       window.location.href = `/dashboard?totalHoursRange=${selectedRange}`;
+    });
+
+    const xpCounter = document.getElementById('xp-counter');
+    const xpPopup = document.getElementById('xp-history-popup');
+    const xpPopupClose = document.getElementById('xp-popup-close');
+    const xpHistoryList = document.getElementById('xp-history-list');
+
+    xpCounter.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/xp-history');
+        const data = await response.json();
+
+        let html = '<h3>Achievements</h3><ul>';
+        if (data.achievements.length > 0) {
+            data.achievements.forEach(item => {
+                html += `<li>${item}</li>`;
+            });
+        } else {
+            html += '<li>No achievement XP earned yet.</li>';
+        }
+        html += '</ul>';
+
+        html += '<h3>Study Logs</h3><ul>';
+        if (data.logs.length > 0) {
+            data.logs.forEach(item => {
+                html += `<li>${item}</li>`;
+            });
+        } else {
+            html += '<li>No study XP earned yet.</li>';
+        }
+        html += '</ul>';
+
+
+        xpHistoryList.innerHTML = html;
+        xpPopup.style.display = 'block';
+      } catch (error) {
+        console.error('Failed to fetch XP history:', error);
+        xpHistoryList.innerHTML = '<p>Could not load XP history.</p>';
+        xpPopup.style.display = 'block';
+      }
+    });
+
+    xpPopupClose.addEventListener('click', () => {
+      xpPopup.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+      if (event.target == xpPopup) {
+        xpPopup.style.display = 'none';
+      }
     });
   </script>
 </body>
