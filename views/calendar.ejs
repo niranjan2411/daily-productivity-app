@@ -24,6 +24,7 @@
     <br>
     
     
+ 
 <div class="add-log-form">
       <h2>Add/Update Study Hours</h2>
       <% if (error) { %>
@@ -48,24 +49,41 @@
     <div class="calendar-view">
       
 <% 
-        // --- FINAL CORRECTED LOGIC ---
         const getMonthString = (date) => {
           const year = date.getUTCFullYear();
           const month = String(date.getUTCMonth() + 1).padStart(2, '0');
           return `${year}-${month}`;
         };
 
-const prevMonthDate = new Date(currentMonth);
+        const prevMonthDate = new Date(currentMonth);
         prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
         const prevMonthString = getMonthString(prevMonthDate);
 
-const nextMonthDate = new Date(currentMonth);
+        const nextMonthDate = new Date(currentMonth);
         nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
         const nextMonthString = getMonthString(nextMonthDate);
-        
-const today = new Date();
+
+        const today = new Date();
         const isFutureMonth = nextMonthDate.getUTCFullYear() > today.getUTCFullYear() || 
                              (nextMonthDate.getUTCFullYear() === today.getUTCFullYear() && nextMonthDate.getUTCMonth() > today.getUTCMonth());
+
+        const getHeatmapColor = (hours, goal) => {
+            if (hours === 0) return 'rgba(220, 53, 69, 0.9)'; // Bright red for 0 hours
+
+            // Below Goal: Red with varying opacity
+            if (hours < goal) {
+                // Opacity is higher for fewer hours (closer to 0) and lower for hours closer to the goal
+                const opacity = 0.8 - (hours / goal) * 0.6; 
+                return `rgba(220, 53, 69, ${opacity.toFixed(2)})`;
+            }
+
+            // At or Above Goal: GitHub-style green shades
+            const excessPercentage = (hours / goal);
+            if (excessPercentage < 1.25) return '#39d353';
+            if (excessPercentage < 1.75) return '#26a641';
+            if (excessPercentage < 2.5) return '#006d32';
+            return '#0e4429';
+        };
 %>
 
       <div class="calendar-header">
@@ -77,17 +95,17 @@ const today = new Date();
 
       <div class="calendar-grid">
         <% 
-   const daysInMonth = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0).getDate();
-for (let day = 1; day <= daysInMonth; day++) {
-            // This is the main correction: define 'log' first before using it.
+          const daysInMonth = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0).getDate();
+          for (let day = 1; day <= daysInMonth; day++) {
             const log = logs.find(l => new Date(l.date).getUTCDate() === day);
             const hasLog = log !== undefined;
-const metGoal = hasLog && log.hours >= user.dailyGoalHours;
+            const hours = hasLog ? log.hours : -1; // Use -1 to signify no log
+            const color = hasLog ? getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
         %>
-          <div class="calendar-day <%= hasLog ? (metGoal ? 'goal-met' : 'below-goal') : '' %>">
+          <div class="calendar-day" style="background-color: <%= color %>;">
             <div class="day-number"><%= day %></div>
             <% if (hasLog) { %>
-              <div class="day-hours" style="border: 1px solid white;border-radius: 10%; padding:5px "><%= log.hours.toFixed(1) %>h</div>
+              <div class="day-hours" style="border: 1px solid white;border-radius: 10%; padding:5px "><%= hours.toFixed(1) %>h</div>
             <% } %>
  
          </div>
@@ -96,26 +114,30 @@ const metGoal = hasLog && log.hours >= user.dailyGoalHours;
     </div>
   
     <div class="legend">
-      <div class="legend-item">
-        <span class="legend-color goal-met"></span> Goal Met
-      </div>
-      <div class="legend-item">
-        <span class="legend-color below-goal"></span> Below Goal
-      </div>
-      <div class="legend-item">
-       
- <span class="legend-color no-data"></span> No Data
-      </div>
+        <div class="legend-item">
+            <span class="legend-text">0 hours</span>
+            <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.9);"></span>
+            <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.2);"></span>
+            <span class="legend-text">Near Goal</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-text">Goal Met</span>
+            <span class="legend-color" style="background-color: #39d353;"></span>
+            <span class="legend-color" style="background-color: #26a641;"></span>
+            <span class="legend-color" style="background-color: #006d32;"></span>
+            <span class="legend-color" style="background-color: #0e4429;"></span>
+            <span class="legend-text">Exceeded</span>
+        </div>
     </div>
   </div>
 
   <script>
     const today = new Date();
-const yyyy = today.getFullYear();
+    const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const todayString = `${yyyy}-${mm}-${dd}`;
-const dateInput = document.getElementById('date');
+    const dateInput = document.getElementById('date');
     dateInput.value = todayString;
     dateInput.setAttribute('max', todayString);
   </script>
