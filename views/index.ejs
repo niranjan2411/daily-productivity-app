@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrackU - Level Up Your Productivity</title>
+    <link rel="stylesheet" href="/css/landing.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="animated-bg"></div>
+
+    <nav>
+        <div class="logo">TrackU</div>
+        <a href="/login" class="login-btn">Login / SignUp</a>
+    </nav>
+
+    <section class="hero">
+        <h1>Level Up Your Productivity</h1>
+        <p>Transform your daily study routine into an exciting adventure. Track hours, earn XP, unlock achievements, and watch yourself grow.</p>
+        <div class="cta-buttons">
+            <a href="/signup" class="cta-primary">Start Your Journey</a>
+            <a href="#features" class="cta-secondary">Explore Features</a>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <h2 class="section-title">Why Choose TrackU?</h2>
+        <p class="section-subtitle">Your all-in-one productivity companion with analytics at its core</p>
+
+        <div class="features-wrapper">
+            <div class="feature-row">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Visual Analytics</h3>
+                    <p>Interactive charts and graphs to visualize your progress. Track daily trends, weekly averages, and monthly totals with beautiful, intuitive displays.</p>
+                </div>
+                <div class="desktop-carousel" data-carousel="1">
+                    <div class="desktop-carousel-container">
+                        <div class="desktop-carousel-slides">
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.46.51-AM.jpg" alt="Analytics Dashboard">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.42.36-AM.jpg" alt="Charts View">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.46.03-AM.jpg" alt="Statistics">
+                            </div>
+                        </div>
+                        <button class="carousel-nav prev" onclick="moveDesktopSlide(1, -1)">‹</button>
+                        <button class="carousel-nav next" onclick="moveDesktopSlide(1, 1)">›</button>
+                        <div class="desktop-carousel-dots">
+                            <span class="desktop-carousel-dot active" onclick="setDesktopSlide(1, 0)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(1, 1)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(1, 2)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-card">
+                    <div class="feature-icon">🗓️</div>
+                    <h3>Dynamic Calendar</h3>
+                    <p>Heatmap calendar that color-codes your productivity. See your consistency at a glance with red-to-green gradient visualization.</p>
+                </div>
+                <div class="desktop-carousel" data-carousel="2">
+                    <div class="desktop-carousel-container">
+                        <div class="desktop-carousel-slides">
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.43.10-AM.jpg" alt="Calendar View">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.42.36-AM.jpg" alt="Monthly Overview">
+                            </div>
+                        </div>
+                        <button class="carousel-nav prev" onclick="moveDesktopSlide(2, -1)">‹</button>
+                        <button class="carousel-nav next" onclick="moveDesktopSlide(2, 1)">›</button>
+                        <div class="desktop-carousel-dots">
+                            <span class="desktop-carousel-dot active" onclick="setDesktopSlide(2, 0)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(2, 1)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-card">
+                    <div class="feature-icon">⭐</div>
+                    <h3>XP & Leveling System</h3>
+                    <p>Earn experience points for every study session. Level up, unlock new achievements, and stay motivated with gamified progress tracking.</p>
+                </div>
+                <div class="desktop-carousel" data-carousel="3">
+                    <div class="desktop-carousel-container">
+                        <div class="desktop-carousel-slides">
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.43.45-AM.jpg" alt="XP Dashboard">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.10-AM.jpg" alt="Level Progress">
+                            </div>
+                        </div>
+                        <button class="carousel-nav prev" onclick="moveDesktopSlide(3, -1)">‹</button>
+                        <button class="carousel-nav next" onclick="moveDesktopSlide(3, 1)">›</button>
+                        <div class="desktop-carousel-dots">
+                            <span class="desktop-carousel-dot active" onclick="setDesktopSlide(3, 0)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(3, 1)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-card">
+                    <div class="feature-icon">🏆</div>
+                    <h3>Achievement System</h3>
+                    <p>Unlock dozens of achievements for consistency and goal completion. From "7-Day Streak" to "100-Day Club" - celebrate every milestone.</p>
+                </div>
+                <div class="desktop-carousel" data-carousel="4">
+                    <div class="desktop-carousel-container">
+                        <div class="desktop-carousel-slides">
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.32-AM.jpg" alt="Achievements">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.42-AM.jpg" alt="Achievement Details">
+                            </div>
+                        </div>
+                        <button class="carousel-nav prev" onclick="moveDesktopSlide(4, -1)">‹</button>
+                        <button class="carousel-nav next" onclick="moveDesktopSlide(4, 1)">›</button>
+                        <div class="desktop-carousel-dots">
+                            <span class="desktop-carousel-dot active" onclick="setDesktopSlide(4, 0)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(4, 1)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-card">
+                    <div class="feature-icon">🔥</div>
+                    <h3>Streak Tracking</h3>
+                    <p>Build powerful habits with streak counters. Track both consistency streaks and goal-achievement streaks to stay accountable.</p>
+                </div>
+                <div class="desktop-carousel" data-carousel="5">
+                    <div class="desktop-carousel-container">
+                        <div class="desktop-carousel-slides">
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.21-AM.jpg" alt="Streaks Display">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.43.45-AM.jpg" alt="Consistency View">
+                            </div>
+                        </div>
+                        <button class="carousel-nav prev" onclick="moveDesktopSlide(5, -1)">‹</button>
+                        <button class="carousel-nav next" onclick="moveDesktopSlide(5, 1)">›</button>
+                        <div class="desktop-carousel-dots">
+                            <span class="desktop-carousel-dot active" onclick="setDesktopSlide(5, 0)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(5, 1)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Customizable Goal</h3>
+                    <p>Set personalized daily study hour goals. Adjust targets anytime to match your evolving schedule and ambitions.</p>
+                </div>
+                <div class="desktop-carousel" data-carousel="6">
+                    <div class="desktop-carousel-container">
+                        <div class="desktop-carousel-slides">
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.45.45-AM.jpg" alt="Goal Settings">
+                            </div>
+                            <div class="desktop-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.46.03-AM.jpg" alt="Goal Tracking">
+                            </div>
+                        </div>
+                        <button class="carousel-nav prev" onclick="moveDesktopSlide(6, -1)">‹</button>
+                        <button class="carousel-nav next" onclick="moveDesktopSlide(6, 1)">›</button>
+                        <div class="desktop-carousel-dots">
+                            <span class="desktop-carousel-dot active" onclick="setDesktopSlide(6, 0)"></span>
+                            <span class="desktop-carousel-dot" onclick="setDesktopSlide(6, 1)"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mobile-showcase">
+        <h2 class="section-title">Beautiful on Every Device</h2>
+        <p class="section-subtitle">Seamless experience across desktop and mobile</p>
+
+        <div class="mobile-carousel-container">
+            <div class="phone-mockup">
+                <div class="screen">
+                    <div class="mobile-carousel-wrapper" id="mobileCarouselWrapper">
+                        <div class="mobile-carousel-slides" id="mobileCarouselSlides">
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.43.10-AM.jpg" alt="Study Calendar">
+                            </div>
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.43.45-AM.jpg" alt="Dashboard Mobile">
+                            </div>
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.10-AM.jpg" alt="Dashboard Stats">
+                            </div>
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.21-AM.jpg" alt="Streaks Display">
+                            </div>
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.32-AM.jpg" alt="Achievements">
+                            </div>
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.44.42-AM.jpg" alt="Achievement Details">
+                            </div>
+                            <div class="mobile-carousel-slide">
+                                <img src="/images/Screenshot-2025-10-15-at-1.45.45-AM.jpg" alt="Analytics View">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mobile-carousel-controls">
+                <span class="mobile-carousel-dot active" onclick="moveToMobileSlide(0)"></span>
+                <span class="mobile-carousel-dot" onclick="moveToMobileSlide(1)"></span>
+                <span class="mobile-carousel-dot" onclick="moveToMobileSlide(2)"></span>
+                <span class="mobile-carousel-dot" onclick="moveToMobileSlide(3)"></span>
+                <span class="mobile-carousel-dot" onclick="moveToMobileSlide(4)"></span>
+                <span class="mobile-carousel-dot" onclick="moveToMobileSlide(5)"></span>
+                <span class="mobile-carousel-dot" onclick="moveToMobileSlide(6)"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="gamification">
+        <h2 class="section-title">The Motivation</h2>
+        <p class="section-subtitle">Turn productivity into an engaging game that motivates you</p>
+
+        <div class="game-features">
+            <div class="game-card">
+                <div class="feature-icon">⚡</div>
+                <div class="game-stat">2410</div>
+                <div class="game-label">XP</div>
+            </div>
+
+            <div class="game-card">
+                <div class="feature-icon">📈</div>
+                <div class="game-stat">Level 3</div>
+                <div class="game-label">Current Level</div>
+            </div>
+
+            <div class="game-card">
+                <div class="feature-icon">🔥</div>
+                <div class="game-stat">11 Days</div>
+                <div class="game-label">Current Streak</div>
+            </div>
+
+            <div class="game-card">
+                <div class="feature-icon">🏅</div>
+                <div class="game-stat">7+</div>
+                <div class="game-label">Achievements</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-section">
+        <h2 class="section-title">Track What Matters</h2>
+        <p class="section-subtitle">Comprehensive insights into your productivity journey</p>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-number">141h</div>
+                <div class="stat-label">Total Hours Studied/Worked</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-number">6.25h</div>
+                <div class="stat-label">Weekly Average</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-number">5+</div>
+                <div class="stat-label">Analytics Charts</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Mobile Responsive</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="final-cta">
+        <h2>Ready to Transform Your Productivity?</h2>
+        <p>Join thousands of students and professionals who are leveling up their daily habits. Start tracking, stay consistent, and achieve your goals.</p>
+        <a href="/signup" class="cta-primary">Get Started for Free</a>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 TrackU. Level up your productivity every day. <a href="https://www.linkedin.com/in/niranjanraj-jnu/">Meet the Developer</a></p>
+    </footer>
+
+    <script>
+        // Desktop Carousel functionality
+        const desktopCarousels = {};
+
+        function initDesktopCarousels() {
+            document.querySelectorAll('[data-carousel]').forEach(carousel => {
+                const id = parseInt(carousel.getAttribute('data-carousel'));
+                desktopCarousels[id] = { currentSlide: 0, totalSlides: carousel.querySelectorAll('.desktop-carousel-slide').length };
+            });
+        }
+
+        function moveDesktopSlide(carouselId, direction) {
+            const carousel = desktopCarousels[carouselId];
+            carousel.currentSlide = (carousel.currentSlide + direction + carousel.totalSlides) % carousel.totalSlides;
+            setDesktopSlide(carouselId, carousel.currentSlide);
+        }
+
+        function setDesktopSlide(carouselId, slideIndex) {
+            const carousel = desktopCarousels[carouselId];
+            carousel.currentSlide = slideIndex;
+            
+            const carouselElement = document.querySelector(`[data-carousel="${carouselId}"]`);
+            const slides = carouselElement.querySelector('.desktop-carousel-slides');
+            const dots = carouselElement.querySelectorAll('.desktop-carousel-dot');
+            
+            slides.style.transform = `translateX(-${carousel.currentSlide * 100}%)`;
+            
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === carousel.currentSlide);
+            });
+        }
+
+        // Mobile Carousel functionality
+        let currentMobileSlide = 0;
+        const totalMobileSlides = 7;
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+
+        const mobileWrapper = document.getElementById('mobileCarouselWrapper');
+        const mobileSlides = document.getElementById('mobileCarouselSlides');
+
+        function moveToMobileSlide(slideIndex) {
+            currentMobileSlide = slideIndex;
+            mobileSlides.style.transform = `translateX(-${currentMobileSlide * 100}%)`;
+            
+            document.querySelectorAll('.mobile-carousel-dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentMobileSlide);
+            });
+        }
+
+        // Touch/Swipe functionality for mobile carousel
+        mobileWrapper.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+            mobileSlides.style.transition = 'none';
+        });
+
+        mobileWrapper.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            currentX = e.touches[0].clientX;
+            const diff = currentX - startX;
+            const currentOffset = -currentMobileSlide * mobileWrapper.offsetWidth;
+            mobileSlides.style.transform = `translateX(${currentOffset + diff}px)`;
+        });
+
+        mobileWrapper.addEventListener('touchend', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            mobileSlides.style.transition = 'transform 0.3s ease-out';
+            
+            const diff = currentX - startX;
+            const threshold = mobileWrapper.offsetWidth * 0.2;
+            
+            if (diff > threshold && currentMobileSlide > 0) {
+                moveToMobileSlide(currentMobileSlide - 1);
+            } else if (diff < -threshold && currentMobileSlide < totalMobileSlides - 1) {
+                moveToMobileSlide(currentMobileSlide + 1);
+            } else {
+                moveToMobileSlide(currentMobileSlide);
+            }
+        });
+
+        // Mouse drag for desktop
+        mobileWrapper.addEventListener('mousedown', (e) => {
+            startX = e.clientX;
+            isDragging = true;
+            mobileSlides.style.transition = 'none';
+        });
+
+        mobileWrapper.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            currentX = e.clientX;
+            const diff = currentX - startX;
+            const currentOffset = -currentMobileSlide * mobileWrapper.offsetWidth;
+            mobileSlides.style.transform = `translateX(${currentOffset + diff}px)`;
+        });
+
+        mobileWrapper.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            mobileSlides.style.transition = 'transform 0.3s ease-out';
+            
+            const diff = currentX - startX;
+            const threshold = mobileWrapper.offsetWidth * 0.2;
+            
+            if (diff > threshold && currentMobileSlide > 0) {
+                moveToMobileSlide(currentMobileSlide - 1);
+            } else if (diff < -threshold && currentMobileSlide < totalMobileSlides - 1) {
+                moveToMobileSlide(currentMobileSlide + 1);
+            } else {
+                moveToMobileSlide(currentMobileSlide);
+            }
+        });
+
+        mobileWrapper.addEventListener('mouseleave', () => {
+            if (isDragging) {
+                isDragging = false;
+                mobileSlides.style.transition = 'transform 0.3s ease-out';
+                moveToMobileSlide(currentMobileSlide);
+            }
+        });
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initDesktopCarousels();
+        });
+
+        // Smooth scroll enhancement
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .game-card, .stat-box').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

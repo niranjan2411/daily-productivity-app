@@ -89,7 +89,7 @@ app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
   }
-  res.redirect('/login');
+  res.render('index');
 });
 
 app.get('/login', (req, res) => {
