@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser'); // Corrected this line
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const MongoStore = require('connect-mongo');
@@ -17,11 +17,7 @@ const { achievementsList, router: achievementRouter } = require('./routes/achiev
 
 const app = express();
 
-// --- Database Connection & Middleware ---
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
+// --- Middleware Setup ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -29,6 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+// Session Middleware is now initialized BEFORE routes
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -50,17 +47,17 @@ const authLimiter = rateLimit({
 
 app.use('/api/achievements', achievementRouter);
 
+
 // --- DYNAMIC XP & Leveling Logic ---
 const XP_PER_HOUR = 10;
 const XP_FOR_GOAL = 50;
 const XP_FOR_ACHIEVEMENT = 100;
-const XP_PER_LEVEL = 1000; // New constant for level calculation
+const XP_PER_LEVEL = 1000;
 
 const calculateXpAndLevel = async (userId) => {
     const user = await User.findById(userId);
     if (!user) return { xp: 0, level: 1 };
 
-    // 1. Calculate XP from study hours and goals met
     const allLogs = await StudyLog.find({ userId });
     let xpFromLogs = 0;
     allLogs.forEach(log => {
@@ -70,18 +67,78 @@ const calculateXpAndLevel = async (userId) => {
         }
     });
 
-    // 2. Calculate XP from achievements
     const achievements = await Achievement.find({ userId, achieved: true });
     const xpFromAchievements = achievements.length * XP_FOR_ACHIEVEMENT;
-
     const totalXp = Math.round(xpFromLogs + xpFromAchievements);
-    
-    // Updated level calculation
     const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
 
-    return { xp: totalXp, level: Math.min(level, 100) }; // Cap level at 100
+    return { xp: totalXp, level: Math.min(level, 100) };
 };
 
+// --- Streak Calculation Logic ---
+const calculateLongestStreak = (logs) => {
+    if (!logs || logs.length === 0) return 0;
+    if (logs.length === 1) return 1;
+    let maxStreak = 0;
+    let currentStreak = 1;
+    for (let i = 1; i < logs.length; i++) {
+        const prevDate = logs[i - 1].date;
+        const currentDate = logs[i].date;
+        const diffInDays = (currentDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
+        if (diffInDays === 1) {
+            currentStreak++;
+        } else if (diffInDays > 1) {
+            maxStreak = Math.max(maxStreak, currentStreak);
+            currentStreak = 1;
+        }
+    }
+    return Math.max(maxStreak, currentStreak);
+};
+
+const calculateCurrentStreak = (logs) => {
+    if (!logs || logs.length === 0) return 0;
+    let currentStreak = 0;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const logDates = new Set(logs.map(log => log.date.getTime()));
+    let currentDate = yesterday;
+    while (logDates.has(currentDate.getTime())) {
+        currentStreak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+    }
+    return currentStreak;
+};
+
+// --- Achievement Re-evaluation ---
+const reevaluateAchievements = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) return;
+    const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
+    const userAchievements = await Achievement.find({ userId });
+    const achievedIds = new Set(userAchievements.map(a => a.achievementId));
+    for (const achievement of achievementsList) {
+        const isAchievedInDB = achievedIds.has(achievement.id);
+        const userQualifies = achievement.check(allLogs, user);
+        if (userQualifies && !isAchievedInDB) {
+            await Achievement.findOneAndUpdate(
+                { userId, achievementId: achievement.id },
+                {
+                    name: achievement.name,
+                    description: achievement.description,
+                    achieved: true,
+                    dateAchieved: new Date(),
+                    notified: false,
+                    goalValueOnAchieved: achievement.type === 'goal' ? user.dailyGoalHours : undefined,
+                },
+                { upsert: true, new: true }
+            );
+        } else if (!userQualifies && isAchievedInDB) {
+            await Achievement.deleteOne({ userId, achievementId: achievement.id });
+        }
+    }
+};
 
 // --- Core Routes ---
 
@@ -117,7 +174,7 @@ app.post('/login', authLimiter, [
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
-    res.redirect('/login');
+    res.redirect('/');
   });
 });
 
@@ -164,47 +221,6 @@ app.post('/signup', authLimiter, [
   }
 });
 
-const calculateLongestStreak = (logs) => {
-    if (!logs || logs.length === 0) return 0;
-    if (logs.length === 1) return 1;
-    let maxStreak = 0;
-    let currentStreak = 1;
-    for (let i = 1; i < logs.length; i++) {
-        const prevDate = logs[i - 1].date;
-        const currentDate = logs[i].date;
-        const diffInDays = (currentDate.getTime() - prevDate.getTime()) / (1000 * 3600 * 24);
-        if (diffInDays === 1) {
-            currentStreak++;
-        } else if (diffInDays > 1) {
-            maxStreak = Math.max(maxStreak, currentStreak);
-            currentStreak = 1;
-        }
-    }
-    return Math.max(maxStreak, currentStreak);
-};
-
-const calculateCurrentStreak = (logs) => {
-    if (!logs || logs.length === 0) return 0;
-
-    let currentStreak = 0;
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const logDates = new Set(logs.map(log => log.date.getTime()));
-
-    let currentDate = yesterday;
-    while (logDates.has(currentDate.getTime())) {
-        currentStreak++;
-        currentDate.setDate(currentDate.getDate() - 1);
-    }
-
-    return currentStreak;
-};
-
-
 app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId);
@@ -214,7 +230,6 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
         });
     }
 
-    // Dynamically calculate XP and Level
     const { xp, level } = await calculateXpAndLevel(req.session.userId);
     user.xp = xp;
     user.level = level;
@@ -287,14 +302,12 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
   try {
     const userId = req.session.userId;
     const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     const achievements = await Achievement.find({ userId, achieved: true }).sort({ dateAchieved: 'desc' });
     const studyLogs = await StudyLog.find({ userId }).sort({ date: 'desc' });
 
-    const achievementHistory = achievements.map(ach => {
-      return `+${XP_FOR_ACHIEVEMENT} XP: Achievement unlocked - "${ach.name}"`;
-    });
-
+    const achievementHistory = achievements.map(ach => `+${XP_FOR_ACHIEVEMENT} XP: Achievement unlocked - "${ach.name}"`);
     const logHistory = [];
     studyLogs.forEach(log => {
       logHistory.push(`+${log.hours * XP_PER_HOUR} XP: Studied for ${log.hours} hours on ${log.date.toLocaleDateString()}`);
@@ -310,14 +323,15 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
   }
 });
 
-
-// --- Dynamic Achievement Logic & Other Routes ---
-
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
+      if (!user) {
+          return req.session.destroy(() => {
+            res.redirect('/login');
+          });
+      }
 
-      // Dynamically calculate XP and Level for display
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
@@ -347,36 +361,6 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     }
 });
   
-const reevaluateAchievements = async (userId) => {
-    const user = await User.findById(userId);
-    if (!user) return;
-    const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
-    const userAchievements = await Achievement.find({ userId });
-    const achievedIds = new Set(userAchievements.map(a => a.achievementId));
-
-    for (const achievement of achievementsList) {
-        const isAchievedInDB = achievedIds.has(achievement.id);
-        const userQualifies = achievement.check(allLogs, user);
-
-        if (userQualifies && !isAchievedInDB) {
-            await Achievement.findOneAndUpdate(
-                { userId, achievementId: achievement.id },
-                {
-                    name: achievement.name,
-                    description: achievement.description,
-                    achieved: true,
-                    dateAchieved: new Date(),
-                    notified: false,
-                    goalValueOnAchieved: achievement.type === 'goal' ? user.dailyGoalHours : undefined,
-                },
-                { upsert: true, new: true }
-            );
-        } else if (!userQualifies && isAchievedInDB) {
-            await Achievement.deleteOne({ userId, achievementId: achievement.id });
-        }
-    }
-};
-
 app.post('/add-study-log', authenticateUser, noCache, [
   body('date').isISO8601(),
   body('hours').isFloat({ min: 0, max: 24 })
@@ -407,7 +391,12 @@ app.post('/update-goal', authenticateUser, noCache, [
   body('dailyGoalHours').isFloat({ min: 0.5, max: 24 })
 ], async (req, res) => {
     const user = await User.findById(req.session.userId);
-    // Re-calculate XP for rendering the settings page with an error if validation fails
+    if (!user) {
+        return req.session.destroy(() => {
+          res.redirect('/login');
+        });
+    }
+
     const { xp, level } = await calculateXpAndLevel(req.session.userId);
     user.xp = xp;
     user.level = level;
@@ -431,8 +420,12 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
   try {
     const userId = req.session.userId;
     const user = await User.findById(userId);
+    if (!user) {
+        return req.session.destroy(() => {
+          res.redirect('/login');
+        });
+    }
 
-    // Dynamically calculate XP and Level for display
     const { xp, level } = await calculateXpAndLevel(userId);
     user.xp = xp;
     user.level = level;
@@ -474,8 +467,12 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
 app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
+      if (!user) {
+          return req.session.destroy(() => {
+            res.redirect('/login');
+          });
+      }
 
-      // Dynamically calculate XP and Level for display
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
@@ -565,6 +562,12 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
 app.get('/settings', authenticateUser, noCache, async (req, res) => {
     try {
       const user = await User.findById(req.session.userId);
+      if (!user) {
+          return req.session.destroy(() => {
+            res.redirect('/login');
+          });
+      }
+
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
@@ -583,7 +586,12 @@ app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
     await Achievement.deleteMany({ userId });
     
     const user = await User.findById(req.session.userId);
-    // Recalculate XP (which will be 0) to render the page
+    if (!user) {
+        return req.session.destroy(() => {
+          res.redirect('/login');
+        });
+    }
+
     const { xp, level } = await calculateXpAndLevel(req.session.userId);
     user.xp = xp;
     user.level = level;
@@ -606,6 +614,12 @@ app.post('/update-password', authenticateUser, noCache, [
   })
 ], async (req, res) => {
   const user = await User.findById(req.session.userId);
+  if (!user) {
+      return req.session.destroy(() => {
+        res.redirect('/login');
+      });
+  }
+
   const { xp, level } = await calculateXpAndLevel(req.session.userId);
   user.xp = xp;
   user.level = level;
@@ -630,9 +644,19 @@ app.post('/update-password', authenticateUser, noCache, [
 });
 
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// --- Database Connection & Server Start ---
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB Connected');
+    
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('Failed to connect to MongoDB', err);
+    process.exit(1);
+  });
 
 module.exports = app;
