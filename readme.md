@@ -2,7 +2,7 @@
 
 A full-stack, gamified web application built with Node.js, Express, and MongoDB to help you track daily study hours, visualize your progress, and stay motivated by earning XP and unlocking achievements.
 
-**Live Demo:** [**https://tracku.me/login**](https://tracku.me/login)
+**Live Demo:** [**https://tracku.me/**](https://tracku.me/)
 
 ---
 

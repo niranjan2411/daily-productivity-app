@@ -2,12 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
-const bodyParser = require('body-parser'); // Corrected this line
+const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const MongoStore = require('connect-mongo');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
+
+// UPDATED THIS LINE: Removed '.default'
+const dbConnect = require('./lib/dbConnect');
 
 const User = require('./models/User');
 const StudyLog = require('./models/StudyLog');
@@ -16,6 +19,7 @@ const { authenticateUser } = require('./middleware/auth');
 const { achievementsList, router: achievementRouter } = require('./routes/achievements');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // --- Middleware Setup ---
 app.set('view engine', 'ejs');
@@ -25,7 +29,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// Session Middleware is now initialized BEFORE routes
+// Session Middleware
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -33,6 +37,17 @@ app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: { maxAge: 10 * 24 * 60 * 60 * 1000, httpOnly: true }
 }));
+
+// Middleware to ensure DB connection is ready before any route
+app.use(async (req, res, next) => {
+  try {
+    await dbConnect();
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).send('Server is temporarily unavailable. Please try again later.');
+  }
+});
 
 const noCache = (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -47,7 +62,6 @@ const authLimiter = rateLimit({
 
 app.use('/api/achievements', achievementRouter);
 
-
 // --- DYNAMIC XP & Leveling Logic ---
 const XP_PER_HOUR = 10;
 const XP_FOR_GOAL = 50;
@@ -57,7 +71,6 @@ const XP_PER_LEVEL = 1000;
 const calculateXpAndLevel = async (userId) => {
     const user = await User.findById(userId);
     if (!user) return { xp: 0, level: 1 };
-
     const allLogs = await StudyLog.find({ userId });
     let xpFromLogs = 0;
     allLogs.forEach(log => {
@@ -66,12 +79,10 @@ const calculateXpAndLevel = async (userId) => {
             xpFromLogs += XP_FOR_GOAL;
         }
     });
-
     const achievements = await Achievement.find({ userId, achieved: true });
     const xpFromAchievements = achievements.length * XP_FOR_ACHIEVEMENT;
     const totalXp = Math.round(xpFromLogs + xpFromAchievements);
     const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
-
     return { xp: totalXp, level: Math.min(level, 100) };
 };
 
@@ -79,7 +90,7 @@ const calculateXpAndLevel = async (userId) => {
 const calculateLongestStreak = (logs) => {
     if (!logs || logs.length === 0) return 0;
     if (logs.length === 1) return 1;
-    let maxStreak = 0;
+    let maxStreak = 1;
     let currentStreak = 1;
     for (let i = 1; i < logs.length; i++) {
         const prevDate = logs[i - 1].date;
@@ -88,11 +99,11 @@ const calculateLongestStreak = (logs) => {
         if (diffInDays === 1) {
             currentStreak++;
         } else if (diffInDays > 1) {
-            maxStreak = Math.max(maxStreak, currentStreak);
             currentStreak = 1;
         }
+        maxStreak = Math.max(maxStreak, currentStreak);
     }
-    return Math.max(maxStreak, currentStreak);
+    return maxStreak;
 };
 
 const calculateCurrentStreak = (logs) => {
@@ -100,13 +111,12 @@ const calculateCurrentStreak = (logs) => {
     let currentStreak = 0;
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
     const logDates = new Set(logs.map(log => log.date.getTime()));
-    let currentDate = yesterday;
+    let currentDate = logDates.has(today.getTime()) ? today : new Date(new Date().setUTCDate(today.getUTCDate() - 1));
+    currentDate.setUTCHours(0,0,0,0);
     while (logDates.has(currentDate.getTime())) {
         currentStreak++;
-        currentDate.setDate(currentDate.getDate() - 1);
+        currentDate.setUTCDate(currentDate.getUTCDate() - 1);
     }
     return currentStreak;
 };
@@ -141,7 +151,6 @@ const reevaluateAchievements = async (userId) => {
 };
 
 // --- Core Routes ---
-
 app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
@@ -197,16 +206,13 @@ app.post('/signup', authLimiter, [
   if (!errors.isEmpty()) {
     return res.render('signup', { error: 'Invalid data provided', errors: errors.array() });
   }
-
   try {
     const { name, email, password } = req.body;
     if (await User.findOne({ email })) {
       return res.render('signup', { error: 'Email already registered', errors: [] });
     }
-
     const user = new User({ name, email, password });
     await user.save();
-
     req.session.userId = user._id;
     req.session.save((err) => {
       if (err) {
@@ -229,32 +235,25 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
           res.redirect('/login');
         });
     }
-
     const { xp, level } = await calculateXpAndLevel(req.session.userId);
     user.xp = xp;
     user.level = level;
-
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
     const todayLog = await StudyLog.findOne({ userId: req.session.userId, date: today });
-
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgo = new Date(new Date().setUTCDate(new Date().getUTCDate() - 30));
+    thirtyDaysAgo.setUTCHours(0,0,0,0);
     const recentLogs = await StudyLog.find({
       userId: req.session.userId,
       date: { $gte: thirtyDaysAgo }
     }).sort({ date: -1 });
-    
     const allLogs = await StudyLog.find({ userId: req.session.userId }).sort({ date: 'asc' });
-
     const consistencyLogs = allLogs.filter(log => log.hours > 0);
     const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
-
     const currentConsistencyStreak = calculateCurrentStreak(consistencyLogs);
     const currentGoalStreak = calculateCurrentStreak(goalLogs);
     const maxConsistencyStreak = calculateLongestStreak(consistencyLogs);
     const maxGoalStreak = calculateLongestStreak(goalLogs);
-
     const { totalHoursRange = 'alltime' } = req.query;
     const totalHoursMatch = { userId: user._id };
     let startDate = null;
@@ -277,9 +276,7 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
       { $match: totalHoursMatch },
       { $group: { _id: null, total: { $sum: '$hours' } } }
     ]);
-    
-    const achievementCount = await Achievement.countDocuments({ userId: req.session.userId, notified: false });
-
+    const achievementCount = await Achievement.countDocuments({ userId: req.session.userId, notified: false, achieved: true });
     res.render('dashboard', {
       user,
       todayHours: todayLog ? todayLog.hours : 0,
@@ -303,19 +300,16 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
     const userId = req.session.userId;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-
     const achievements = await Achievement.find({ userId, achieved: true }).sort({ dateAchieved: 'desc' });
     const studyLogs = await StudyLog.find({ userId }).sort({ date: 'desc' });
-
     const achievementHistory = achievements.map(ach => `+${XP_FOR_ACHIEVEMENT} XP: Achievement unlocked - "${ach.name}"`);
     const logHistory = [];
     studyLogs.forEach(log => {
-      logHistory.push(`+${log.hours * XP_PER_HOUR} XP: Studied for ${log.hours} hours on ${log.date.toLocaleDateString()}`);
+      logHistory.push(`+${Math.round(log.hours * XP_PER_HOUR)} XP: Studied for ${log.hours} hours on ${log.date.toLocaleDateString()}`);
       if (log.hours >= user.dailyGoalHours) {
         logHistory.push(`+${XP_FOR_GOAL} XP: Daily goal met on ${log.date.toLocaleDateString()}`);
       }
     });
-
     res.json({ achievements: achievementHistory, logs: logHistory });
   } catch (error) {
     console.error(error);
@@ -331,11 +325,9 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
             res.redirect('/login');
           });
       }
-
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
-
       let currentMonth;
       if (req.query.month) {
         const [year, month] = req.query.month.split('-').map(Number);
@@ -345,15 +337,12 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
         currentMonth.setUTCDate(1);
       }
       currentMonth.setUTCHours(0, 0, 0, 0);
-      
       const nextMonth = new Date(currentMonth);
       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
-
       const logs = await StudyLog.find({
         userId: req.session.userId,
         date: { $gte: currentMonth, $lt: nextMonth }
       });
-
       res.render('calendar', { user, logs, currentMonth, error: null });
     } catch (error) {
       console.error(error);
@@ -373,7 +362,6 @@ app.post('/add-study-log', authenticateUser, noCache, [
       const { date, hours } = req.body;
       const [year, month, day] = date.split('-').map(Number);
       const logDate = new Date(Date.UTC(year, month - 1, day));
-      
       await StudyLog.findOneAndUpdate(
         { userId: req.session.userId, date: logDate },
         { hours: parseFloat(hours) },
@@ -396,11 +384,9 @@ app.post('/update-goal', authenticateUser, noCache, [
           res.redirect('/login');
         });
     }
-
     const { xp, level } = await calculateXpAndLevel(req.session.userId);
     user.xp = xp;
     user.level = level;
-
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.render('settings', { user, success: null, error: 'Invalid goal value' });
@@ -425,11 +411,9 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
           res.redirect('/login');
         });
     }
-
     const { xp, level } = await calculateXpAndLevel(userId);
     user.xp = xp;
     user.level = level;
-
     const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
     const consistencyLogs = allLogs.filter(log => log.hours > 0);
     const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
@@ -440,11 +424,7 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
     const allAchievements = achievementsList.map(ach => {
       const isAchieved = achievedIds.has(ach.id);
       const doc = isAchieved ? achievedDocs.find(d => d.achievementId === ach.id) : null;
-      return {
-        ...ach,
-        achieved: isAchieved,
-        goalValueOnAchieved: doc ? doc.goalValueOnAchieved : null,
-      };
+      return { ...ach, achieved: isAchieved, goalValueOnAchieved: doc ? doc.goalValueOnAchieved : null };
     });
     const completed = allAchievements.filter(a => a.achieved);
     const yetToCompleteConsistency = allAchievements.filter(a => !a.achieved && a.type === 'consistency');
@@ -472,11 +452,9 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
             res.redirect('/login');
           });
       }
-
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
-
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       thirtyDaysAgo.setHours(0, 0, 0, 0);
@@ -491,9 +469,7 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
         userId: req.session.userId,
         date: { $gte: sevenDaysAgo }
       });
-      const weekAverage = weekLogs.length > 0
-        ? weekLogs.reduce((sum, log) => sum + log.hours, 0) / weekLogs.length
-        : 0;
+      const weekAverage = weekLogs.length > 0 ? weekLogs.reduce((sum, log) => sum + log.hours, 0) / 7 : 0;
       const monthTotal = logs.reduce((sum, log) => sum + log.hours, 0);
       res.render('analytics', {
         user,
@@ -512,22 +488,15 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
       const userId = req.session.userId;
       const { chart, startDate, endDate, month } = req.query;
       let data;
-
       switch (chart) {
           case 'dateRange':
-              data = await StudyLog.find({
-                  userId,
-                  date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-              }).sort({ date: 'asc' });
+              data = await StudyLog.find({ userId, date: { $gte: new Date(startDate), $lte: new Date(endDate) } }).sort({ date: 'asc' });
               break;
           case 'monthly':
               const [year, monthNum] = month.split('-').map(Number);
               const firstDay = new Date(Date.UTC(year, monthNum - 1, 1));
               const lastDay = new Date(Date.UTC(year, monthNum, 0));
-              data = await StudyLog.find({
-                  userId,
-                  date: { $gte: firstDay, $lte: lastDay }
-              }).sort({ date: 'asc' });
+              data = await StudyLog.find({ userId, date: { $gte: firstDay, $lte: lastDay } }).sort({ date: 'asc' });
               break;
           case 'dayOfWeek':
                const [yearD, monthNumD] = month.split('-').map(Number);
@@ -567,7 +536,6 @@ app.get('/settings', authenticateUser, noCache, async (req, res) => {
             res.redirect('/login');
           });
       }
-
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
@@ -584,18 +552,12 @@ app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
     const userId = req.session.userId;
     await StudyLog.deleteMany({ userId });
     await Achievement.deleteMany({ userId });
-    
     const user = await User.findById(req.session.userId);
     if (!user) {
         return req.session.destroy(() => {
           res.redirect('/login');
         });
     }
-
-    const { xp, level } = await calculateXpAndLevel(req.session.userId);
-    user.xp = xp;
-    user.level = level;
-
     res.render('settings', { user, success: 'All study data and achievements have been cleared', error: null });
   } catch (error) {
     console.error(error);
@@ -619,11 +581,9 @@ app.post('/update-password', authenticateUser, noCache, [
         res.redirect('/login');
       });
   }
-
   const { xp, level } = await calculateXpAndLevel(req.session.userId);
   user.xp = xp;
   user.level = level;
-
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.render('settings', { user, success: null, error: 'New passwords do not match' });
@@ -643,20 +603,12 @@ app.post('/update-password', authenticateUser, noCache, [
   }
 });
 
-
-// --- Database Connection & Server Start ---
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB Connected');
-    
-    const PORT = process.env.PORT || 3000;
+// --- Start Server for Local Development ---
+if (!process.env.VERCEL) {
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+        console.log(`Server running on http://localhost:${PORT}`);
     });
-  })
-  .catch(err => {
-    console.error('Failed to connect to MongoDB', err);
-    process.exit(1);
-  });
+}
 
+// Export the app for Vercel
 module.exports = app;
