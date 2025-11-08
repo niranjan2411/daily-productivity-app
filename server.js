@@ -30,6 +30,7 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 // Session Middleware
+// This will now correctly handle the DB connection non-blocking for public pages.
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -38,16 +39,21 @@ app.use(session({
   cookie: { maxAge: 10 * 24 * 60 * 60 * 1000, httpOnly: true }
 }));
 
-// Middleware to ensure DB connection is ready before any route
-app.use(async (req, res, next) => {
-  try {
-    await dbConnect();
-    next();
-  } catch (error) {
-    console.error('Database connection error:', error);
-    res.status(500).send('Server is temporarily unavailable. Please try again later.');
-  }
-});
+// --- THIS BLOCK WAS REMOVED ---
+// The redundant middleware block that caused the cold start timeout is gone.
+// Your MongoStore and Mongoose connection logic in dbConnect.js
+// already handle this caching and connection efficiently.
+//
+// app.use(async (req, res, next) => {
+//   try {
+//     await dbConnect();
+//     next();
+//   } catch (error) {
+//     console.error('Database connection error:', error);
+//     res.status(500).send('Server is temporarily unavailable. Please try again later.');
+//   }
+// });
+// --- END OF REMOVED BLOCK ---
 
 const noCache = (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -69,6 +75,9 @@ const XP_FOR_ACHIEVEMENT = 100;
 const XP_PER_LEVEL = 1000;
 
 const calculateXpAndLevel = async (userId) => {
+    // This function will implicitly use the cached dbConnect logic
+    // when it makes Mongoose calls (e.g., User.findById)
+    await dbConnect(); // Ensure DB is connected before Mongoose calls
     const user = await User.findById(userId);
     if (!user) return { xp: 0, level: 1 };
     const allLogs = await StudyLog.find({ userId });
@@ -123,6 +132,7 @@ const calculateCurrentStreak = (logs) => {
 
 // --- Achievement Re-evaluation ---
 const reevaluateAchievements = async (userId) => {
+    await dbConnect(); // Ensure DB is connected
     const user = await User.findById(userId);
     if (!user) return;
     const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
@@ -151,6 +161,7 @@ const reevaluateAchievements = async (userId) => {
 };
 
 // --- Core Routes ---
+// These routes are now session-aware *without* blocking for the DB.
 app.get('/', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
@@ -159,13 +170,27 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+  // This check will now work, as req.session exists
+  if (req.session.userId) {
+    return res.redirect('/dashboard');
+  }
   res.render('login', { error: null });
 });
 
+app.get('/signup', (req, res) => {
+  // This check will also work
+  if (req.session.userId) {
+    return res.redirect('/dashboard');
+  }
+  res.render('signup', { error: null, errors: [] });
+});
+
+// These routes will now trigger the DB connection if it's not already ready.
 app.post('/login', authLimiter, [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 })
 ], async (req, res) => {
+  await dbConnect(); // Ensure DB is connected before this specific logic
   const { email, password } = req.body;
   const user = await User.findOne({ email });
   if (!user || !(await user.comparePassword(password))) {
@@ -187,10 +212,6 @@ app.get('/logout', (req, res) => {
   });
 });
 
-app.get('/signup', (req, res) => {
-  res.render('signup', { error: null, errors: [] });
-});
-
 app.post('/signup', authLimiter, [
   body('name').trim().escape(),
   body('email').isEmail().normalizeEmail(),
@@ -202,6 +223,7 @@ app.post('/signup', authLimiter, [
     return true;
   })
 ], async (req, res) => {
+  await dbConnect(); // Ensure DB is connected before this specific logic
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.render('signup', { error: 'Invalid data provided', errors: errors.array() });
@@ -227,8 +249,12 @@ app.post('/signup', authLimiter, [
   }
 });
 
+// All routes below are protected by authenticateUser, which
+// will only be called *after* the session middleware is running.
+// They will also implicitly wait for the dbConnect cache.
 app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
   try {
+    await dbConnect(); // Ensure DB is connected
     const user = await User.findById(req.session.userId);
     if (!user) {
         return req.session.destroy(() => {
@@ -297,6 +323,7 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
 
 app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
   try {
+    await dbConnect(); // Ensure DB is connected
     const userId = req.session.userId;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -319,6 +346,7 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
 
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     try {
+      await dbConnect(); // Ensure DB is connected
       const user = await User.findById(req.session.userId);
       if (!user) {
           return req.session.destroy(() => {
@@ -359,6 +387,7 @@ app.post('/add-study-log', authenticateUser, noCache, [
       return res.status(400).send('Invalid data provided');
     }
     try {
+      await dbConnect(); // Ensure DB is connected
       const { date, hours } = req.body;
       const [year, month, day] = date.split('-').map(Number);
       const logDate = new Date(Date.UTC(year, month - 1, day));
@@ -378,6 +407,7 @@ app.post('/add-study-log', authenticateUser, noCache, [
 app.post('/update-goal', authenticateUser, noCache, [
   body('dailyGoalHours').isFloat({ min: 0.5, max: 24 })
 ], async (req, res) => {
+    await dbConnect(); // Ensure DB is connected
     const user = await User.findById(req.session.userId);
     if (!user) {
         return req.session.destroy(() => {
@@ -404,6 +434,7 @@ app.post('/update-goal', authenticateUser, noCache, [
 
 app.get('/achievements', authenticateUser, noCache, async (req, res) => {
   try {
+    await dbConnect(); // Ensure DB is connected
     const userId = req.session.userId;
     const user = await User.findById(userId);
     if (!user) {
@@ -446,6 +477,7 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
 
 app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     try {
+      await dbConnect(); // Ensure DB is connected
       const user = await User.findById(req.session.userId);
       if (!user) {
           return req.session.destroy(() => {
@@ -485,6 +517,7 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
 
 app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   try {
+      await dbConnect(); // Ensure DB is connected
       const userId = req.session.userId;
       const { chart, startDate, endDate, month } = req.query;
       let data;
@@ -530,6 +563,7 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   
 app.get('/settings', authenticateUser, noCache, async (req, res) => {
     try {
+      await dbConnect(); // Ensure DB is connected
       const user = await User.findById(req.session.userId);
       if (!user) {
           return req.session.destroy(() => {
@@ -549,6 +583,7 @@ app.get('/settings', authenticateUser, noCache, async (req, res) => {
 
 app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
   try {
+    await dbConnect(); // Ensure DB is connected
     const userId = req.session.userId;
     await StudyLog.deleteMany({ userId });
     await Achievement.deleteMany({ userId });
@@ -575,6 +610,7 @@ app.post('/update-password', authenticateUser, noCache, [
     return true;
   })
 ], async (req, res) => {
+  await dbConnect(); // Ensure DB is connected
   const user = await User.findById(req.session.userId);
   if (!user) {
       return req.session.destroy(() => {
