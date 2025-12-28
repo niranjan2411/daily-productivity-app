@@ -8,6 +8,7 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
+  <%- include('partials/loader') %>
   <div class="container">
     <div class="form-box">
       <h1>Create Account</h1>
@@ -51,7 +52,6 @@
       }
       validatePasswords();
     });
-
     confirmPasswordInput.addEventListener('input', validatePasswords);
 
     function validatePasswords() {

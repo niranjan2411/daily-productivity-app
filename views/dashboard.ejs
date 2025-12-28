@@ -8,6 +8,7 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
+  <%- include('partials/loader') %>
   <nav class="navbar">
     <h2>Productivity Tracker</h2>
     <div class="nav-links">
@@ -104,7 +105,6 @@
         </svg></a>
       </div>
 
-   
         <div class="stat-card">
         <h3>Total Hours</h3>
         <p class="stat-number"><%= totalHours.toFixed(1) %>h</p>
@@ -127,7 +127,7 @@
       <h2>Recent Activity</h2>
       <% if (recentLogs.length > 0) { %>
         <table>
-            <thead>
+          <thead>
             <tr>
               <th>Date</th>
               <th>Hours</th>
@@ -135,7 +135,7 @@
             </tr>
           </thead>
           <tbody>
-          <% recentLogs.slice(0, 10).forEach(log => { %>
+            <% recentLogs.slice(0, 10).forEach(log => { %>
               <tr>
                 <td><%= log.date.toLocaleDateString() %></td>
                 <td><%= log.hours.toFixed(1) %>h</td>
@@ -146,7 +146,7 @@
                 </td>
               </tr>
             <% }) %>
-            </tbody>
+          </tbody>
         </table>
       <% } else { %>
         <p>No activity recorded yet. Start tracking your productivity!</p>
@@ -164,12 +164,10 @@
       const selectedRange = this.value;
       window.location.href = `/dashboard?totalHoursRange=${selectedRange}`;
     });
-
     const xpCounter = document.getElementById('xp-counter');
     const xpPopup = document.getElementById('xp-history-popup');
     const xpPopupClose = document.getElementById('xp-popup-close');
     const xpHistoryList = document.getElementById('xp-history-list');
-
     xpCounter.addEventListener('click', async () => {
       try {
         const response = await fetch('/api/xp-history');
@@ -208,7 +206,6 @@
     xpPopupClose.addEventListener('click', () => {
       xpPopup.style.display = 'none';
     });
-
     window.addEventListener('click', (event) => {
       if (event.target == xpPopup) {
         xpPopup.style.display = 'none';
