@@ -1,3 +1,4 @@
+<% if (!partial) { %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,62 +8,79 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <style>
-    /* Responsive Summary Section */
-    .calendar-header {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
+    #calendar-container { position: relative; min-height: 400px; }
+    .loader-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 10, 10, 0.7); display: none;
+      justify-content: center; align-items: center; z-index: 10;
+      border-radius: 20px; backdrop-filter: blur(2px);
     }
-
-    .header-main {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
+    .spinner {
+      width: 40px; height: 40px; border: 4px solid rgba(255, 215, 0, 0.1);
+      border-top: 4px solid #FFD700; border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
-
-    .month-summary {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      max-width: 600px;
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .calendar-header { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .header-main { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    
+    .month-summary { 
+      display: flex; 
+      justify-content: center; 
+      gap: 8px; 
+      width: 100%; 
+      max-width: 500px; 
     }
-
-    .summary-item {
-      background: rgba(255, 215, 0, 0.1);
-      padding: 6px 4px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 215, 0, 0.3);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-      min-width: 0;
+    
+    .summary-item { 
+      background: rgba(255, 215, 0, 0.1); 
+      padding: 8px 4px; 
+      border-radius: 8px; 
+      border: 1px solid rgba(255, 215, 0, 0.3); 
+      flex: 1; 
+      min-width: 0; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
     }
-
-    .summary-label {
-      color: var(--text-gray);
-      font-size: 0.6rem;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+    
+    .summary-label { 
+      color: #b0b0b0; 
+      font-size: 0.65rem; 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px;
       margin-bottom: 2px;
       text-align: center;
     }
-
-    .summary-value {
-      color: var(--primary-yellow);
-      font-weight: bold;
-      font-size: 0.9rem;
+    
+    .summary-value { 
+      color: #FFD700; 
+      font-weight: bold; 
+      font-size: 0.95rem; 
     }
 
+
     @media (max-width: 480px) {
-      .summary-value { font-size: 0.8rem; }
-      .summary-label { font-size: 0.55rem; }
-      .calendar-header h2 { font-size: 1.2rem; }
-      .month-summary { gap: 5px; }
+      .calendar-view {
+        padding: 15px 10px;
+      }
+      .summary-item {
+        padding: 6px 2px;
+      }
+      .summary-value {
+        font-size: 0.8rem;
+      }
+      .summary-label {
+        font-size: 0.55rem;
+        letter-spacing: 0;
+      }
+      .calendar-header h2 {
+        font-size: 1.2rem;
+      }
+      .month-summary {
+        gap: 5px;
+      }
     }
   </style>
 </head>
@@ -80,22 +98,22 @@
 
   <div class="container">
     <h1>Study Hour Calendar</h1>
-    <a type="button" href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block;text-decoration: none; padding: 5px;position:absolute; color:#ffd900;background-color: rgba(255, 255, 255, 0.49);border: 2px white solid;border-radius: 10px;">Start the Stopwatch </a>
+    <a href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block; text-decoration: none; padding: 5px; color:#ffd900; background-color: rgba(255, 255, 255, 0.1); border: 1px solid white; border-radius: 10px;">Start Stopwatch</a>
     <br><br>
     
     <div class="add-log-form">
-      <h2>Add/Update Study Hours</h2>
+      <h2>Add/Update Hours</h2>
       <% if (error) { %>
         <div class="error" style="margin-bottom: 20px;"><%= error %></div>
       <% } %>
-      <form action="/add-study-log" method="POST" id="logForm">
+      <form id="logForm">
         <div class="form-row">
           <div class="form-group">
-            <label for="date" style="margin-top: 5px;">Date</label>
+            <label for="date">Date</label>
             <input type="date" id="date" name="date" required>
           </div>
           <div class="form-group">
-            <label for="hours">Hours Studied</label>
+            <label for="hours">Hours</label>
             <input type="number" id="hours" name="hours" step="0.5" min="0" max="24" required>
           </div>
         </div>
@@ -103,26 +121,30 @@
       </form>
     </div>
 
-    <div class="calendar-view">
-      <% 
-        const getMonthString = (date) => {
-          const year = date.getUTCFullYear();
-          const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-          return `${year}-${month}`;
-        };
+    <div id="calendar-container">
+      <div class="loader-overlay" id="loader"><div class="spinner"></div></div>
+      
+      <div id="calendar-content" class="calendar-view">
+<% } %>
 
-        const prevMonthDate = new Date(currentMonth);
-        prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
-        const prevMonthString = getMonthString(prevMonthDate);
+        <% 
+          const getMonthString = (date) => {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            return `${year}-${month}`;
+          };
+          const prevMonthDate = new Date(currentMonth);
+          prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
+          const prevMonthString = getMonthString(prevMonthDate);
 
-        const nextMonthDate = new Date(currentMonth);
-        nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
-        const nextMonthString = getMonthString(nextMonthDate);
-        const today = new Date();
-        const isFutureMonth = nextMonthDate.getUTCFullYear() > today.getUTCFullYear() || 
-                             (nextMonthDate.getUTCFullYear() === today.getUTCFullYear() && nextMonthDate.getUTCMonth() > today.getUTCMonth());
-        
-        const getHeatmapColor = (hours, goal) => {
+          const nextMonthDate = new Date(currentMonth);
+          nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+          const nextMonthString = getMonthString(nextMonthDate);
+          const todayDate = new Date();
+          const isFutureMonth = nextMonthDate.getUTCFullYear() > todayDate.getUTCFullYear() || 
+                              (nextMonthDate.getUTCFullYear() === todayDate.getUTCFullYear() && nextMonthDate.getUTCMonth() > todayDate.getUTCMonth());
+          
+          const getHeatmapColor = (hours, goal) => {
             if (hours === 0) return 'rgba(220, 53, 69, 0.9)';
             if (hours < goal) {
                 const opacity = 0.8 - (hours / goal) * 0.6;
@@ -133,63 +155,63 @@
             if (excessPercentage < 1.75) return '#26a641';
             if (excessPercentage < 2.5) return '#006d32';
             return '#0e4429';
-        };
-      %>
-
-      <div class="calendar-header">
-        <div class="header-main">
-          <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
-          <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
-          <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
-             class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
-        </div>
-        
-        <div class="month-summary">
-          <div class="summary-item">
-            <span class="summary-label">Total</span>
-            <span class="summary-value" id="monthTotal">0.0h</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Days Logged</span>
-            <span class="summary-value" id="monthDays">0</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Avg/Day</span>
-            <span class="summary-value" id="monthAvg">0.00h</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="calendar-grid">
-        <% 
-          const daysInMonth = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0).getDate();
-          for (let day = 1; day <= daysInMonth; day++) {
-            const log = logs.find(l => new Date(l.date).getUTCDate() === day);
-            const hasLog = log !== undefined;
-            const hours = hasLog ? log.hours : -1;
-            const color = hasLog ? getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
+          };
         %>
-          <div class="calendar-day" style="background-color: <%= color %>;">
-            <div class="day-number"><%= day %></div>
-            <% if (hasLog) { %>
-              <div class="day-hours" style="border: 1px solid white; border-radius: 10%; padding:5px ">
-                <%= hours.toFixed(1) %>h
-              </div>
-            <% } %>
+
+        <div class="calendar-header">
+          <div class="header-main">
+            <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
+            <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
+            <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
+              class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
           </div>
-        <% } %>
-      </div>
-    </div>
-  
-    <div class="legend">
+          
+          <div class="month-summary">
+            <div class="summary-item">
+              <span class="summary-label">Total Hours</span>
+              <span class="summary-value" id="monthTotal">0.0h</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Days Logged</span>
+              <span class="summary-value" id="monthDays">0</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Avg/Day</span>
+              <span class="summary-value" id="monthAvg">0.00h</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calendar-grid">
+          <% 
+            const daysInMonth = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+              const log = logs.find(l => new Date(l.date).getUTCDate() === day);
+              const hasLog = log !== undefined;
+              const hours = hasLog ? log.hours : -1;
+              const color = hasLog ? getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
+          %>
+            <div class="calendar-day" style="background-color: <%= color %>;">
+              <div class="day-number"><%= day %></div>
+              <% if (hasLog) { %>
+                <div class="day-hours" style="border: 1px solid white; border-radius: 10%; padding:5px ">
+                  <%= hours.toFixed(1) %>h
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+
+<% if (!partial) { %>
+      </div> </div> <div class="legend">
         <div class="legend-item">
-            <span class="legend-text">0h</span>
+            <span class="legend-text">0 hours</span>
             <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.9);"></span>
             <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.2);"></span>
             <span class="legend-text">Near Goal</span>
         </div>
         <div class="legend-item">
-            <span class="legend-text">Met</span>
+            <span class="legend-text">Goal Met</span>
             <span class="legend-color" style="background-color: #39d353;"></span>
             <span class="legend-color" style="background-color: #26a641;"></span>
             <span class="legend-color" style="background-color: #006d32;"></span>
@@ -200,35 +222,72 @@
   </div>
 
   <script>
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-    document.getElementById('date').value = todayString;
-    document.getElementById('date').setAttribute('max', todayString);
+    const loader = document.getElementById('loader');
+    const content = document.getElementById('calendar-content');
+    const logForm = document.getElementById('logForm');
 
-    function calculateMonthStats() {
-      // Logic from your perfect initial version: find elements with the .day-hours class
-      const hourElements = document.querySelectorAll('.day-hours');
-      let totalHours = 0;
-      let loggedDays = 0;
-
-      hourElements.forEach(el => {
-        // Extract number from "X.Xh" format
-        const h = parseFloat(el.innerText.replace('h', ''));
-        if (!isNaN(h)) {
-          totalHours += h;
-          loggedDays++;
-        }
-      });
-
-      const average = loggedDays > 0 ? (totalHours / loggedDays) : 0;
-
-      document.getElementById('monthTotal').innerText = totalHours.toFixed(1) + 'h';
-      document.getElementById('monthDays').innerText = loggedDays;
-      document.getElementById('monthAvg').innerText = average.toFixed(2) + 'h';
+    async function updateCalendar(monthParam = '') {
+      loader.style.display = 'flex';
+      try {
+        const response = await fetch(`/calendar?month=${monthParam}&partial=true`);
+        const html = await response.text();
+        content.innerHTML = html;
+        calculateMonthStats();
+      } catch (err) {
+        console.error('Update failed', err);
+      } finally {
+        loader.style.display = 'none';
+      }
     }
 
-    // Run on load
-    document.addEventListener('DOMContentLoaded', calculateMonthStats);
+    logForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new URLSearchParams(new FormData(logForm));
+      loader.style.display = 'flex';
+      try {
+        const response = await fetch('/add-study-log', {
+          method: 'POST', body: formData,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        const urlParams = new URLSearchParams(window.location.search);
+        await updateCalendar(urlParams.get('month') || '');
+        logForm.reset();
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+      } finally {
+        loader.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const navLink = e.target.closest('.month-nav');
+      if (navLink && navLink.getAttribute('href') !== '#') {
+        e.preventDefault();
+        const url = new URL(navLink.href, window.location.origin);
+        const month = url.searchParams.get('month');
+        window.history.pushState({}, '', navLink.href);
+        updateCalendar(month || '');
+      }
+    });
+
+    function calculateMonthStats() {
+      const hourElements = document.querySelectorAll('.day-hours');
+      let total = 0, days = 0;
+      hourElements.forEach(el => {
+        const h = parseFloat(el.innerText.replace('h', ''));
+        if (!isNaN(h)) { total += h; days++; }
+      });
+      document.getElementById('monthTotal').innerText = total.toFixed(1) + 'h';
+      document.getElementById('monthDays').innerText = days;
+      document.getElementById('monthAvg').innerText = (days > 0 ? total/days : 0).toFixed(2) + 'h';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        calculateMonthStats();
+        const todayString = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = todayString;
+        document.getElementById('date').setAttribute('max', todayString);
+    });
   </script>
 </body>
 </html>
+<% } %>
