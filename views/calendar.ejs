@@ -6,6 +6,65 @@
   <title>Calendar - Productivity Tracker</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <style>
+    /* Responsive Summary Section */
+    .calendar-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .header-main {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .month-summary {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .summary-item {
+      background: rgba(255, 215, 0, 0.1);
+      padding: 6px 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .summary-label {
+      color: var(--text-gray);
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+      text-align: center;
+    }
+
+    .summary-value {
+      color: var(--primary-yellow);
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 480px) {
+      .summary-value { font-size: 0.8rem; }
+      .summary-label { font-size: 0.55rem; }
+      .calendar-header h2 { font-size: 1.2rem; }
+      .month-summary { gap: 5px; }
+    }
+  </style>
 </head>
 <body>
   <nav class="navbar">
@@ -22,23 +81,19 @@
   <div class="container">
     <h1>Study Hour Calendar</h1>
     <a type="button" href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block;text-decoration: none; padding: 5px;position:absolute; color:#ffd900;background-color: rgba(255, 255, 255, 0.49);border: 2px white solid;border-radius: 10px;">Start the Stopwatch </a>
-    <br>
-    <br>
+    <br><br>
     
-    
- 
-<div class="add-log-form">
+    <div class="add-log-form">
       <h2>Add/Update Study Hours</h2>
       <% if (error) { %>
         <div class="error" style="margin-bottom: 20px;"><%= error %></div>
       <% } %>
-      <form action="/add-study-log" method="POST">
+      <form action="/add-study-log" method="POST" id="logForm">
         <div class="form-row">
           <div class="form-group">
             <label for="date" style="margin-top: 5px;">Date</label>
             <input type="date" id="date" name="date" required>
-   
-       </div>
+          </div>
           <div class="form-group">
             <label for="hours">Hours Studied</label>
             <input type="number" id="hours" name="hours" step="0.5" min="0" max="24" required>
@@ -49,8 +104,7 @@
     </div>
 
     <div class="calendar-view">
-      
-<% 
+      <% 
         const getMonthString = (date) => {
           const year = date.getUTCFullYear();
           const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -64,35 +118,46 @@
         const nextMonthDate = new Date(currentMonth);
         nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
         const nextMonthString = getMonthString(nextMonthDate);
-
         const today = new Date();
         const isFutureMonth = nextMonthDate.getUTCFullYear() > today.getUTCFullYear() || 
                              (nextMonthDate.getUTCFullYear() === today.getUTCFullYear() && nextMonthDate.getUTCMonth() > today.getUTCMonth());
-
+        
         const getHeatmapColor = (hours, goal) => {
-            if (hours === 0) return 'rgba(220, 53, 69, 0.9)'; // Bright red for 0 hours
-
-            // Below Goal: Red with varying opacity
+            if (hours === 0) return 'rgba(220, 53, 69, 0.9)';
             if (hours < goal) {
-                // Opacity is higher for fewer hours (closer to 0) and lower for hours closer to the goal
-                const opacity = 0.8 - (hours / goal) * 0.6; 
+                const opacity = 0.8 - (hours / goal) * 0.6;
                 return `rgba(220, 53, 69, ${opacity.toFixed(2)})`;
             }
-
-            // At or Above Goal: GitHub-style green shades
             const excessPercentage = (hours / goal);
             if (excessPercentage < 1.25) return '#39d353';
             if (excessPercentage < 1.75) return '#26a641';
             if (excessPercentage < 2.5) return '#006d32';
             return '#0e4429';
         };
-%>
+      %>
 
       <div class="calendar-header">
-        <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
-        <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
-        <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
-           class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
+        <div class="header-main">
+          <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
+          <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
+          <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
+             class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
+        </div>
+        
+        <div class="month-summary">
+          <div class="summary-item">
+            <span class="summary-label">Total</span>
+            <span class="summary-value" id="monthTotal">0.0h</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Days Logged</span>
+            <span class="summary-value" id="monthDays">0</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Avg/Day</span>
+            <span class="summary-value" id="monthAvg">0.00h</span>
+          </div>
+        </div>
       </div>
 
       <div class="calendar-grid">
@@ -101,29 +166,30 @@
           for (let day = 1; day <= daysInMonth; day++) {
             const log = logs.find(l => new Date(l.date).getUTCDate() === day);
             const hasLog = log !== undefined;
-            const hours = hasLog ? log.hours : -1; // Use -1 to signify no log
+            const hours = hasLog ? log.hours : -1;
             const color = hasLog ? getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
         %>
           <div class="calendar-day" style="background-color: <%= color %>;">
             <div class="day-number"><%= day %></div>
             <% if (hasLog) { %>
-              <div class="day-hours" style="border: 1px solid white;border-radius: 10%; padding:5px "><%= hours.toFixed(1) %>h</div>
+              <div class="day-hours" style="border: 1px solid white; border-radius: 10%; padding:5px ">
+                <%= hours.toFixed(1) %>h
+              </div>
             <% } %>
- 
-         </div>
+          </div>
         <% } %>
       </div>
     </div>
   
     <div class="legend">
         <div class="legend-item">
-            <span class="legend-text">0 hours</span>
+            <span class="legend-text">0h</span>
             <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.9);"></span>
             <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.2);"></span>
             <span class="legend-text">Near Goal</span>
         </div>
         <div class="legend-item">
-            <span class="legend-text">Goal Met</span>
+            <span class="legend-text">Met</span>
             <span class="legend-color" style="background-color: #39d353;"></span>
             <span class="legend-color" style="background-color: #26a641;"></span>
             <span class="legend-color" style="background-color: #006d32;"></span>
@@ -135,13 +201,34 @@
 
   <script>
     const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const todayString = `${yyyy}-${mm}-${dd}`;
-    const dateInput = document.getElementById('date');
-    dateInput.value = todayString;
-    dateInput.setAttribute('max', todayString);
+    const todayString = today.toISOString().split('T')[0];
+    document.getElementById('date').value = todayString;
+    document.getElementById('date').setAttribute('max', todayString);
+
+    function calculateMonthStats() {
+      // Logic from your perfect initial version: find elements with the .day-hours class
+      const hourElements = document.querySelectorAll('.day-hours');
+      let totalHours = 0;
+      let loggedDays = 0;
+
+      hourElements.forEach(el => {
+        // Extract number from "X.Xh" format
+        const h = parseFloat(el.innerText.replace('h', ''));
+        if (!isNaN(h)) {
+          totalHours += h;
+          loggedDays++;
+        }
+      });
+
+      const average = loggedDays > 0 ? (totalHours / loggedDays) : 0;
+
+      document.getElementById('monthTotal').innerText = totalHours.toFixed(1) + 'h';
+      document.getElementById('monthDays').innerText = loggedDays;
+      document.getElementById('monthAvg').innerText = average.toFixed(2) + 'h';
+    }
+
+    // Run on load
+    document.addEventListener('DOMContentLoaded', calculateMonthStats);
   </script>
 </body>
 </html>
