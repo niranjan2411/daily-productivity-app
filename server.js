@@ -467,45 +467,7 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
   }
 });
 
-app.get('/analytics', authenticateUser, noCache, async (req, res) => {
-    try {
-      await dbConnect();
-      const user = await User.findById(req.session.userId);
-      if (!user) {
-          return req.session.destroy(() => {
-            res.redirect('/login');
-          });
-      }
-      const { xp, level } = await calculateXpAndLevel(req.session.userId);
-      user.xp = xp;
-      user.level = level;
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      thirtyDaysAgo.setHours(0, 0, 0, 0);
-      const logs = await StudyLog.find({
-        userId: req.session.userId,
-        date: { $gte: thirtyDaysAgo }
-      }).sort({ date: 1 });
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
-      const weekLogs = await StudyLog.find({
-        userId: req.session.userId,
-        date: { $gte: sevenDaysAgo }
-      });
-      const weekAverage = weekLogs.length > 0 ? weekLogs.reduce((sum, log) => sum + log.hours, 0) / 7 : 0;
-      const monthTotal = logs.reduce((sum, log) => sum + log.hours, 0);
-      res.render('analytics', {
-        user,
-        logs,
-        weekAverage: weekAverage.toFixed(2),
-        monthTotal: monthTotal.toFixed(2)
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send('Server error');
-    }
-});
+
 
 app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   try {
@@ -513,42 +475,12 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
       const userId = req.session.userId;
       const { chart, startDate, endDate, month, range } = req.query;
       let data = [];
-      const now = new Date();
-      const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-
-      // SAFETY: Explicitly cast userId to string before using in ObjectId
+      
+      // Used for charts other than distribution
       const userObjectId = new mongoose.Types.ObjectId(String(userId));
 
-      const getLogs = async (start, end) => {
-        return await StudyLog.aggregate([
-            { $match: { userId: userObjectId, date: { $gte: start, $lte: end } } },
-            { $sort: { date: 1 } }
-        ]);
-      };
-
-      const groupByDay = (logs) => {
-        const map = new Map();
-        logs.forEach(log => {
-            const d = log.date.toISOString().split('T')[0];
-            map.set(d, (map.get(d) || 0) + log.hours);
-        });
-        return Array.from(map.entries()).map(([date, hours]) => ({ date, hours })).sort((a,b) => new Date(a.date) - new Date(b.date));
-      };
-
-      const groupByMonth = async (start, end) => {
-        return await StudyLog.aggregate([
-            { $match: { userId: userObjectId, date: { $gte: start, $lte: end } } },
-            { 
-                $group: { 
-                    _id: { year: { $year: "$date" }, month: { $month: "$date" } }, 
-                    total: { $sum: "$hours" } 
-                } 
-            },
-            { $sort: { "_id.year": 1, "_id.month": 1 } }
-        ]);
-      };
-
       switch (chart) {
+          // --- EXISTING CASES (Unchanged) ---
           case 'dateRange':
               data = await StudyLog.find({ userId, date: { $gte: new Date(startDate), $lte: new Date(endDate) } }).sort({ date: 'asc' });
               break;
@@ -572,72 +504,77 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
                const [yearG, monthNumG] = month.split('-').map(Number);
                const firstDayG = new Date(Date.UTC(yearG, monthNumG - 1, 1));
                const lastDayG = new Date(Date.UTC(yearG, monthNumG, 0));
-              const user = await User.findById(userId);
+              const userGoal = await User.findById(userId);
               const logs = await StudyLog.find({ userId, date: { $gte: firstDayG, $lte: lastDayG } });
-              const met = logs.filter(log => log.hours >= user.dailyGoalHours).length;
+              const met = logs.filter(log => log.hours >= userGoal.dailyGoalHours).length;
               const notMet = logs.length - met;
               data = { met, notMet };
               break;
-          
-          // NEW CASE: Distribution
+
+          // --- FIXED DISTRIBUTION LOGIC (MATCHING DASHBOARD) ---
           case 'distribution':
-              let startDist, endDist;
-              endDist = new Date(today);
-              endDist.setUTCHours(23, 59, 59, 999);
-              
-              if (range === 'this_week') {
-                  const day = today.getUTCDay(); // 0 (Sun) to 6 (Sat)
-                  const diff = today.getUTCDate() - day + (day === 0 ? -6 : 1); 
-                  startDist = new Date(today);
-                  startDist.setUTCDate(diff);
-                  startDist.setUTCHours(0,0,0,0);
-                  const logs = await getLogs(startDist, endDist);
-                  data = groupByDay(logs);
-              } else if (range === 'past_week') {
-                  const day = today.getUTCDay();
-                  const diff = today.getUTCDate() - day + (day === 0 ? -6 : 1) - 7;
-                  startDist = new Date(today);
-                  startDist.setUTCDate(diff);
-                  startDist.setUTCHours(0,0,0,0);
-                  endDist = new Date(startDist);
-                  endDist.setUTCDate(startDist.getUTCDate() + 6);
-                  endDist.setUTCHours(23,59,59,999);
-                  const logs = await getLogs(startDist, endDist);
-                  data = groupByDay(logs);
-              } else if (range === 'this_month') {
-                  startDist = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
-                  const logs = await getLogs(startDist, endDist);
-                  data = groupByDay(logs);
-              } else if (range === 'past_month') {
-                  startDist = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
-                  endDist = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
-                  const logs = await getLogs(startDist, endDist);
-                  data = groupByDay(logs);
+              // 1. Fetch User strictly to get the correct ObjectId
+              const userDist = await User.findById(req.session.userId);
+              if (!userDist) return res.status(401).json({ error: 'User not found' });
+
+              const now = new Date();
+              let matchQuery = { userId: userDist._id }; // Use user._id from DB document
+              let label = 'Total Hours';
+              let divisor = 1;
+
+              // 2. Exact Dashboard Date Logic
+              // Dashboard uses: new Date(new Date().setDate(now.getDate() - 7))
+              // We replicate this to ensure consistency.
+
+              if (range === 'past_7_days' || range === 'average_7_days') {
+                  const d = new Date(now);
+                  d.setDate(d.getDate() - 7); 
+                  matchQuery.date = { $gte: d };
+                  label = range.includes('average') ? 'Daily Average (7 Days)' : 'Total Hours (7 Days)';
+                  divisor = range.includes('average') ? 7 : 1;
+
+              } else if (range === 'recent_30_days' || range === 'average_30_days') {
+                  const d = new Date(now);
+                  d.setDate(d.getDate() - 30);
+                  matchQuery.date = { $gte: d };
+                  label = range.includes('average') ? 'Daily Average (30 Days)' : 'Total Hours (30 Days)';
+                  divisor = range.includes('average') ? 30 : 1;
+
               } else if (range === 'past_6_months') {
-                  startDist = new Date(today);
-                  startDist.setUTCMonth(startDist.getUTCMonth() - 6);
-                  startDist.setUTCDate(1);
-                  data = await groupByMonth(startDist, endDist);
-              } else if (range === 'past_year') {
-                  startDist = new Date(today);
-                  startDist.setUTCFullYear(startDist.getUTCFullYear() - 1);
-                  startDist.setUTCDate(1);
-                  data = await groupByMonth(startDist, endDist);
-              } else if (range === 'all_time') {
-                  data = await StudyLog.aggregate([
-                      { $match: { userId: userObjectId } },
-                      { 
-                          $group: { 
-                              _id: { year: { $year: "$date" }, month: { $month: "$date" } }, 
-                              total: { $sum: "$hours" } 
-                          } 
-                      },
-                      { $sort: { "_id.year": 1, "_id.month": 1 } }
-                  ]);
+                  const d = new Date(now);
+                  d.setMonth(d.getMonth() - 6);
+                  matchQuery.date = { $gte: d };
+                  label = 'Total Hours (6 Months)';
+                  divisor = 1;
+
+              } else if (range === 'all_time_hours' || range === 'average_all_time') {
+                  // No date filter for all time
+                  label = range.includes('average') ? 'Daily Average (All Time)' : 'Total Hours (All Time)';
+                  if (range.includes('average')) {
+                      // Calculate active days for accurate average
+                      const firstLog = await StudyLog.findOne({ userId: userDist._id }).sort({ date: 1 });
+                      if (firstLog) {
+                          const diff = now - firstLog.date;
+                          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                          divisor = days > 0 ? days : 1;
+                      }
+                  }
               }
+
+              // 3. Aggregation
+              const aggResult = await StudyLog.aggregate([
+                  { $match: matchQuery },
+                  { $group: { _id: null, total: { $sum: '$hours' } } }
+              ]);
+
+              // 4. Calculate Final Value
+              const totalVal = aggResult.length > 0 ? aggResult[0].total : 0;
+              const finalVal = totalVal / divisor;
+
+              // 5. Return Data strictly formatted
+              data = [{ label: label, value: parseFloat(finalVal.toFixed(1)) }];
               break;
           
-          // NEW CASE: Scrollable History
           case 'monthly_history':
               data = await StudyLog.aggregate([
                   { $match: { userId: userObjectId } },
