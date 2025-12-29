@@ -237,15 +237,23 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
     const { xp, level } = await calculateXpAndLevel(req.session.userId);
     user.xp = xp;
     user.level = level;
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const todayLog = await StudyLog.findOne({ userId: req.session.userId, date: today });
-    const thirtyDaysAgo = new Date(new Date().setUTCDate(new Date().getUTCDate() - 30));
-    thirtyDaysAgo.setUTCHours(0,0,0,0);
+    
+    // --- UTC SAFE DATE LOGIC ---
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    // Today's log
+    const todayLog = await StudyLog.findOne({ userId: req.session.userId, date: todayUTC });
+
+    // Recent Logs (Last 30 days UTC)
+    const thirtyDaysAgo = new Date(todayUTC);
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+    
     const recentLogs = await StudyLog.find({
       userId: req.session.userId,
       date: { $gte: thirtyDaysAgo }
     }).sort({ date: -1 });
+
     const allLogs = await StudyLog.find({ userId: req.session.userId }).sort({ date: 'asc' });
     const consistencyLogs = allLogs.filter(log => log.hours > 0);
     const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
@@ -253,19 +261,23 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
     const currentGoalStreak = calculateCurrentStreak(goalLogs);
     const maxConsistencyStreak = calculateLongestStreak(consistencyLogs);
     const maxGoalStreak = calculateLongestStreak(goalLogs);
+    
     const { totalHoursRange = 'alltime' } = req.query;
     const totalHoursMatch = { userId: user._id };
     let startDate = null;
-    const now = new Date();
+
     switch (totalHoursRange) {
       case '7days':
-        startDate = new Date(new Date().setDate(now.getDate() - 7));
+        startDate = new Date(todayUTC);
+        startDate.setUTCDate(startDate.getUTCDate() - 7);
         break;
       case '1month':
-        startDate = new Date(new Date().setMonth(now.getMonth() - 1));
+        startDate = new Date(todayUTC);
+        startDate.setUTCMonth(startDate.getUTCMonth() - 1);
         break;
       case '6months':
-        startDate = new Date(new Date().setMonth(now.getMonth() - 6));
+        startDate = new Date(todayUTC);
+        startDate.setUTCMonth(startDate.getUTCMonth() - 6);
         break;
     }
     if (startDate) {
@@ -348,7 +360,6 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
         date: { $gte: currentMonth, $lt: nextMonth }
       });
 
-      // --- FIX: Check for partial request ---
       const isPartial = req.query.partial === 'true';
 
       res.render('calendar', { 
@@ -356,7 +367,7 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
           logs, 
           currentMonth, 
           error: null,
-          partial: isPartial // Pass this to EJS
+          partial: isPartial 
       });
     } catch (error) {
       console.error(error);
@@ -384,7 +395,6 @@ app.post('/add-study-log', authenticateUser, noCache, [
       );
       await reevaluateAchievements(req.session.userId);
       
-      // If AJAX request, return success JSON instead of redirecting
       if (req.xhr || req.headers.accept.indexOf('json') > -1) {
           return res.status(200).json({ success: true });
       }
@@ -467,7 +477,7 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
   }
 });
 
-
+// --- UPDATED ANALYTICS VIEW ROUTE ---
 app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     try {
       await dbConnect();
@@ -480,27 +490,38 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
       const { xp, level } = await calculateXpAndLevel(req.session.userId);
       user.xp = xp;
       user.level = level;
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      thirtyDaysAgo.setHours(0, 0, 0, 0);
-      const logs = await StudyLog.find({
+
+      // 1. Logs for "Last 30 Days Progress" Chart (Strict UTC)
+      const now = new Date();
+      const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const thirtyDaysAgo = new Date(todayUTC);
+      thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+      
+      const recentLogs = await StudyLog.find({
         userId: req.session.userId,
         date: { $gte: thirtyDaysAgo }
       }).sort({ date: 1 });
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      sevenDaysAgo.setHours(0, 0, 0, 0);
-      const weekLogs = await StudyLog.find({
+
+      // 2. CURRENT MONTH STATS (Strict UTC Month Range)
+      const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+      
+      const currentMonthLogs = await StudyLog.find({
         userId: req.session.userId,
-        date: { $gte: sevenDaysAgo }
+        date: { $gte: startOfMonth, $lt: nextMonth }
       });
-      const weekAverage = weekLogs.length > 0 ? weekLogs.reduce((sum, log) => sum + log.hours, 0) / 7 : 0;
-      const monthTotal = logs.reduce((sum, log) => sum + log.hours, 0);
+
+      const currentMonthTotal = currentMonthLogs.reduce((sum, log) => sum + log.hours, 0);
+      const currentMonthDaysLogged = currentMonthLogs.length; // Count of unique days logged
+      
+      // Calculate Average: Total / Number of Logged Days
+      const currentMonthAvg = currentMonthDaysLogged > 0 ? currentMonthTotal / currentMonthDaysLogged : 0;
+
       res.render('analytics', {
         user,
-        logs,
-        weekAverage: weekAverage.toFixed(2),
-        monthTotal: monthTotal.toFixed(2)
+        logs: recentLogs, // Passed for the chart
+        currentMonthTotal: currentMonthTotal.toFixed(2),
+        currentMonthAvg: currentMonthAvg.toFixed(2)
       });
     } catch (error) {
       console.error(error);
@@ -508,18 +529,16 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     }
 });
 
+// --- UPDATED ANALYTICS API ROUTE ---
 app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   try {
       await dbConnect();
       const userId = req.session.userId;
       const { chart, startDate, endDate, month, range } = req.query;
       let data = [];
-      
-      // Used for charts other than distribution
       const userObjectId = new mongoose.Types.ObjectId(String(userId));
 
       switch (chart) {
-          // --- EXISTING CHARTS (Unchanged) ---
           case 'dateRange':
               data = await StudyLog.find({ userId, date: { $gte: new Date(startDate), $lte: new Date(endDate) } }).sort({ date: 'asc' });
               break;
@@ -550,65 +569,59 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
               data = { met, notMet };
               break;
 
-          // --- FIXED TOTAL ANALYSIS (EXACT DASHBOARD LOGIC) ---
+          // --- FIXED TOTAL ANALYSIS (Uses Log Count for Average) ---
           case 'distribution':
-              // 1. Fetch User strictly to get the correct ObjectId (Critical Fix)
               const userDist = await User.findById(req.session.userId);
               if (!userDist) return res.status(401).json({ error: 'User not found' });
 
               const now = new Date();
-              let matchQuery = { userId: userDist._id }; // Use user._id from DB document
+              const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+              
+              let matchQuery = { userId: userDist._id };
               let label = 'Total Hours';
-              let divisor = 1;
+              let isAverage = false;
 
-              // 2. Exact Dashboard Date Logic
               if (range === 'past_7_days' || range === 'average_7_days') {
-                  const d = new Date(now);
-                  d.setDate(d.getDate() - 7); 
+                  const d = new Date(todayUTC);
+                  d.setUTCDate(d.getUTCDate() - 7); 
                   matchQuery.date = { $gte: d };
                   label = range.includes('average') ? 'Avg (7 Days)' : 'Total (7 Days)';
-                  divisor = range.includes('average') ? 7 : 1;
+                  isAverage = range.includes('average');
 
               } else if (range === 'recent_30_days' || range === 'average_30_days') {
-                  const d = new Date(now);
-                  d.setDate(d.getDate() - 30);
+                  const d = new Date(todayUTC);
+                  d.setUTCDate(d.getUTCDate() - 30);
                   matchQuery.date = { $gte: d };
                   label = range.includes('average') ? 'Avg (30 Days)' : 'Total (30 Days)';
-                  divisor = range.includes('average') ? 30 : 1;
+                  isAverage = range.includes('average');
 
               } else if (range === 'past_6_months') {
-                  const d = new Date(now);
-                  d.setMonth(d.getMonth() - 6);
+                  const d = new Date(todayUTC);
+                  d.setUTCMonth(d.getUTCMonth() - 6);
                   matchQuery.date = { $gte: d };
                   label = 'Total (6 Months)';
-                  divisor = 1;
+                  isAverage = false;
 
               } else if (range === 'all_time_hours' || range === 'average_all_time') {
-                  // No date filter for all time
                   label = range.includes('average') ? 'Avg (All Time)' : 'Total (All Time)';
-                  if (range.includes('average')) {
-                      // Calculate active days for accurate average
-                      const firstLog = await StudyLog.findOne({ userId: userDist._id }).sort({ date: 1 });
-                      if (firstLog) {
-                          const diff = now - firstLog.date;
-                          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                          divisor = days > 0 ? days : 1;
-                      }
-                  }
+                  isAverage = range.includes('average');
               }
 
-              // 3. Aggregation
+              // Aggregation: Sum hours AND Count actual logs
               const aggResult = await StudyLog.aggregate([
                   { $match: matchQuery },
-                  { $group: { _id: null, total: { $sum: '$hours' } } }
+                  { $group: { _id: null, total: { $sum: '$hours' }, count: { $sum: 1 } } }
               ]);
 
-              // 4. Calculate Final Value
-              const totalVal = aggResult.length > 0 ? aggResult[0].total : 0;
-              const finalVal = totalVal / divisor;
+              const resObj = aggResult[0] || { total: 0, count: 0 };
+              let finalVal = resObj.total;
 
-              // 5. Return Data strictly formatted
-              data = [{ label: label, value: parseFloat(finalVal.toFixed(1)) }];
+              if (isAverage) {
+                  // Divide by count of logs found, NOT calendar days
+                  finalVal = resObj.count > 0 ? resObj.total / resObj.count : 0;
+              }
+
+              data = [{ label: label, value: parseFloat(finalVal.toFixed(2)) }];
               break;
           
           case 'monthly_history':

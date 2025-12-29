@@ -49,7 +49,8 @@
     .big-stat-number {
         font-size: 4rem;
         font-weight: bold;
-        color: #4CAF50; /* Green */
+        color: #4CAF50;
+        /* Green */
         margin: 10px 0;
         line-height: 1;
     }
@@ -93,7 +94,7 @@
                         <option value="past_7_days">Total (Past 7 Days)</option>
                         <option value="recent_30_days">Total (Recent 30 Days)</option>
                         <option value="past_6_months">Total (Past 6 Months)</option>
-                        <option value="all_time_hours">Total (All Time)</option>
+                        <option value="all_time_hours" selected>Total (All Time)</option>
                         <option disabled>──────────</option>
                         <option value="average_7_days">Avg (Past 7 Days)</option>
                         <option value="average_30_days">Avg (Past 30 Days)</option>
@@ -128,18 +129,18 @@
 
     <div class="stats-grid">
      <div class="stat-card">
-        <h3>Weekly Average</h3>
-        <p class="stat-number"><%= weekAverage %>h</p>
+        <h3>Current Month Total</h3>
+        <p class="stat-number"><%= currentMonthTotal %>h</p>
       </div>
       <div class="stat-card">
-        <h3>Monthly Total</h3>
-        <p class="stat-number"><%= monthTotal %>h</p>
+        <h3>Current Month Avg/Day</h3>
+        <p class="stat-number"><%= currentMonthAvg %>h</p>
       </div>
       <div class="stat-card">
         <h3>Daily Goal</h3>
         <p class="stat-number"><%= user.dailyGoalHours %>h</p>
      </div>
-  </div>
+    </div>
 
     <div class="chart-container">
       <h2>Last 30 Days Progress</h2>
@@ -235,7 +236,6 @@
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const labels = data.map(d => `${monthNames[d._id.month - 1]} '${String(d._id.year).slice(2)}`);
             const values = data.map(d => d.total);
-
             if (data.length > 0) {
                 const first = data[0]._id;
                 const last = data[data.length - 1]._id;
@@ -252,7 +252,6 @@
             }
             inner.style.width = chartWidth;
             inner.style.height = '100%';
-
             const ctx = document.getElementById('monthlyHistoryChart').getContext('2d');
             if (monthlyHistoryChart) monthlyHistoryChart.destroy();
 
@@ -278,7 +277,6 @@
                     plugins: { legend: { display: false } }
                 }
             });
-            
             setTimeout(() => { outer.scrollLeft = outer.scrollWidth; }, 100);
 
         } catch (error) { console.error(error); }
@@ -371,7 +369,7 @@
             borderColor: '#FF5722',
             borderDash: [5, 5],
             pointRadius: 0,
-         }]
+        }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
@@ -415,8 +413,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Init Top Widgets
-      updateDistributionStats('past_7_days');
+      // Init Top Widgets - Changed to all_time_hours default
+      updateDistributionStats('all_time_hours');
       renderMonthlyHistoryChart();
       
       const today = new Date();
@@ -446,6 +444,7 @@
         renderDayOfWeekChart(selectedMonth);
         renderGoalAchievementChart(selectedMonth);
       });
+      
       document.getElementById('generate-range-chart').addEventListener('click', () => {
         const startDate = startDateInput.value;
         const endDate = endDateInput.value;
@@ -454,13 +453,13 @@
         } else {
             alert('Please select a valid start and end date.');
         }
+      });
+      
+      // Distribution Select Listener
+      document.getElementById('distributionRange').addEventListener('change', (e) => {
+          updateDistributionStats(e.target.value);
+      });
     });
-    
-    // Distribution Select Listener
-    document.getElementById('distributionRange').addEventListener('change', (e) => {
-        updateDistributionStats(e.target.value);
-    });
-});
   </script>
 </body>
 </html>
