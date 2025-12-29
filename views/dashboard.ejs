@@ -455,6 +455,48 @@
       }
     });
     xpPopupClose.addEventListener('click', () => { xpPopup.style.display = 'none'; });
+
+    document.addEventListener('DOMContentLoaded', () => {
+    // Select all elements that have numbers we want to animate
+    // Add class "animate-num" to your stat-number elements in HTML first!
+    const stats = document.querySelectorAll('.stat-number, #xp-counter span');
+
+    stats.forEach(stat => {
+        const originalText = stat.innerText;
+        // Extract the number (remove 'h', 'XP', ' days')
+        const target = parseFloat(originalText.replace(/[^0-9.]/g, ''));
+        
+        if (isNaN(target)) return; // Skip if no number found
+
+        let start = 0;
+        const duration = 1500; // 1.5 seconds
+        const startTime = performance.now();
+
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Ease-out function for smooth effect
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            
+            const current = start + (target - start) * easeOut;
+            
+            // Format back with original suffix
+            if (originalText.includes('h')) stat.innerText = current.toFixed(1) + 'h';
+            else if (originalText.includes('XP')) stat.innerText = Math.floor(current) + ' XP';
+            else if (originalText.includes('days')) stat.innerText = Math.floor(current) + ' days';
+            else stat.innerText = Math.floor(current);
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            } else {
+                stat.innerText = originalText; // Ensure exact final value
+            }
+        }
+        
+        requestAnimationFrame(update);
+    });
+});
   </script>
 </body>
 </html>
