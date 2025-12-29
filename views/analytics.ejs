@@ -25,6 +25,37 @@
     <h1>Your Analytics</h1>
     <br>
 
+    <div class="chart-container">
+        <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h2>Total Study Hours Analysis</h2>
+            <select id="distributionRange" class="period-selector">
+                <option value="this_week">This Week</option>
+                <option value="past_week">Past Week</option>
+                <option value="this_month">This Month</option>
+                <option value="past_month">Past Month</option>
+                <option value="past_6_months">Past 6 Months</option>
+                <option value="past_year">Past Year</option>
+                <option value="all_time">All Time</option>
+            </select>
+        </div>
+        <br>
+        <div class="chart-wrapper">
+            <canvas id="distributionChart"></canvas>
+            <div id="distributionNoData" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#888;">No Data Available</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h2>Month-wise History</h2>
+        <p style="color: #888; font-size: 0.9em; margin-bottom: 15px;">Swipe horizontally to see more months</p>
+        <div class="scrollable-chart-outer">
+            <div class="scrollable-chart-inner">
+                 <canvas id="monthlyHistoryChart"></canvas>
+                 <div id="historyNoData" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#888;">No Data Available</div>
+            </div>
+        </div>
+    </div>
+
     <div class="stats-grid">
      <div class="stat-card">
         <h3>Weekly Average</h3>
@@ -37,7 +68,7 @@
       <div class="stat-card">
         <h3>Daily Goal</h3>
         <p class="stat-number"><%= user.dailyGoalHours %>h</p>
-      </div>
+     </div>
   </div>
 
     <div class="chart-container">
@@ -98,7 +129,136 @@
   <script>
     // --- Chart instances and global settings ---
     const dailyGoal = <%= user.dailyGoalHours %>;
-    let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart;
+    let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart, distributionChart, monthlyHistoryChart;
+
+    // --- NEW 1: Distribution Chart ---
+    async function renderDistributionChart(range) {
+        try {
+            const response = await fetch(`/api/analytics?chart=distribution&range=${range}`);
+            const data = await response.json();
+            
+            if (!data || !Array.isArray(data)) {
+                console.error("Invalid data format for distribution chart", data);
+                return;
+            }
+
+            // CHECK: Empty data handling
+            if (data.length === 0) {
+                if(distributionChart) distributionChart.destroy();
+                document.getElementById('distributionNoData').style.display = 'block';
+                return; 
+            } else {
+                 document.getElementById('distributionNoData').style.display = 'none';
+            }
+
+            let labels = [];
+            let values = [];
+
+            if (['past_6_months', 'past_year', 'all_time'].includes(range)) {
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                labels = data.map(d => `${monthNames[d._id.month - 1]} ${d._id.year}`);
+                values = data.map(d => d.total);
+            } else {
+                labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }));
+                values = data.map(d => d.hours);
+            }
+
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+            if (distributionChart) distributionChart.destroy();
+
+            distributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Hours',
+                        data: values,
+                        backgroundColor: 'rgba(255, 215, 0, 0.6)',
+                        borderColor: '#FFD700',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ccc' } },
+                        x: { grid: { display: false }, ticks: { color: '#ccc' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        } catch (error) {
+            console.error("Error rendering distribution chart:", error);
+        }
+    }
+
+    // --- NEW 2: Scrollable Monthly History ---
+    async function renderMonthlyHistoryChart() {
+        try {
+            const response = await fetch(`/api/analytics?chart=monthly_history`);
+            const data = await response.json();
+
+            if (!data || !Array.isArray(data)) {
+                 console.error("Invalid data format for monthly history", data);
+                 return;
+            }
+
+            if (data.length === 0) {
+                 if(monthlyHistoryChart) monthlyHistoryChart.destroy();
+                 document.getElementById('historyNoData').style.display = 'block';
+                 return;
+            } else {
+                document.getElementById('historyNoData').style.display = 'none';
+            }
+
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const labels = data.map(d => `${monthNames[d._id.month - 1]} '${String(d._id.year).slice(2)}`);
+            const values = data.map(d => d.total);
+
+            // Dynamic width: ~60px per bar, min 100%
+            const outer = document.querySelector('.scrollable-chart-outer');
+            const inner = document.querySelector('.scrollable-chart-inner');
+            const minWidth = Math.max(outer.clientWidth, labels.length * 70);
+            inner.style.width = `${minWidth}px`;
+            inner.style.height = '300px';
+
+            const ctx = document.getElementById('monthlyHistoryChart').getContext('2d');
+            if (monthlyHistoryChart) monthlyHistoryChart.destroy();
+
+            monthlyHistoryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Monthly Total',
+                        data: values,
+                        backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                        borderColor: '#4CAF50',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#ccc' } },
+                        x: { grid: { display: false }, ticks: { color: '#ccc' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Scroll to end
+            setTimeout(() => {
+                outer.scrollLeft = outer.scrollWidth;
+            }, 100);
+        } catch (error) {
+             console.error("Error rendering monthly history:", error);
+        }
+    }
+
 
     // --- 1. Renders the "Last 30 Days" chart ---
     function render30DayChart() {
@@ -140,11 +300,11 @@
     // --- 2. Renders the "Custom Date Range" bar chart ---
     async function renderDateRangeChart(startDate, endDate) {
     if (!startDate || !endDate) return;
-      const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
+    const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
       const data = await response.json();
     if (dateRangeChart) dateRangeChart.destroy();
       const ctx = document.getElementById('dateRangeChart').getContext('2d');
-      dateRangeChart = new Chart(ctx, {
+    dateRangeChart = new Chart(ctx, {
           type: 'bar',
           data: {
             labels: data.map(log => new Date(log.date).toLocaleDateString('en-CA', {timeZone: 'UTC'})), // YYYY-MM-DD
@@ -160,7 +320,7 @@
                     return value < dailyGoal ? '#FF5722' : '#4CAF50';
                 },
                 borderWidth: 1
-            }, {
+             }, {
                 type: 'line',
                 label: 'Daily Goal',
                 data: Array(data.length).fill(dailyGoal),
@@ -257,6 +417,11 @@
 
     // --- Event Listeners and Initial Rendering ---
     document.addEventListener('DOMContentLoaded', () => {
+      // NEW: Init the top charts
+      renderDistributionChart('this_week');
+      renderMonthlyHistoryChart();
+      
+      // Existing Logic
       const today = new Date();
       const currentYear = today.getFullYear();
       const currentMonthNum = today.getMonth() + 1;
@@ -294,6 +459,12 @@
             alert('Please select a valid start and end date.');
         }
     });
+
+    // NEW: Listener for distribution dropdown
+    document.getElementById('distributionRange').addEventListener('change', (e) => {
+        renderDistributionChart(e.target.value);
+    });
+
     });
   </script>
 </body>

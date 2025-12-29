@@ -511,8 +511,43 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   try {
       await dbConnect();
       const userId = req.session.userId;
-      const { chart, startDate, endDate, month } = req.query;
-      let data;
+      const { chart, startDate, endDate, month, range } = req.query;
+      let data = [];
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+      // SAFETY: Explicitly cast userId to string before using in ObjectId
+      const userObjectId = new mongoose.Types.ObjectId(String(userId));
+
+      const getLogs = async (start, end) => {
+        return await StudyLog.aggregate([
+            { $match: { userId: userObjectId, date: { $gte: start, $lte: end } } },
+            { $sort: { date: 1 } }
+        ]);
+      };
+
+      const groupByDay = (logs) => {
+        const map = new Map();
+        logs.forEach(log => {
+            const d = log.date.toISOString().split('T')[0];
+            map.set(d, (map.get(d) || 0) + log.hours);
+        });
+        return Array.from(map.entries()).map(([date, hours]) => ({ date, hours })).sort((a,b) => new Date(a.date) - new Date(b.date));
+      };
+
+      const groupByMonth = async (start, end) => {
+        return await StudyLog.aggregate([
+            { $match: { userId: userObjectId, date: { $gte: start, $lte: end } } },
+            { 
+                $group: { 
+                    _id: { year: { $year: "$date" }, month: { $month: "$date" } }, 
+                    total: { $sum: "$hours" } 
+                } 
+            },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]);
+      };
+
       switch (chart) {
           case 'dateRange':
               data = await StudyLog.find({ userId, date: { $gte: new Date(startDate), $lte: new Date(endDate) } }).sort({ date: 'asc' });
@@ -528,7 +563,7 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
                const firstDayD = new Date(Date.UTC(yearD, monthNumD - 1, 1));
                const lastDayD = new Date(Date.UTC(yearD, monthNumD, 0));
               data = await StudyLog.aggregate([
-                  { $match: { userId: new mongoose.Types.ObjectId(userId), date: { $gte: firstDayD, $lte: lastDayD } } },
+                  { $match: { userId: userObjectId, date: { $gte: firstDayD, $lte: lastDayD } } },
                   { $group: { _id: { $dayOfWeek: "$date" }, avgHours: { $avg: "$hours" } } },
                    { $sort: { _id: 1 } }
               ]);
@@ -543,13 +578,86 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
               const notMet = logs.length - met;
               data = { met, notMet };
               break;
+          
+          // NEW CASE: Distribution
+          case 'distribution':
+              let startDist, endDist;
+              endDist = new Date(today);
+              endDist.setUTCHours(23, 59, 59, 999);
+              
+              if (range === 'this_week') {
+                  const day = today.getUTCDay(); // 0 (Sun) to 6 (Sat)
+                  const diff = today.getUTCDate() - day + (day === 0 ? -6 : 1); 
+                  startDist = new Date(today);
+                  startDist.setUTCDate(diff);
+                  startDist.setUTCHours(0,0,0,0);
+                  const logs = await getLogs(startDist, endDist);
+                  data = groupByDay(logs);
+              } else if (range === 'past_week') {
+                  const day = today.getUTCDay();
+                  const diff = today.getUTCDate() - day + (day === 0 ? -6 : 1) - 7;
+                  startDist = new Date(today);
+                  startDist.setUTCDate(diff);
+                  startDist.setUTCHours(0,0,0,0);
+                  endDist = new Date(startDist);
+                  endDist.setUTCDate(startDist.getUTCDate() + 6);
+                  endDist.setUTCHours(23,59,59,999);
+                  const logs = await getLogs(startDist, endDist);
+                  data = groupByDay(logs);
+              } else if (range === 'this_month') {
+                  startDist = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+                  const logs = await getLogs(startDist, endDist);
+                  data = groupByDay(logs);
+              } else if (range === 'past_month') {
+                  startDist = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+                  endDist = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
+                  const logs = await getLogs(startDist, endDist);
+                  data = groupByDay(logs);
+              } else if (range === 'past_6_months') {
+                  startDist = new Date(today);
+                  startDist.setUTCMonth(startDist.getUTCMonth() - 6);
+                  startDist.setUTCDate(1);
+                  data = await groupByMonth(startDist, endDist);
+              } else if (range === 'past_year') {
+                  startDist = new Date(today);
+                  startDist.setUTCFullYear(startDist.getUTCFullYear() - 1);
+                  startDist.setUTCDate(1);
+                  data = await groupByMonth(startDist, endDist);
+              } else if (range === 'all_time') {
+                  data = await StudyLog.aggregate([
+                      { $match: { userId: userObjectId } },
+                      { 
+                          $group: { 
+                              _id: { year: { $year: "$date" }, month: { $month: "$date" } }, 
+                              total: { $sum: "$hours" } 
+                          } 
+                      },
+                      { $sort: { "_id.year": 1, "_id.month": 1 } }
+                  ]);
+              }
+              break;
+          
+          // NEW CASE: Scrollable History
+          case 'monthly_history':
+              data = await StudyLog.aggregate([
+                  { $match: { userId: userObjectId } },
+                  { 
+                      $group: { 
+                          _id: { year: { $year: "$date" }, month: { $month: "$date" } }, 
+                          total: { $sum: "$hours" } 
+                      } 
+                  },
+                  { $sort: { "_id.year": 1, "_id.month": 1 } }
+              ]);
+              break;
+
           default:
               return res.status(400).json({ error: 'Invalid chart type' });
       }
       res.json(data);
   } catch (error) {
       console.error('Analytics API error:', error);
-      res.status(500).json({ error: 'Server error' });
+      res.status(500).json({ error: 'Server error', data: [] });
   }
 });
   

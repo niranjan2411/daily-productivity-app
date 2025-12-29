@@ -475,6 +475,7 @@ table th {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
+  min-height: 300px; /* Added min-height to ensure visibility */
 }
 
 .chart-grid {
@@ -501,6 +502,52 @@ input[type="month"], input[type="date"] {
   font-size: 14px;
   color-scheme: dark; /* This is the fix for the date picker */
 }
+
+/* NEW STYLES FOR UPDATED ANALYTICS */
+.period-selector {
+    background-color: var(--dark-bg);
+    color: var(--text-white);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+.period-selector:focus {
+    outline: none;
+    border-color: var(--primary-yellow);
+}
+
+.scrollable-chart-outer {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    border-radius: 10px;
+    padding-bottom: 10px; /* Space for scrollbar */
+    /* Custom Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-yellow) var(--card-bg);
+}
+
+.scrollable-chart-outer::-webkit-scrollbar {
+    height: 8px;
+}
+.scrollable-chart-outer::-webkit-scrollbar-track {
+    background: var(--card-bg);
+    border-radius: 4px;
+}
+.scrollable-chart-outer::-webkit-scrollbar-thumb {
+    background-color: var(--primary-yellow);
+    border-radius: 4px;
+}
+
+.scrollable-chart-inner {
+    position: relative;
+    height: 300px;
+    display: block; /* Ensure block display */
+}
+
 
 /* Achievements */
 .achievement-category, .achievement-subcategory {
@@ -977,4 +1024,65 @@ input[type="month"], input[type="date"] {
   .chart-wrapper { aspect-ratio: 1 / 1; }
   .chart-grid .chart-wrapper { aspect-ratio: 1 / 1 !important; }
   .user-stats-bar { flex-direction: column; gap: 15px; border-radius: 20px; }
+}
+
+/* ... (previous styles) ... */
+
+/* NEW STYLES FOR UPDATED ANALYTICS */
+.period-selector {
+    background-color: var(--dark-bg);
+    color: var(--text-white);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+.period-selector:focus {
+    outline: none;
+    border-color: var(--primary-yellow);
+}
+
+.scrollable-chart-outer {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    border-radius: 10px;
+    padding-bottom: 10px; /* Space for scrollbar */
+    /* Custom Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-yellow) var(--card-bg);
+}
+
+.scrollable-chart-outer::-webkit-scrollbar {
+    height: 8px;
+}
+.scrollable-chart-outer::-webkit-scrollbar-track {
+    background: var(--card-bg);
+    border-radius: 4px;
+}
+.scrollable-chart-outer::-webkit-scrollbar-thumb {
+    background-color: var(--primary-yellow);
+    border-radius: 4px;
+}
+
+.scrollable-chart-inner {
+    position: relative;
+    height: 300px;
+    display: block; /* Ensure block display */
+}
+
+
+.chart-wrapper canvas,
+.scrollable-chart-inner canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 300px; 
 }
