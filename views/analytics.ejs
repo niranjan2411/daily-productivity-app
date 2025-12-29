@@ -8,7 +8,7 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Responsive Grid for Top Row */
+    /* Responsive Grid */
     .top-charts-row {
       display: flex;
       flex-wrap: wrap;
@@ -21,13 +21,14 @@
       min-width: 300px;
       background: #1e1e1e;
       border-radius: 12px;
-      padding: 5px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
     }
 
+    /* Container adjustments */
     .chart-half-width .chart-container {
-      margin-bottom: 0;
+      margin: 0;
       height: 100%;
       box-shadow: none;
       background: transparent;
@@ -35,46 +36,33 @@
       flex-direction: column;
     }
 
-    .chart-half-width .chart-wrapper {
-        flex-grow: 1;
-        min-height: 250px;
-        position: relative;
-    }
-
-    /* Text Stat Display Styles */
+    /* TEXT STAT DISPLAY STYLE */
     .text-stat-wrapper {
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        height: 100%;
+        flex-grow: 1;
         min-height: 200px;
         text-align: center;
     }
     .big-stat-number {
         font-size: 4rem;
         font-weight: bold;
-        color: #4CAF50; /* Green accent */
+        color: #4CAF50; /* Green */
         margin: 10px 0;
         line-height: 1;
     }
     .big-stat-label {
         font-size: 1.1rem;
-        color: #aaa;
-        margin-bottom: 5px;
+        color: #bbb;
+        font-weight: 500;
     }
 
     @media (max-width: 768px) {
-      .top-charts-row {
-        flex-direction: column;
-      }
-      .chart-half-width {
-        width: 100%;
-        min-width: 0;
-      }
-      .big-stat-number {
-          font-size: 3rem;
-      }
+      .top-charts-row { flex-direction: column; }
+      .chart-half-width { width: 100%; min-width: 0; }
+      .big-stat-number { font-size: 3rem; }
     }
   </style>
 </head>
@@ -84,7 +72,7 @@
     <h2>Productivity Tracker</h2>
     <div class="nav-links">
       <a href="/dashboard">Dashboard</a>
-      <a href="/calendar">⭐️ Calendar</a>
+      <a href="/calendar">Calendar</a>
       <a href="/analytics" class="active">Analytics</a>
       <a href="/settings">Settings</a>
       <a href="/logout">Logout</a>
@@ -101,7 +89,7 @@
             <div class="chart-container">
                 <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <h2 style="font-size: 1.2rem; margin: 0;">Total Analysis</h2>
-                    <select id="distributionRange" class="period-selector" style="font-size: 0.85rem; padding: 4px;">
+                    <select id="distributionRange" class="period-selector" style="font-size: 0.85rem; padding: 6px;">
                         <option value="past_7_days">Total (Past 7 Days)</option>
                         <option value="recent_30_days">Total (Recent 30 Days)</option>
                         <option value="past_6_months">Total (Past 6 Months)</option>
@@ -117,7 +105,6 @@
                     <div class="big-stat-number" id="distValue">--</div>
                     <div class="big-stat-label" id="distLabel">Loading...</div>
                 </div>
-
             </div>
         </div>
 
@@ -129,7 +116,7 @@
                 </div>
                 <p style="color: #666; font-size: 0.8em; margin-bottom: 10px;">Swipe to view past months</p>
                 
-                <div class="scrollable-chart-outer" style="overflow-x: auto; overflow-y: hidden; width: 100%; flex-grow: 1;">
+                <div class="scrollable-chart-outer" style="overflow-x: auto; width: 100%; flex-grow: 1;">
                     <div class="scrollable-chart-inner" style="position: relative; min-width: 100%; height: 250px;">
                         <canvas id="monthlyHistoryChart"></canvas>
                         <div id="historyNoData" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#888;">No Data</div>
@@ -137,7 +124,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <div class="stats-grid">
@@ -157,9 +143,7 @@
 
     <div class="chart-container">
       <h2>Last 30 Days Progress</h2>
-      <div class="chart-wrapper">
-        <canvas id="progressChart"></canvas>
-      </div>
+      <div class="chart-wrapper"><canvas id="progressChart"></canvas></div>
     </div>
 
     <div class="chart-container">
@@ -169,14 +153,11 @@
         <label for="start-date">Start Date:</label>
         <input type="date" id="start-date">
         <label for="end-date">End Date:</label>
-       <input type="date" id="end-date">
-      
-  <button id="generate-range-chart" class="btn" style="width: auto; padding: 8px 16px;">Generate Chart</button>
+        <input type="date" id="end-date">
+        <button id="generate-range-chart" class="btn" style="width: auto; padding: 8px 16px;">Generate Chart</button>
       </div>
       <br>
-      <div class="chart-wrapper">
-        <canvas id="dateRangeChart"></canvas>
-      </div>
+      <div class="chart-wrapper"><canvas id="dateRangeChart"></canvas></div>
     </div>
 
     <div class="chart-container">
@@ -186,32 +167,24 @@
         <label for="month-picker">Select Month:</label>
         <input type="month" id="month-picker">
       </div>
-      <div class="chart-wrapper">
-        <canvas id="monthlyChart"></canvas>
-      </div>
+      <div class="chart-wrapper"><canvas id="monthlyChart"></canvas></div>
     </div>
-
 
     <div class="chart-grid">
       <div class="chart-container-grid-item">
         <h2 id="dayOfWeekTitle">Productivity by Day</h2>
-        <div class="chart-wrapper">
-          <canvas id="dayOfWeekChart"></canvas>
-        </div>
+        <div class="chart-wrapper"><canvas id="dayOfWeekChart"></canvas></div>
       </div>
-      
       <div class="chart-container-grid-item">
         <h2 id="goalAchievementTitle">Goal Achievement Rate</h2>
-        <div class="chart-wrapper">
-          <canvas id="goalAchievementChart"></canvas>
-        </div>
+        <div class="chart-wrapper"><canvas id="goalAchievementChart"></canvas></div>
       </div>
     </div>
 
   </div>
 
   <script>
-    // --- Chart instances and global settings ---
+    // --- Global Chart Vars ---
     const dailyGoal = <%= user.dailyGoalHours %>;
     let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart, monthlyHistoryChart;
 
@@ -220,18 +193,17 @@
         const valEl = document.getElementById('distValue');
         const labelEl = document.getElementById('distLabel');
         
-        valEl.style.opacity = '0.5'; // Visual feedback
+        valEl.style.opacity = '0.5';
         
         try {
             const response = await fetch(`/api/analytics?chart=distribution&range=${range}`);
             const data = await response.json();
             
-            // Check for valid data array
+            // Robust check: Ensure data exists, otherwise default to 0
             if (!data || !Array.isArray(data) || data.length === 0) {
                  valEl.innerText = "0h";
                  labelEl.innerText = "No Data";
             } else {
-                 // Check if value exists, default to 0 if null/undefined
                  const value = (data[0].value !== undefined && data[0].value !== null) ? data[0].value : 0;
                  const label = data[0].label || "Total";
                  
@@ -239,14 +211,14 @@
                  labelEl.innerText = label;
             }
         } catch (error) {
-            console.error("Error fetching distribution stats:", error);
+            console.error("Error fetching stats:", error);
             valEl.innerText = "Error";
         } finally {
             valEl.style.opacity = '1';
         }
     }
 
-    // --- 2. Scrollable History Chart ---
+    // --- 2. History Chart (Scrollable) ---
     async function renderMonthlyHistoryChart() {
         try {
             const response = await fetch(`/api/analytics?chart=monthly_history`);
@@ -271,17 +243,13 @@
                     `${monthNames[first.month-1]} ${first.year} - ${monthNames[last.month-1]} ${last.year}`;
             }
 
-            // Dynamic Width
             const outer = document.querySelector('.scrollable-chart-outer');
             const inner = document.querySelector('.scrollable-chart-inner');
             const visibleMonths = 6;
             let chartWidth = '100%';
-            
             if (data.length > visibleMonths) {
-                const widthPercentage = (data.length / visibleMonths) * 100;
-                chartWidth = `${widthPercentage}%`;
+                chartWidth = `${(data.length / visibleMonths) * 100}%`;
             }
-
             inner.style.width = chartWidth;
             inner.style.height = '100%';
 
@@ -310,18 +278,13 @@
                     plugins: { legend: { display: false } }
                 }
             });
+            
+            setTimeout(() => { outer.scrollLeft = outer.scrollWidth; }, 100);
 
-            setTimeout(() => {
-                outer.scrollLeft = outer.scrollWidth;
-            }, 100);
-
-        } catch (error) {
-             console.error("Error rendering monthly history:", error);
-        }
+        } catch (error) { console.error(error); }
     }
 
-
-    // --- 3. Last 30 Days (Existing) ---
+    // --- Standard Charts (Keep Existing Logic) ---
     function render30DayChart() {
         const ctx = document.getElementById('progressChart').getContext('2d');
         const logs = <%- JSON.stringify(logs) %>;
@@ -340,8 +303,7 @@
                     tension: 0.4,
                     fill: true,
                     borderDash: [5, 5]
-                 }, 
-                    {
+                 }, {
                     label: 'Goal',
                     data: Array(labels.length).fill(dailyGoal),
                     borderColor: '#FF5722',
@@ -349,15 +311,10 @@
                     pointRadius: 0
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
     }
 
-    // --- 4. Custom Range (Existing) ---
     async function renderDateRangeChart(startDate, endDate) {
         if (!startDate || !endDate) return;
         const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
@@ -371,8 +328,8 @@
             datasets: [{
                 label: 'Hours',
                 data: data.map(log => log.hours),
-                backgroundColor: (context) => context.raw < dailyGoal ? 'rgba(255, 87, 34, 0.6)' : 'rgba(76, 175, 80, 0.6)',
-                borderColor: (context) => context.raw < dailyGoal ? '#FF5722' : '#4CAF50',
+                backgroundColor: c => c.raw < dailyGoal ? 'rgba(255, 87, 34, 0.6)' : 'rgba(76, 175, 80, 0.6)',
+                borderColor: c => c.raw < dailyGoal ? '#FF5722' : '#4CAF50',
                 borderWidth: 1
               }, {
                 type: 'line',
@@ -380,20 +337,14 @@
                 data: Array(data.length).fill(dailyGoal),
                 borderColor: '#fdc500', 
                 borderDash: [5,5], 
-                borderWidth: 2, 
                 pointRadius: 0,
                 fill: false
             }]
         },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            scales: { y: { beginAtZero: true } } 
-        }
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
     }
 
-    // --- 5. Monthly Deep Dive (Existing) ---
     async function renderMonthlyChart(month) {
       const response = await fetch(`/api/analytics?chart=monthly&month=${month}`);
       const data = await response.json();
@@ -413,7 +364,6 @@
             pointRadius: data.map(log => log.hours < dailyGoal ? 7 : 4),
             pointBorderColor: data.map(log => log.hours < dailyGoal ? '#FF5722' : '#4CAF50'),
             pointBackgroundColor: data.map(log => log.hours < dailyGoal ? '#FF5722' : '#4CAF50'),
-            pointBorderWidth: 2,
             borderDash: [5, 5]
           }, {
             label: 'Goal',
@@ -427,7 +377,6 @@
       });
     }
 
-    // --- 6. Day of Week (Existing) ---
     async function renderDayOfWeekChart(month) {
       if (dayOfWeekChart) dayOfWeekChart.destroy();
       const response = await fetch(`/api/analytics?chart=dayOfWeek&month=${month}`);
@@ -448,7 +397,6 @@
       document.getElementById('dayOfWeekTitle').innerText = `Productivity by Day (${monthName})`;
     }
 
-    // --- 7. Goal Achievement (Existing) ---
     async function renderGoalAchievementChart(month) {
         if (goalAchievementChart) goalAchievementChart.destroy();
         const response = await fetch(`/api/analytics?chart=goalAchievement&month=${month}`);
@@ -466,9 +414,8 @@
         document.getElementById('goalAchievementTitle').innerText = `Goal Achievement (${monthName})`;
     }
 
-    // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
-      // Init Top Charts
+      // Init Top Widgets
       updateDistributionStats('past_7_days');
       renderMonthlyHistoryChart();
       
@@ -508,7 +455,8 @@
             alert('Please select a valid start and end date.');
         }
     });
-    // Distribution Change Listener (Text Update)
+    
+    // Distribution Select Listener
     document.getElementById('distributionRange').addEventListener('change', (e) => {
         updateDistributionStats(e.target.value);
     });

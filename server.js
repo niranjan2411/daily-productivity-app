@@ -468,6 +468,45 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
 });
 
 
+app.get('/analytics', authenticateUser, noCache, async (req, res) => {
+    try {
+      await dbConnect();
+      const user = await User.findById(req.session.userId);
+      if (!user) {
+          return req.session.destroy(() => {
+            res.redirect('/login');
+          });
+      }
+      const { xp, level } = await calculateXpAndLevel(req.session.userId);
+      user.xp = xp;
+      user.level = level;
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+      const logs = await StudyLog.find({
+        userId: req.session.userId,
+        date: { $gte: thirtyDaysAgo }
+      }).sort({ date: 1 });
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      const weekLogs = await StudyLog.find({
+        userId: req.session.userId,
+        date: { $gte: sevenDaysAgo }
+      });
+      const weekAverage = weekLogs.length > 0 ? weekLogs.reduce((sum, log) => sum + log.hours, 0) / 7 : 0;
+      const monthTotal = logs.reduce((sum, log) => sum + log.hours, 0);
+      res.render('analytics', {
+        user,
+        logs,
+        weekAverage: weekAverage.toFixed(2),
+        monthTotal: monthTotal.toFixed(2)
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Server error');
+    }
+});
 
 app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   try {
@@ -480,7 +519,7 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
       const userObjectId = new mongoose.Types.ObjectId(String(userId));
 
       switch (chart) {
-          // --- EXISTING CASES (Unchanged) ---
+          // --- EXISTING CHARTS (Unchanged) ---
           case 'dateRange':
               data = await StudyLog.find({ userId, date: { $gte: new Date(startDate), $lte: new Date(endDate) } }).sort({ date: 'asc' });
               break;
@@ -511,9 +550,9 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
               data = { met, notMet };
               break;
 
-          // --- FIXED DISTRIBUTION LOGIC (MATCHING DASHBOARD) ---
+          // --- FIXED TOTAL ANALYSIS (EXACT DASHBOARD LOGIC) ---
           case 'distribution':
-              // 1. Fetch User strictly to get the correct ObjectId
+              // 1. Fetch User strictly to get the correct ObjectId (Critical Fix)
               const userDist = await User.findById(req.session.userId);
               if (!userDist) return res.status(401).json({ error: 'User not found' });
 
@@ -523,33 +562,30 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
               let divisor = 1;
 
               // 2. Exact Dashboard Date Logic
-              // Dashboard uses: new Date(new Date().setDate(now.getDate() - 7))
-              // We replicate this to ensure consistency.
-
               if (range === 'past_7_days' || range === 'average_7_days') {
                   const d = new Date(now);
                   d.setDate(d.getDate() - 7); 
                   matchQuery.date = { $gte: d };
-                  label = range.includes('average') ? 'Daily Average (7 Days)' : 'Total Hours (7 Days)';
+                  label = range.includes('average') ? 'Avg (7 Days)' : 'Total (7 Days)';
                   divisor = range.includes('average') ? 7 : 1;
 
               } else if (range === 'recent_30_days' || range === 'average_30_days') {
                   const d = new Date(now);
                   d.setDate(d.getDate() - 30);
                   matchQuery.date = { $gte: d };
-                  label = range.includes('average') ? 'Daily Average (30 Days)' : 'Total Hours (30 Days)';
+                  label = range.includes('average') ? 'Avg (30 Days)' : 'Total (30 Days)';
                   divisor = range.includes('average') ? 30 : 1;
 
               } else if (range === 'past_6_months') {
                   const d = new Date(now);
                   d.setMonth(d.getMonth() - 6);
                   matchQuery.date = { $gte: d };
-                  label = 'Total Hours (6 Months)';
+                  label = 'Total (6 Months)';
                   divisor = 1;
 
               } else if (range === 'all_time_hours' || range === 'average_all_time') {
                   // No date filter for all time
-                  label = range.includes('average') ? 'Daily Average (All Time)' : 'Total Hours (All Time)';
+                  label = range.includes('average') ? 'Avg (All Time)' : 'Total (All Time)';
                   if (range.includes('average')) {
                       // Calculate active days for accurate average
                       const firstLog = await StudyLog.findOne({ userId: userDist._id }).sort({ date: 1 });
