@@ -56,11 +56,20 @@ const XP_FOR_GOAL = 50;
 const XP_FOR_ACHIEVEMENT = 100;
 const XP_PER_LEVEL = 1000;
 
-const calculateXpAndLevel = async (userId) => {
+// OPTIMIZATION 1: Accept 'userDoc' to prevent re-fetching the user from DB
+const calculateXpAndLevel = async (userId, userDoc = null) => {
     await dbConnect();
-    const user = await User.findById(userId);
+    // Use the provided user document or fetch it if missing
+    const user = userDoc || await User.findById(userId);
+    
     if (!user) return { xp: 0, level: 1 };
-    const allLogs = await StudyLog.find({ userId });
+    
+    // Run these independent queries in parallel
+    const [allLogs, achievements] = await Promise.all([
+        StudyLog.find({ userId }),
+        Achievement.find({ userId, achieved: true })
+    ]);
+
     let xpFromLogs = 0;
     allLogs.forEach(log => {
         xpFromLogs += log.hours * XP_PER_HOUR;
@@ -68,7 +77,7 @@ const calculateXpAndLevel = async (userId) => {
             xpFromLogs += XP_FOR_GOAL;
         }
     });
-    const achievements = await Achievement.find({ userId, achieved: true });
+    
     const xpFromAchievements = achievements.length * XP_FOR_ACHIEVEMENT;
     const totalXp = Math.round(xpFromLogs + xpFromAchievements);
     const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
@@ -234,34 +243,12 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
           res.redirect('/login');
         });
     }
-    const { xp, level } = await calculateXpAndLevel(req.session.userId);
-    user.xp = xp;
-    user.level = level;
-    
+
     // --- UTC SAFE DATE LOGIC ---
     const now = new Date();
     const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-    // Today's log
-    const todayLog = await StudyLog.findOne({ userId: req.session.userId, date: todayUTC });
-
-    // Recent Logs (Last 30 days UTC)
-    const thirtyDaysAgo = new Date(todayUTC);
-    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
-    
-    const recentLogs = await StudyLog.find({
-      userId: req.session.userId,
-      date: { $gte: thirtyDaysAgo }
-    }).sort({ date: -1 });
-
-    const allLogs = await StudyLog.find({ userId: req.session.userId }).sort({ date: 'asc' });
-    const consistencyLogs = allLogs.filter(log => log.hours > 0);
-    const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
-    const currentConsistencyStreak = calculateCurrentStreak(consistencyLogs);
-    const currentGoalStreak = calculateCurrentStreak(goalLogs);
-    const maxConsistencyStreak = calculateLongestStreak(consistencyLogs);
-    const maxGoalStreak = calculateLongestStreak(goalLogs);
-    
+    // Prepare Aggregation Match for Total Hours
     const { totalHoursRange = 'alltime' } = req.query;
     const totalHoursMatch = { userId: user._id };
     let startDate = null;
@@ -283,11 +270,32 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
     if (startDate) {
       totalHoursMatch.date = { $gte: startDate };
     }
-    const totalHoursAgg = await StudyLog.aggregate([
-      { $match: totalHoursMatch },
-      { $group: { _id: null, total: { $sum: '$hours' } } }
+
+    const thirtyDaysAgo = new Date(todayUTC);
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+    // OPTIMIZATION 2: Parallel execution for Dashboard
+    // We pass 'user' to calculateXpAndLevel to avoid re-fetching it
+    const [xpData, todayLog, recentLogs, allLogs, totalHoursAgg, achievementCount] = await Promise.all([
+        calculateXpAndLevel(req.session.userId, user),
+        StudyLog.findOne({ userId: req.session.userId, date: todayUTC }),
+        StudyLog.find({ userId: req.session.userId, date: { $gte: thirtyDaysAgo } }).sort({ date: -1 }),
+        StudyLog.find({ userId: req.session.userId }).sort({ date: 'asc' }),
+        StudyLog.aggregate([{ $match: totalHoursMatch }, { $group: { _id: null, total: { $sum: '$hours' } } }]),
+        Achievement.countDocuments({ userId: req.session.userId, notified: false, achieved: true })
     ]);
-    const achievementCount = await Achievement.countDocuments({ userId: req.session.userId, notified: false, achieved: true });
+
+    user.xp = xpData.xp;
+    user.level = xpData.level;
+
+    // Process logic in memory (fast)
+    const consistencyLogs = allLogs.filter(log => log.hours > 0);
+    const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
+    const currentConsistencyStreak = calculateCurrentStreak(consistencyLogs);
+    const currentGoalStreak = calculateCurrentStreak(goalLogs);
+    const maxConsistencyStreak = calculateLongestStreak(consistencyLogs);
+    const maxGoalStreak = calculateLongestStreak(goalLogs);
+    
     res.render('dashboard', {
       user,
       todayHours: todayLog ? todayLog.hours : 0,
@@ -312,8 +320,13 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
     const userId = req.session.userId;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    const achievements = await Achievement.find({ userId, achieved: true }).sort({ dateAchieved: 'desc' });
-    const studyLogs = await StudyLog.find({ userId }).sort({ date: 'desc' });
+
+    // Parallelize history fetch
+    const [achievements, studyLogs] = await Promise.all([
+        Achievement.find({ userId, achieved: true }).sort({ dateAchieved: 'desc' }),
+        StudyLog.find({ userId }).sort({ date: 'desc' })
+    ]);
+
     const achievementHistory = achievements.map(ach => `+${XP_FOR_ACHIEVEMENT} XP: Achievement unlocked - "${ach.name}"`);
     const logHistory = [];
     studyLogs.forEach(log => {
@@ -332,16 +345,15 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
     try {
       await dbConnect();
+      // 1. Fetch User first to ensure validity
       const user = await User.findById(req.session.userId);
       if (!user) {
           return req.session.destroy(() => {
             res.redirect('/login');
           });
       }
-      const { xp, level } = await calculateXpAndLevel(req.session.userId);
-      user.xp = xp;
-      user.level = level;
 
+      // 2. Prepare Date Ranges
       let currentMonth;
       if (req.query.month) {
         const [year, month] = req.query.month.split('-').map(Number);
@@ -355,10 +367,18 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
       const nextMonth = new Date(currentMonth);
       nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
       
-      const logs = await StudyLog.find({
-        userId: req.session.userId,
-        date: { $gte: currentMonth, $lt: nextMonth }
-      });
+      // OPTIMIZATION 3: Parallelize XP Calculation and Log Fetching
+      // Passed 'user' to calculateXpAndLevel
+      const [xpData, logs] = await Promise.all([
+          calculateXpAndLevel(req.session.userId, user),
+          StudyLog.find({
+            userId: req.session.userId,
+            date: { $gte: currentMonth, $lt: nextMonth }
+          })
+      ]);
+
+      user.xp = xpData.xp;
+      user.level = xpData.level;
 
       const isPartial = req.query.partial === 'true';
 
@@ -416,7 +436,7 @@ app.post('/update-goal', authenticateUser, noCache, [
           res.redirect('/login');
         });
     }
-    const { xp, level } = await calculateXpAndLevel(req.session.userId);
+    const { xp, level } = await calculateXpAndLevel(req.session.userId, user);
     user.xp = xp;
     user.level = level;
     const errors = validationResult(req);
@@ -444,15 +464,22 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
           res.redirect('/login');
         });
     }
-    const { xp, level } = await calculateXpAndLevel(userId);
-    user.xp = xp;
-    user.level = level;
-    const allLogs = await StudyLog.find({ userId }).sort({ date: 'asc' });
+
+    // Optimization: Parallel Fetch
+    const [xpData, allLogs, achievedDocs] = await Promise.all([
+        calculateXpAndLevel(userId, user),
+        StudyLog.find({ userId }).sort({ date: 'asc' }),
+        Achievement.find({ userId })
+    ]);
+
+    user.xp = xpData.xp;
+    user.level = xpData.level;
+
     const consistencyLogs = allLogs.filter(log => log.hours > 0);
     const goalLogs = allLogs.filter(log => log.hours >= user.dailyGoalHours);
     const longestConsistencyStreak = calculateLongestStreak(consistencyLogs);
     const longestGoalStreak = calculateLongestStreak(goalLogs);
-    const achievedDocs = await Achievement.find({ userId });
+    
     const achievedIds = new Set(achievedDocs.map(a => a.achievementId));
     const allAchievements = achievementsList.map(ach => {
       const isAchieved = achievedIds.has(ach.id);
@@ -487,9 +514,6 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
             res.redirect('/login');
           });
       }
-      const { xp, level } = await calculateXpAndLevel(req.session.userId);
-      user.xp = xp;
-      user.level = level;
 
       // 1. Logs for "Last 30 Days Progress" Chart (Strict UTC)
       const now = new Date();
@@ -497,29 +521,26 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
       const thirtyDaysAgo = new Date(todayUTC);
       thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
       
-      const recentLogs = await StudyLog.find({
-        userId: req.session.userId,
-        date: { $gte: thirtyDaysAgo }
-      }).sort({ date: 1 });
-
-      // 2. CURRENT MONTH STATS (Strict UTC Month Range)
       const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
       const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-      
-      const currentMonthLogs = await StudyLog.find({
-        userId: req.session.userId,
-        date: { $gte: startOfMonth, $lt: nextMonth }
-      });
+
+      // OPTIMIZATION 4: Parallelize Analytics Queries
+      const [xpData, recentLogs, currentMonthLogs] = await Promise.all([
+          calculateXpAndLevel(req.session.userId, user),
+          StudyLog.find({ userId: req.session.userId, date: { $gte: thirtyDaysAgo } }).sort({ date: 1 }),
+          StudyLog.find({ userId: req.session.userId, date: { $gte: startOfMonth, $lt: nextMonth } })
+      ]);
+
+      user.xp = xpData.xp;
+      user.level = xpData.level;
 
       const currentMonthTotal = currentMonthLogs.reduce((sum, log) => sum + log.hours, 0);
-      const currentMonthDaysLogged = currentMonthLogs.length; // Count of unique days logged
-      
-      // Calculate Average: Total / Number of Logged Days
+      const currentMonthDaysLogged = currentMonthLogs.length; 
       const currentMonthAvg = currentMonthDaysLogged > 0 ? currentMonthTotal / currentMonthDaysLogged : 0;
 
       res.render('analytics', {
         user,
-        logs: recentLogs, // Passed for the chart
+        logs: recentLogs, 
         currentMonthTotal: currentMonthTotal.toFixed(2),
         currentMonthAvg: currentMonthAvg.toFixed(2)
       });
@@ -529,7 +550,7 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     }
 });
 
-// --- UPDATED ANALYTICS API ROUTE ---
+// --- UPDATED ANALYTICS API ROUTE (Kept largely same, just Ensure parallel where applicable if expanded) ---
 app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
   try {
       await dbConnect();
@@ -562,6 +583,7 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
                const [yearG, monthNumG] = month.split('-').map(Number);
                const firstDayG = new Date(Date.UTC(yearG, monthNumG - 1, 1));
                const lastDayG = new Date(Date.UTC(yearG, monthNumG, 0));
+              // Optimization: We can't avoid 2 steps here easily without complex aggregations, but this is fine for API
               const userGoal = await User.findById(userId);
               const logs = await StudyLog.find({ userId, date: { $gte: firstDayG, $lte: lastDayG } });
               const met = logs.filter(log => log.hours >= userGoal.dailyGoalHours).length;
@@ -607,7 +629,6 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
                   isAverage = range.includes('average');
               }
 
-              // Aggregation: Sum hours AND Count actual logs
               const aggResult = await StudyLog.aggregate([
                   { $match: matchQuery },
                   { $group: { _id: null, total: { $sum: '$hours' }, count: { $sum: 1 } } }
@@ -617,7 +638,6 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
               let finalVal = resObj.total;
 
               if (isAverage) {
-                  // Divide by count of logs found, NOT calendar days
                   finalVal = resObj.count > 0 ? resObj.total / resObj.count : 0;
               }
 
@@ -656,7 +676,8 @@ app.get('/settings', authenticateUser, noCache, async (req, res) => {
             res.redirect('/login');
           });
       }
-      const { xp, level } = await calculateXpAndLevel(req.session.userId);
+      // Pass User to XP Calc
+      const { xp, level } = await calculateXpAndLevel(req.session.userId, user);
       user.xp = xp;
       user.level = level;
       const success = req.query.success === 'true' ? 'Goal updated successfully' : null;
@@ -671,8 +692,11 @@ app.post('/clear-account-data', authenticateUser, noCache, async (req, res) => {
   try {
     await dbConnect();
     const userId = req.session.userId;
-    await StudyLog.deleteMany({ userId });
-    await Achievement.deleteMany({ userId });
+    // Parallelize Deletions
+    await Promise.all([
+        StudyLog.deleteMany({ userId }),
+        Achievement.deleteMany({ userId })
+    ]);
     const user = await User.findById(req.session.userId);
     if (!user) {
         return req.session.destroy(() => {
@@ -703,7 +727,7 @@ app.post('/update-password', authenticateUser, noCache, [
         res.redirect('/login');
       });
   }
-  const { xp, level } = await calculateXpAndLevel(req.session.userId);
+  const { xp, level } = await calculateXpAndLevel(req.session.userId, user);
   user.xp = xp;
   user.level = level;
   const errors = validationResult(req);
