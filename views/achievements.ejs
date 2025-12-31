@@ -265,7 +265,8 @@
       background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(15px);
       -webkit-backdrop-filter: blur(15px);
-      z-index: 9999; /* Higher than navbar, lower than confetti */
+      z-index: 9999;
+      /* Higher than navbar, lower than confetti */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -418,7 +419,9 @@
     const countCompleted = completed.length;
     const countConsistency = yetToCompleteConsistency.length;
     const countGoal = yetToCompleteGoal.length;
-    const totalCount = countCompleted + countConsistency + countGoal;
+    // Add check for yetToCompleteHours in case it's undefined (though server should pass it)
+    const countHours = typeof yetToCompleteHours !== 'undefined' ? yetToCompleteHours.length : 0;
+    const totalCount = countCompleted + countConsistency + countGoal + countHours;
     const completionPercent = totalCount > 0 ? Math.round((countCompleted / totalCount) * 100) : 0;
   %>
 
@@ -474,7 +477,13 @@
       </div>
     <% } %>
 
-    <% if (yetToCompleteConsistency.length > 0 || yetToCompleteGoal.length > 0) { %>
+    <% 
+      const hasConsistency = yetToCompleteConsistency.length > 0;
+      const hasGoal = yetToCompleteGoal.length > 0;
+      const hasHours = typeof yetToCompleteHours !== 'undefined' && yetToCompleteHours.length > 0;
+    %>
+
+    <% if (hasConsistency || hasGoal || hasHours) { %>
       <div class="category-header" style="border-color: rgba(255,255,255,0.05);">
         <div class="category-icon-box" style="background: rgba(255,255,255,0.05); color: #666;"><i class="bi bi-lock-fill"></i></div>
         <h2 class="category-title" style="color: #666;">Locked Achievements</h2>
@@ -482,16 +491,32 @@
 
       <div class="grid-container">
         
-        <% [...yetToCompleteConsistency, ...yetToCompleteGoal].forEach((achievement, index) => { 
+        <% 
+           // Merge all locked lists for display
+           let lockedList = [...yetToCompleteConsistency, ...yetToCompleteGoal];
+           if (typeof yetToCompleteHours !== 'undefined') {
+             lockedList = [...lockedList, ...yetToCompleteHours];
+           }
+
+           lockedList.forEach((achievement, index) => { 
              let progress = 0;
              let current = 0;
+             let required = achievement.requiredDays; // Default
+             let unit = 'Days';
              
-             if(achievement.type === 'consistency') {
+             if (achievement.type === 'consistency') {
                current = longestConsistencyStreak;
-               progress = Math.min(100, (longestConsistencyStreak / achievement.requiredDays) * 100);
-             } else {
+               required = achievement.requiredDays;
+               progress = Math.min(100, (current / required) * 100);
+             } else if (achievement.type === 'goal') {
                current = longestGoalStreak;
-               progress = Math.min(100, (longestGoalStreak / achievement.requiredDays) * 100);
+               required = achievement.requiredDays;
+               progress = Math.min(100, (current / required) * 100);
+             } else if (achievement.type === 'total_hours') {
+               current = Math.floor(totalStudyHours);
+               required = achievement.requiredHours;
+               unit = 'Hours';
+               progress = Math.min(100, (current / required) * 100);
              }
         %>
           <div class="ach-card" style="animation: scaleUp 0.5s ease-out backwards <%= index * 0.1 %>s">
@@ -509,7 +534,7 @@
               </div>
               <div class="progress-info">
                 <span>Progress</span>
-                <span><%= current %> / <%= achievement.requiredDays %> Days</span>
+                <span><%= current %> / <%= required %> <%= unit %></span>
               </div>
             </div>
           </div>
@@ -532,7 +557,6 @@
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      
       // Styling to ensure it is ON TOP of the modal
       canvas.style.position = 'fixed';
       canvas.style.top = '0';
@@ -541,7 +565,6 @@
       canvas.style.zIndex = '10000'; // Highest Priority
       
       document.body.appendChild(canvas);
-
       // Particle Config
       const particles = [];
       const particleCount = 200;
@@ -552,7 +575,6 @@
         '#ffffff', // White
         '#C0C0C0'  // Silver
       ];
-
       for (let i = 0; i < particleCount; i++) {
         particles.push({
           x: Math.random() * canvas.width,
@@ -572,7 +594,6 @@
       
       function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
         particles.forEach((p, index) => {
           ctx.beginPath();
           ctx.lineWidth = p.w / 2;
@@ -643,13 +664,11 @@
           <button class="btn-modal-close" onclick="closePopup()">Collect Reward</button>
         </div>
       `;
-
       document.body.appendChild(modal);
 
       // 4. Trigger PROFESSIONAL CONFETTI
       fireGoldConfetti();
     };
-
     // Override Close Function
     window.closePopup = function() {
       const modal = document.querySelector('.modal-overlay');
@@ -660,7 +679,6 @@
         setTimeout(() => modal.remove(), 300);
       }
     };
-
     // Event Listeners
     document.addEventListener('DOMContentLoaded', () => {
       checkAndShowAchievements();
