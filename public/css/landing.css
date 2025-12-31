@@ -625,7 +625,8 @@ footer p {
         flex-shrink: 0;
         scroll-snap-align: center;
         width: 90%;
-        max-width: 350px;
+        max-width: none; 
+        margin: 0 auto;  
         grid-template-columns: 1fr;
     }
     .game-features {
