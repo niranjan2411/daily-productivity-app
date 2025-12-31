@@ -5,147 +5,99 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendar - Productivity Tracker</title>
+  
+  <link rel="preload" href="/css/style.css" as="style">
   <link rel="stylesheet" href="/css/style.css">
+  
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+
   <style>
-    #calendar-container { position: relative;
-      min-height: 400px; }
+    #calendar-container { position: relative; min-height: 400px; }
     .loader-overlay {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(10, 10, 10, 0.7); display: none;
       justify-content: center; align-items: center; z-index: 10;
-      border-radius: 20px;
-      backdrop-filter: blur(2px);
+      border-radius: 20px; backdrop-filter: blur(2px);
     }
     .spinner {
       width: 40px; height: 40px;
       border: 4px solid rgba(255, 215, 0, 0.1);
       border-top: 4px solid #FFD700; border-radius: 50%;
       animation: spin 1s linear infinite;
+      will-change: transform; /* 🚀 Optimization: Hardware Acceleration */
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg);
-    } }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
     /* Header Layout */
     .calendar-header { 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      gap: 5px; /* Reduced gap between tools and nav */
-      margin-bottom: 20px; 
-      width: 100%;
+      display: flex; flex-direction: column; align-items: center; 
+      gap: 5px; margin-bottom: 20px; width: 100%;
     }
 
     /* New Tools Row for the Download Button */
     .tools-row {
-      width: 100%;
-      display: flex;
-      justify-content: flex-end; /* Pushes button to the right */
-      padding: 0 5px;
-      margin-bottom: -10px; /* Slight overlap into padding to save space, or 0 */
+      width: 100%; display: flex; justify-content: flex-end; 
+      padding: 0 5px; margin-bottom: -10px; 
     }
 
-    /* Clean Button Styles - No Absolute Positioning */
+    /* Clean Button Styles */
     .download-btn {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%; /* Circular button */
-        cursor: pointer;
-        width: 36px;
-        height: 36px;
-        color: #888;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        border-radius: 50%; cursor: pointer;
+        width: 36px; height: 36px; color: #888;
+        display: flex; align-items: center; justify-content: center;
         transition: all 0.2s ease;
     }
 
     .download-btn:hover {
-        background: rgba(255, 215, 0, 0.1);
-        color: #FFD700;
-        border-color: rgba(255, 215, 0, 0.3);
-        transform: scale(1.05);
+        background: rgba(255, 215, 0, 0.1); color: #FFD700;
+        border-color: rgba(255, 215, 0, 0.3); transform: scale(1.05);
     }
     
-    .download-btn svg {
-        width: 18px;
-        height: 18px;
-    }
+    .download-btn svg { width: 18px; height: 18px; }
 
     /* Navigation Row */
     .header-main { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      width: 100%;
-      position: relative;
+      display: flex; justify-content: space-between; 
+      align-items: center; width: 100%; position: relative;
     }
     
     .month-summary { 
-      display: flex; 
-      justify-content: center;
-      gap: 8px; 
-      width: 100%; 
-      max-width: 500px; 
-      margin-top: 10px;
+      display: flex; justify-content: center; gap: 8px; 
+      width: 100%; max-width: 500px; margin-top: 10px;
     }
     
     .summary-item { 
-      background: rgba(255, 215, 0, 0.1);
-      padding: 8px 4px; 
-      border-radius: 8px; 
-      border: 1px solid rgba(255, 215, 0, 0.3); 
-      flex: 1; 
-      min-width: 0; 
-      display: flex; 
-      flex-direction: column;
+      background: rgba(255, 215, 0, 0.1); padding: 8px 4px; 
+      border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.3); 
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
       align-items: center; 
     }
     
     .summary-label { 
-      color: #b0b0b0;
-      font-size: 0.65rem; 
-      text-transform: uppercase; 
-      letter-spacing: 0.5px;
-      margin-bottom: 2px;
-      text-align: center;
+      color: #b0b0b0; font-size: 0.65rem; text-transform: uppercase; 
+      letter-spacing: 0.5px; margin-bottom: 2px; text-align: center;
     }
     
     .summary-value { 
-      color: #FFD700; 
-      font-weight: bold;
-      font-size: 0.95rem; 
+      color: #FFD700; font-weight: bold; font-size: 0.95rem; 
     }
 
     .calendar-view {
-        background-color: #121212; 
-        padding: 20px;
-        border-radius: 10px;
+        background-color: #121212; padding: 20px; border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     @media (max-width: 480px) {
-      .calendar-view {
-        padding: 15px 10px;
-      }
-      .summary-item {
-        padding: 6px 2px;
-      }
-      .summary-value {
-        font-size: 0.8rem;
-      }
-      .summary-label {
-        font-size: 0.55rem;
-        letter-spacing: 0;
-      }
-      .calendar-header h2 {
-        font-size: 1.2rem;
-      }
-      .month-summary {
-        gap: 5px;
-      }
+      .calendar-view { padding: 15px 10px; }
+      .summary-item { padding: 6px 2px; }
+      .summary-value { font-size: 0.8rem; }
+      .summary-label { font-size: 0.55rem; letter-spacing: 0; }
+      .calendar-header h2 { font-size: 1.2rem; }
+      .month-summary { gap: 5px; }
     }
   </style>
 </head>
@@ -164,8 +116,7 @@
 
   <div class="container">
     <h1>Study Hour Calendar</h1>
-    <a href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block; text-decoration: none; padding: 5px; color:#ffd900; background-color: rgba(255, 255, 255, 0.1); border: 1px solid white; border-radius: 10px;">Start 
-    Stopwatch</a>
+    <a href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block; text-decoration: none; padding: 5px; color:#ffd900; background-color: rgba(255, 255, 255, 0.1); border: 1px solid white; border-radius: 10px;">Start Stopwatch</a>
     <br><br>
     
     <div class="add-log-form">
@@ -177,7 +128,6 @@
         <div class="form-row">
           <div class="form-group">
             <label for="date">Date</label>
-         
            <input type="date" id="date" name="date" required>
           </div>
           <div class="form-group">
@@ -189,7 +139,6 @@
       </form>
     </div>
 
-  
     <div id="calendar-container">
       <div class="loader-overlay" id="loader"><div class="spinner"></div></div>
       
@@ -241,8 +190,7 @@
                 <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
                 <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
                 <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
-                class="month-nav <%= isFutureMonth ? 'disabled' 
-                : '' %>">&rarr;</a>
+                class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
             </div>
           
             <div class="month-summary">
@@ -269,8 +217,7 @@
               const log = logs.find(l => new Date(l.date).getUTCDate() === day);
               const hasLog = log !== undefined;
               const hours = hasLog ? log.hours : -1;
-              const color = hasLog ?
-              getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
+              const color = hasLog ? getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
           %>
             <div class="calendar-day" style="background-color: <%= color %>;">
               <div class="day-number"><%= day %></div>
@@ -286,8 +233,7 @@
 <% if (!partial) { %>
       </div> </div> <div class="legend">
         <div class="legend-item">
-            <span 
-            class="legend-text">0 hours</span>
+            <span class="legend-text">0 hours</span>
             <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.9);"></span>
             <span class="legend-color" style="background-color: rgba(220, 53, 69, 0.2);"></span>
             <span class="legend-text">Near Goal</span>
@@ -295,7 +241,6 @@
         <div class="legend-item">
             <span class="legend-text">Goal Met</span>
             <span class="legend-color" style="background-color: #39d353;"></span>
-   
             <span class="legend-color" style="background-color: #26a641;"></span>
             <span class="legend-color" style="background-color: #006d32;"></span>
             <span class="legend-color" style="background-color: #0e4429;"></span>
@@ -362,6 +307,24 @@
         const loader = document.getElementById('loader');
         if(loader) loader.style.display = 'flex';
 
+        // Check if html2canvas is loaded (since we deferred it)
+        if (typeof html2canvas !== 'undefined') {
+            executeDownload(element, loader);
+        } else {
+             // Fallback/Retry if clicked immediately
+             console.log("Waiting for html2canvas...");
+             setTimeout(() => {
+                 if (typeof html2canvas !== 'undefined') executeDownload(element, loader);
+                 else {
+                     alert("Feature is still loading. Please try again in a moment.");
+                     if(loader) loader.style.display = 'none';
+                 }
+             }, 1000);
+        }
+      }
+    });
+
+    function executeDownload(element, loader) {
         html2canvas(element, {
             scale: 2,
             backgroundColor: '#121212',
@@ -377,8 +340,7 @@
             console.error('Screenshot failed:', err);
             if(loader) loader.style.display = 'none';
         });
-      }
-    });
+    }
 
     function calculateMonthStats() {
       const hourElements = document.querySelectorAll('.day-hours');
@@ -393,10 +355,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Run stats calculation immediately on load
         calculateMonthStats();
         const todayString = new Date().toISOString().split('T')[0];
-        document.getElementById('date').value = todayString;
-        document.getElementById('date').setAttribute('max', todayString);
+        const dateInput = document.getElementById('date');
+        if(dateInput) {
+            dateInput.value = todayString;
+            dateInput.setAttribute('max', todayString);
+        }
     });
   </script>
 </body>
