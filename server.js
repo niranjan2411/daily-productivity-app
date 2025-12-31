@@ -48,6 +48,13 @@ const authLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
 
+// --- NEW KEEP-WARM ROUTE ---
+// This lightweight route returns 200 OK without hitting the DB.
+// It is used by the GitHub Action to wake up the server.
+app.get('/ping', (req, res) => {
+  res.status(200).send('Pong');
+});
+
 app.use('/api/achievements', achievementRouter);
 
 // --- DYNAMIC XP & Leveling Logic ---

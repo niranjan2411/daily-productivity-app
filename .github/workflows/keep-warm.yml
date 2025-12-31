@@ -1,0 +1,15 @@
+name: Keep Warm
+
+on:
+  schedule:
+    # Runs every 10 minutes (cron syntax)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows you to run it manually from GitHub tab for testing
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Application
+        # Replace the URL below with your actual deployed Vercel URL
+        run: curl -I https://tracku.me/ping
