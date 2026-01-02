@@ -1,119 +1,129 @@
 # Daily Productivity Tracker
 
-A full-stack, gamified web application built with Node.js, Express, and MongoDB to help you track daily study hours, visualize your progress, and stay motivated by earning XP and unlocking achievements.
+A full-stack, gamified web application designed to help you build consistent habits, track daily study hours, and visualize long-term progress. Built with Node.js, Express, and MongoDB, it leverages gamification elements like XP, levels, and achievements to keep you motivated.
 
 **Live Demo:** [**https://tracku.me/**](https://tracku.me/)
 
 ---
 
-## About The Project
+## 🚀 Key Features
 
-This application provides a clean and intuitive interface for users to log the hours they spend studying or working each day. It offers a comprehensive dashboard for a quick overview, a dynamic heatmap calendar for a granular view of daily efforts, and a detailed analytics page to track long-term trends. The goal is to help you stay motivated and consistent by making your progress tangible through gamification elements like experience points (XP), levels, and achievements.
+### 🎮 Gamification & Motivation
+* **Leveling System:** Earn **10 XP** per hour studied and **50 XP** bonuses for hitting your daily goal. Level up every 1000 XP.
+* **XP History:** View a detailed log of every XP point earned (study sessions, streaks, and achievements) via the interactive XP counter.
+* **Achievement System:** Unlock badges for consistency (e.g., "7-Day Streak") and total hours. Notifications alert you immediately upon unlocking.
+* **Streak Tracking:** Monitor distinct streaks for **Consistency** (logging any hours) and **Discipline** (meeting daily goals).
 
----
+### 📊 Advanced Analytics
+* **Interactive Dashboard:** Features a "Today's Focus" circular progress ring, a 3-day quick history view, and real-time level progress.
 
-## Features
+    <img width="800" height="500" alt="dashboard" src="https://github.com/user-attachments/assets/afd627fc-157c-479e-8985-f61159be3d71" />
 
-* **Secure User Authentication:** Safe and secure signup and login functionality with password hashing (`bcrypt.js`) and persistent session management (`express-session`).
-* **Gamified Dashboard:**
-    * **XP & Leveling System:** Earn XP for studying, meeting daily goals, and unlocking achievements to level up.
-    * **XP History:** Click on the XP counter to see a detailed, scrollable history of all XP earned.
-    * **Streak Tracking:** Monitor your current and maximum streaks for both daily consistency and meeting your study goals.
-    * **Dynamic Stats:** Get an at-a-glance view of today's logged hours, total hours (filterable by time range), and new achievements.
-* **Productivity Heatmap Calendar:**
-    * A visual, GitHub-style grid of the current month.
-    * Log hours for any past or present day.
-    * Days are color-coded to provide a granular view of your productivity:
-        * **Red Scale (Below Goal):** Days with 0 hours are bright red. The color fades as you get closer to your goal.
-        * **Green Scale (Goal Met):** The color gets progressively darker as you exceed your daily goal, similar to GitHub's contribution graph.
-* **In-Depth Analytics:**
-    * A dedicated page with interactive charts to visualize your progress.
-    * Track trends over the last 30 days, analyze custom date ranges, and perform a deep dive into any month.
-    * View key metrics like your weekly average and monthly total study hours.
-* **Achievement System:**
-    * Unlock dozens of achievements for consistency and meeting your goals (e.g., "7-Day Streak," "Goal Master").
-    * Receive pop-up notifications for new achievements.
-    * View your completed and in-progress achievements on a dedicated page.
-* **Customizable Goals & Settings:**
-    * Set and update your personal daily study hour goal at any time.
-    * Securely update your password.
-    * Option to clear all your study data without deleting your account.
-* **Fully Responsive:** The user interface is designed to be accessible and functional on both desktop and mobile devices.
 
----
+  
+* **Deep-Dive Charts:**
+    * **Distribution Analysis:** View total/average hours for the past 7 days, 30 days, 6 months, or all-time.
+    * **Productivity by Day:** Bar chart breaking down which days of the week you are most productive.
+    * **Goal Achievement Rate:** Doughnut chart visualizing how often you meet your daily targets.
+    * **Scrollable History:** A swipeable monthly bar chart covering your entire usage history.
+    * **Custom Ranges:** Generate reports for specific date ranges to analyze exam weeks or project sprints.
+ 
+      <img width="800" height="500" alt="analytics" src="https://github.com/user-attachments/assets/20ef3918-f4df-4dc2-8a7b-23d8e6b23b49" />
 
-## How to Use This App
 
-### 1. Getting Started
-* **Sign Up:** Create a new account with your name, email, and a secure password.
-* **Login:** Access your dashboard using your credentials.
-* **Set Your Goal:** Navigate to the **Settings** page from the top navigation bar to set your initial daily study hour goal. This is crucial for tracking your progress accurately.
+### ⚡ User Experience & Utility
+* **Quick Log Modal:** Log hours instantly from the dashboard without navigating away.
+* **Heatmap Calendar:** A GitHub-style contribution graph providing a granular, color-coded view of your monthly effort.
+* **Responsive Design:** Fully optimized interface for desktop, tablet, and mobile devices.
 
-### 2. The Dashboard
-Your dashboard is your mission control center. Here you can:
-* **Track Your Level and XP:** Keep an eye on your current level and XP. Click the XP box to view a detailed history of your earnings.
-* **Monitor Your Streaks:** See how many consecutive days you've studied and how many days in a row you've met your daily goal.
-* **View Key Stats:** Quickly check your study hours for the current day and your total hours over different time ranges (past 7 days, 1 month, etc.).
-* **Access Achievements:** A notification badge will appear on the "My Achievements" button if you have new achievements to view.
+  <img width="800" height="500" alt="calendar" src="https://github.com/user-attachments/assets/8026c595-1c75-416f-b36d-e35954f84a54" />
 
-### 3. Logging Your Hours
-* Navigate to the **Calendar** page.
-* Use the form at the top to select a date and enter the number of hours you studied.
-* Click **Save**. The calendar will instantly update with the new data, and the color of the day will change to reflect your productivity.
+  <img width="800" height="500" alt="achievement" src="https://github.com/user-attachments/assets/c368efe1-c3c8-4d30-8ad3-d0e7f0b386d9" />
 
-### 4. Analyzing Your Progress
-* Go to the **Analytics** page to see your progress visualized.
-* **30-Day Progress:** The default line chart shows your study hours over the last 30 days against your daily goal.
-* **Custom Date Range:** Select a start and end date and click "Generate Chart" to see a bar chart of your performance over that specific period.
-* **Monthly Deep Dive:** Choose a month to see a detailed line chart of your study habits for that month.
+
+### 🛡️ Security & Performance
+* **Secure Auth:** `bcryptjs` for password hashing and `express-session` with MongoDB storage for persistent, secure sessions.
+* **Protection:** Implemented `express-rate-limit` to prevent brute-force attacks and `express-validator` for robust input sanitization.
+* **Optimization:** Database connection "keep-warm" strategies and optimized queries for fast page loads.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-* **Backend:** Node.js, Express.js
-* **Frontend:** EJS (Embedded JavaScript templates), CSS, JavaScript
-* **Database:** MongoDB with Mongoose ODM
-* **Authentication:** `express-session` & `bcrypt.js`
+### Backend
+* **Runtime:** Node.js
+* **Framework:** Express.js
+* **Database:** MongoDB (via Mongoose ODM)
+* **Authentication:** Express-Session, Connect-Mongo, Bcryptjs
+* **Validation:** Express-Validator
+
+### Frontend
+* **Templating:** EJS (Embedded JavaScript)
+* **Styling:** Custom CSS (Responsive Grid & Flexbox)
+* **Visualization:** Chart.js (Interactive canvas-based charts)
 
 ---
 
-## Getting Started Locally
+## ⚙️ Local Installation
 
-Follow these instructions to get a local copy of the project up and running on your machine for development and testing purposes.
+Follow these steps to set up the project locally for development.
 
 ### Prerequisites
+* Node.js (v16+)
+* npm
+* MongoDB URI (Local or Atlas)
 
-* **Node.js** (v16 or later)
-* **npm** (Node Package Manager)
-* **MongoDB:** A MongoDB database connection string (you can get a free one from [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)).
+### Steps
 
-### Installation & Setup
-
-1.  **Clone the repository:**
-    ```sh
+1.  **Clone the repository**
+    ```bash
     git clone [https://github.com/niranjan2411/daily-productivity-app.git](https://github.com/niranjan2411/daily-productivity-app.git)
-    ```
-
-2.  **Navigate to the project directory:**
-    ```sh
     cd daily-productivity-app
     ```
 
-3.  **Install NPM packages:**
-    ```sh
+2.  **Install dependencies**
+    ```bash
     npm install
     ```
 
-4.  **Create a `.env` file:** Create a file named `.env` in the root of the project and add the following environment variables.
-
+3.  **Configure Environment Variables**
+    Create a `.env` file in the root directory and add the following:
     ```env
+    PORT=3000
     MONGODB_URI=your_mongodb_connection_string
-    SESSION_SECRET=a_strong_and_random_secret_key
+    SESSION_SECRET=your_secret_key_here
+    NODE_ENV=development
     ```
 
-5.  **Run the development server:**
-    ```sh
+4.  **Start the server**
+    ```bash
+    # For development (with nodemon)
     npm run dev
+
+    # For production
+    npm start
     ```
-    The application will be available at `http://localhost:3000`.
+
+5.  **Access the App**
+    Open your browser and navigate to `http://localhost:3000`.
+
+---
+
+## 📖 Usage Guide
+
+1.  **Set Your Baseline:** Upon registering, head to **Settings** to define your "Daily Goal" (e.g., 4 hours). This value drives your streak calculations and XP bonuses.
+2.  **Log Activity:** Use the **"Add Study Hours"** button on the dashboard for quick entry, or use the **Calendar** for back-dating entries.
+3.  **Monitor Growth:** Check the **Analytics** tab weekly to identify trends. Use the "Day of Week" chart to optimize your schedule around your most productive days.
+4.  **Data Management:** You can clear your study logs or update your password securely from the Settings page.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! If you have suggestions for new charts, gamification features, or UI improvements:
+
+1.  Fork the project.
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
