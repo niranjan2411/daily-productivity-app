@@ -544,41 +544,29 @@
 
   </div>
 
-  <script>
-    const achievementsList = <%- JSON.stringify(achievementsList) %>;
-  </script>
-  <script src="/js/achievements.js"></script>
-
-  <script>
-    // --- CANVAS-BASED PROFESSIONAL CONFETTI ---
+<script>
+    // --- CANVAS-BASED PROFESSIONAL CONFETTI (Unchanged) ---
     function fireGoldConfetti() {
-      // Create Canvas
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      // Styling to ensure it is ON TOP of the modal
       canvas.style.position = 'fixed';
       canvas.style.top = '0';
       canvas.style.left = '0';
-      canvas.style.pointerEvents = 'none'; // Click through
-      canvas.style.zIndex = '10000'; // Highest Priority
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '10000';
       
       document.body.appendChild(canvas);
-      // Particle Config
+
       const particles = [];
       const particleCount = 200;
-      const gravity = 0.5;
-      const colors = [
-        '#FFD700', // Gold
-        '#FDB931', // Light Gold
-        '#ffffff', // White
-        '#C0C0C0'  // Silver
-      ];
+      const colors = ['#FFD700', '#FDB931', '#ffffff', '#C0C0C0'];
+
       for (let i = 0; i < particleCount; i++) {
         particles.push({
           x: Math.random() * canvas.width,
-          y: Math.random() * -canvas.height, // Start above screen
+          y: Math.random() * -canvas.height,
           w: Math.random() * 8 + 4,
           h: Math.random() * 6 + 4,
           dx: (Math.random() - 0.5) * 4,
@@ -590,8 +578,6 @@
         });
       }
 
-      let animationId;
-      
       function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         particles.forEach((p, index) => {
@@ -602,27 +588,67 @@
           ctx.lineTo(p.x + p.tilt, p.y + p.tilt + (p.h / 2));
           ctx.stroke();
 
-          // Physics
           p.tiltAngle += p.tiltAngleIncremental;
           p.y += p.dy;
           p.x += Math.sin(p.tiltAngle) * 2;
           p.tilt = Math.sin(p.tiltAngle) * 15;
 
-          // Remove if out of bounds
-          if (p.y > canvas.height) {
-            particles.splice(index, 1);
-          }
+          if (p.y > canvas.height) particles.splice(index, 1);
         });
 
         if (particles.length > 0) {
-          animationId = requestAnimationFrame(render);
+          requestAnimationFrame(render);
         } else {
           canvas.remove();
         }
       }
-
       render();
     }
+
+    // --- NEW: MULTI-PLATFORM SHARE FUNCTION ---
+    window.shareAchievement = async function(platform, name, description) {
+      const text = `I just unlocked the "${name}" achievement on TrackU! 🚀\n\n"${description}"\n\nLeveling up my productivity daily.`;
+      const url = "https://tracku.me";
+      const hashtags = "productivity,studygram,TrackU";
+      
+      const encodedText = encodeURIComponent(text);
+      const encodedUrl = encodeURIComponent(url);
+
+      switch(platform) {
+        case 'twitter':
+          window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}&hashtags=${hashtags}`, '_blank');
+          break;
+          
+        case 'whatsapp':
+          // Works on both Web and Mobile
+          window.open(`https://api.whatsapp.com/send?text=${encodedText}%20${encodedUrl}`, '_blank');
+          break;
+          
+        case 'linkedin':
+          // LinkedIn Feed Share
+          window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${encodedText}%20${encodedUrl}`, '_blank');
+          break;
+          
+        case 'native':
+          // The "Share to All Apps" functionality
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: 'TrackU Achievement Unlocked!',
+                text: text,
+                url: url
+              });
+            } catch (err) {
+              console.log('Share canceled or failed', err);
+            }
+          } else {
+            // Fallback for desktop browsers without Web Share API
+            navigator.clipboard.writeText(`${text} ${url}`);
+            alert('Link and text copied to clipboard!');
+          }
+          break;
+      }
+    };
 
     // --- PROFESSIONAL MODAL OVERRIDE ---
     window.showAchievementPopup = function(name, description, type, goalValue, icon) {
@@ -630,7 +656,7 @@
       const existing = document.querySelector('.modal-overlay');
       if (existing) existing.remove();
 
-      // 2. Prepare Meta Info (Goal)
+      // 2. Prepare Meta Info
       let metaHtml = '';
       if (type === 'goal' && goalValue) {
         metaHtml = `
@@ -646,7 +672,10 @@
       // 3. Construct the Premium Modal
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
-      modal.onclick = (e) => { if(e.target === modal) closePopup(); }; // Click outside to close
+      modal.onclick = (e) => { if(e.target === modal) closePopup(); };
+      
+      // Inline styles for share buttons to keep it self-contained
+      const btnStyle = "flex: 1; border: none; padding: 10px; border-radius: 8px; cursor: pointer; color: white; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; transition: transform 0.2s;";
       
       modal.innerHTML = `
         <div class="modal-card">
@@ -661,7 +690,29 @@
           
           ${metaHtml}
           
-          <button class="btn-modal-close" onclick="closePopup()">Collect Reward</button>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 25px;">
+            <div style="display: flex; gap: 8px;">
+                <button onclick="shareAchievement('twitter', '${name}', '${description}')" style="${btnStyle} background: #000; border: 1px solid #333;">
+                    <i class="bi bi-twitter-x"></i> Post
+                </button>
+                
+                <button onclick="shareAchievement('whatsapp', '${name}', '${description}')" style="${btnStyle} background: #25D366;">
+                    <i class="bi bi-whatsapp"></i> Chat
+                </button>
+
+                <button onclick="shareAchievement('linkedin', '${name}', '${description}')" style="${btnStyle} background: #0077b5;">
+                    <i class="bi bi-linkedin"></i> Post
+                </button>
+            </div>
+
+            <button onclick="shareAchievement('native', '${name}', '${description}')" style="${btnStyle} background: rgba(255, 215, 0, 0.15); color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.3);">
+                <i class="bi bi-share-fill"></i> Share to other apps...
+            </button>
+          </div>
+
+          <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+             <button class="btn-modal-close" onclick="closePopup()">Collect Reward</button>
+          </div>
         </div>
       `;
       document.body.appendChild(modal);
@@ -669,19 +720,23 @@
       // 4. Trigger PROFESSIONAL CONFETTI
       fireGoldConfetti();
     };
+
     // Override Close Function
     window.closePopup = function() {
       const modal = document.querySelector('.modal-overlay');
       if (modal) {
-        // Add fade out animation before removing
         modal.style.transition = 'opacity 0.3s';
         modal.style.opacity = '0';
         setTimeout(() => modal.remove(), 300);
       }
     };
+
     // Event Listeners
     document.addEventListener('DOMContentLoaded', () => {
-      checkAndShowAchievements();
+      // Assuming 'checkAndShowAchievements' is defined in achievements.js
+      if (typeof checkAndShowAchievements === 'function') {
+          checkAndShowAchievements();
+      }
       
       document.querySelectorAll('.btn-view-card').forEach(button => {
         button.addEventListener('click', () => {
@@ -694,6 +749,6 @@
         });
       });
     });
-  </script>
+</script>
 </body>
 </html>
