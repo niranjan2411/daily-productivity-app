@@ -431,7 +431,7 @@
           <div class="chart-box">
              <% momentumData.forEach(day => { %>
                <div class="chart-col">
-                  <span class="col-val"><%= day.hours > 0 ? day.displayPct + '%' : '0%' %></span>
+                  <span class="col-val"><%= day.hours > 0 ? day.displayPct + '% of Goal' : '0% of Goal' %></span>
                   <div class="bar-wrapper">
                      <div class="bar-fill <%= day.status %>" style="height: <%= day.visualPct === 0 ? 5 : day.visualPct %>%;"></div>
                   </div>
