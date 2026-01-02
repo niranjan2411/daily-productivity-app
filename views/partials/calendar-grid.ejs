@@ -1,0 +1,71 @@
+<% 
+  const getMonthString = (date) => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
+
+  const prevMonthDate = new Date(currentMonth);
+  prevMonthDate.setUTCMonth(prevMonthDate.getUTCMonth() - 1);
+  const prevMonthString = getMonthString(prevMonthDate);
+
+  const nextMonthDate = new Date(currentMonth);
+  nextMonthDate.setUTCMonth(nextMonthDate.getUTCMonth() + 1);
+  const nextMonthString = getMonthString(nextMonthDate);
+  const todayDate = new Date();
+  const isFutureMonth = nextMonthDate.getUTCFullYear() > todayDate.getUTCFullYear() || 
+                       (nextMonthDate.getUTCFullYear() === todayDate.getUTCFullYear() && nextMonthDate.getUTCMonth() > todayDate.getUTCMonth());
+  
+  const getHeatmapColor = (hours, goal) => {
+      if (hours === 0) return 'rgba(220, 53, 69, 0.9)';
+      if (hours < goal) {
+          const opacity = 0.8 - (hours / goal) * 0.6;
+          return `rgba(220, 53, 69, ${opacity.toFixed(2)})`;
+      }
+      return (hours / goal) < 1.25 ? '#39d353' : '#006d32';
+  };
+%>
+
+<div class="calendar-header">
+  <div class="header-main">
+    <a href="/calendar?month=<%= prevMonthString %>" class="month-nav">&larr;</a>
+    <h2><%= currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %></h2>
+    <a href="<%= isFutureMonth ? '#' : '/calendar?month=' + nextMonthString %>" 
+       class="month-nav <%= isFutureMonth ? 'disabled' : '' %>">&rarr;</a>
+  </div>
+  
+  <div class="month-summary">
+    <div class="summary-item">
+      <span class="summary-label">Total Hours</span>
+      <span class="summary-value" id="monthTotal">0.0h</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Days Logged</span>
+      <span class="summary-value" id="monthDays">0</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Avg/Day</span>
+      <span class="summary-value" id="monthAvg">0.00h</span>
+    </div>
+  </div>
+</div>
+
+<div class="calendar-grid">
+  <% 
+    const daysInMonth = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const log = logs.find(l => new Date(l.date).getUTCDate() === day);
+      const hasLog = log !== undefined;
+      const hours = hasLog ? log.hours : -1;
+      const color = hasLog ? getHeatmapColor(hours, user.dailyGoalHours) : '#2a2a2a';
+  %>
+    <div class="calendar-day" style="background-color: <%= color %>;">
+      <div class="day-number"><%= day %></div>
+      <% if (hasLog) { %>
+        <div class="day-hours" style="border: 1px solid white; border-radius: 10%; padding:5px ">
+          <%= hours.toFixed(1) %>h
+        </div>
+      <% } %>
+    </div>
+  <% } %>
+</div>
