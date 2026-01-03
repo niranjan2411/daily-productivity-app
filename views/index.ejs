@@ -267,8 +267,10 @@
 
         .mobile-slides-track {
             display: flex;
+            flex-direction: row; /* Forces images to line up horizontally */
             transition: transform 0.3s ease-out;
             height: 100%;
+            width: 100%; /* Ensure track takes full width */
         }
 
         .mobile-slide {
@@ -276,7 +278,7 @@
             height: 100%;
         }
         
-        .mobile-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .mobile-slide img { width: 100%; height: 100%; object-fit: contain; }
 
         .mobile-dots {
             display: flex;
@@ -315,13 +317,32 @@
             border-top: 1px solid var(--border-light);
         }
 
-        /* --- RESPONSIVE --- */
         @media(max-width: 900px) {
             .feature-container { flex-direction: column; text-align: center; }
             .feature-section.alt .feature-container { flex-direction: column; }
             .feature-list li { justify-content: center; text-align: left; }
             .hero h1 { font-size: 3rem; }
-            .mobile-nav-btn { display: none; } /* Hide side arrows on mobile, rely on swipe/dots */
+            .mobile-nav-btn { display: none; }
+
+            .mobile-carousel-container {
+                max-width: 240px; 
+                margin-top: 30px;
+            }
+
+            .nav-actions .btn {
+                padding: 6px 14px;
+                font-size: 0.8rem;
+            }
+
+            .hero-cta-group .btn {
+                padding: 10px 20px !important;
+                font-size: 0.9rem !important;
+            }
+            
+            .hero-cta-group {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -372,8 +393,8 @@
             <div class="feature-visual">
                 <div class="slider-wrapper" id="slider-gamification">
                     <div class="slider-slides">
-                        <div class="slider-slide"><img src="/images/xp1.png" alt="XP Dashboard" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/xp2.png" alt="Level Progress" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/game1.webp" alt="XP Dashboard" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/game2.webp" alt="Level Progress" loading="lazy" decoding="async"></div>
                     </div>
                     <div class="slider-nav">
                         <button class="slider-btn prev" onclick="moveSlide('slider-gamification', -1)"><i class="bi bi-chevron-left"></i></button>
@@ -384,7 +405,7 @@
         </div>
     </section>
 
-        <section class="feature-section alt">
+        <section class="feature-section">
         <div class="feature-container">
             <div class="feature-content">
                 <span class="feature-label">Visual History</span>
@@ -403,7 +424,7 @@
         </div>
     </section>
 
-    <section class="feature-section alt">
+    <section class="feature-section">
         <div class="feature-container">
             <div class="feature-content">
                 <span class="feature-label">Data Intelligence</span>
@@ -420,11 +441,11 @@
             <div class="feature-visual">
                 <div class="slider-wrapper" id="slider-analytics">
                     <div class="slider-slides">
-                        <div class="slider-slide"><img src="/images/visual3.png" alt="Analytics Charts" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/visual2.png" alt="Graphs" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/visual1.png" alt="Dashboard" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/visual1.png" alt="Dashboard" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/visual1.png" alt="Dashboard" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/analytics3.webp" alt="Analytics Charts" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/analytics1.webp" alt="Graphs" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/analytics2.webp" alt="Dashboard" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/analytics4.webp" alt="Dashboard" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/analytics5.webp" alt="Dashboard" loading="lazy" decoding="async"></div>
                     </div>
                     <div class="slider-nav">
                         <button class="slider-btn prev" onclick="moveSlide('slider-analytics', -1)"><i class="bi bi-chevron-left"></i></button>
@@ -451,10 +472,9 @@
             <div class="feature-visual">
                 <div class="slider-wrapper" id="slider-habits">
                     <div class="slider-slides">
-                        <div class="slider-slide"><img src="/images/achi1.png" alt="Achievements" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/streak1.png" alt="Streaks" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/streak2.png" alt="Consistency" loading="lazy" decoding="async"></div>
-                        <div class="slider-slide"><img src="/images/achi2.png" alt="Badge Detail" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/achi1.webp" alt="Achievements" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/achi2.webp" alt="Streaks" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/achi3.webp" alt="Consistency" loading="lazy" decoding="async"></div>
                     </div>
                     <div class="slider-nav">
                         <button class="slider-btn prev" onclick="moveSlide('slider-habits', -1)"><i class="bi bi-chevron-left"></i></button>
@@ -466,7 +486,7 @@
     </section>
 
 
-    <section class="feature-section alt">
+    <section class="feature-section">
         <div class="feature-container">
             <div class="feature-content">
                 <span class="feature-label">Consistency</span>
@@ -478,11 +498,22 @@
                     <li><i class="bi bi-clock-history"></i> Can track highest and current consistency</li>
                 </ul>
             </div>
+            
             <div class="feature-visual">
-                <img src="/images/cal1.png" alt="Calendar Heatmap" loading="lazy" decoding="async" style="width: 100%; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <div class="slider-wrapper" id="slider-streak">
+                    <div class="slider-slides">
+                        <div class="slider-slide"><img src="/images/streak1.webp" alt="streak img" loading="lazy" decoding="async"></div>
+                        <div class="slider-slide"><img src="/images/streak2.webp" alt="streak img" loading="lazy" decoding="async"></div>
+                    </div>
+                    <div class="slider-nav">
+                        <button class="slider-btn prev" onclick="moveSlide('slider-streak', -1)"><i class="bi bi-chevron-left"></i></button>
+                        <button class="slider-btn next" onclick="moveSlide('slider-streak', 1)"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
+
 
 
 
@@ -496,13 +527,15 @@
                 <button class="mobile-nav-btn mobile-prev" onclick="moveMobile(-1)"><i class="bi bi-chevron-left"></i></button>
                 <div class="phone-frame">
                     <div class="mobile-slides-track" id="mobileTrack">
-                        <div class="mobile-slide"><img src="/images/m0.png" loading="lazy" decoding="async"></div>
-                        <div class="mobile-slide"><img src="/images/m1.png" loading="lazy" decoding="async"></div>
-                        <div class="mobile-slide"><img src="/images/m2.png" loading="lazy" decoding="async"></div>
-                        <div class="mobile-slide"><img src="/images/m3.png" loading="lazy" decoding="async"></div>
-                        <div class="mobile-slide"><img src="/images/m4.png" loading="lazy" decoding="async"></div>
-                        <div class="mobile-slide"><img src="/images/m5.png" loading="lazy" decoding="async"></div>
-                        <div class="mobile-slide"><img src="/images/m6.png" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob0.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob7.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob1.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob2.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob3.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob4.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob5.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob6.webp" loading="lazy" decoding="async"></div>
+                        <div class="mobile-slide"><img src="/images/mob8.webp" loading="lazy" decoding="async"></div>
                     </div>
                 </div>
                 <button class="mobile-nav-btn mobile-next" onclick="moveMobile(1)"><i class="bi bi-chevron-right"></i></button>
@@ -520,7 +553,7 @@
     </section>
 
     <footer>
-        <p style="color: #666;">&copy; 2025 TrackU. All rights reserved.</p>
+        <p style="color: #666;">&copy; 2025 TrackU. All rights reserved. <a href="mailto:tracku.contact@gmail.com">Any Suggestion/Queries DM</a></p>
     </footer>
 
     <style>@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }</style>
@@ -530,7 +563,7 @@
         const sliders = {};
 
         function initSliders() {
-            ['slider-gamification', 'slider-analytics', 'slider-habits'].forEach(id => {
+            ['slider-gamification', 'slider-analytics', 'slider-habits','slider-streak' ].forEach(id => {
                 const el = document.getElementById(id);
                 if(el) {
                     sliders[id] = { 
@@ -562,6 +595,29 @@
                 dot.className = `dot ${i===0 ? 'active' : ''}`;
                 dot.onclick = () => setMobile(i);
                 dotsContainer.appendChild(dot);
+            }
+
+            // --- NEW CODE: ADD SWIPE FUNCTIONALITY ---
+            let touchStartX = 0;
+            let touchEndX = 0;
+            
+            // Listen for touch start
+            mobileTrack.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            // Listen for touch end
+            mobileTrack.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, {passive: true});
+
+            // Calculate swipe direction
+            function handleSwipe() {
+                // Swipe Left (Next Slide)
+                if (touchEndX < touchStartX - 50) moveMobile(1); 
+                // Swipe Right (Previous Slide)
+                if (touchEndX > touchStartX + 50) moveMobile(-1); 
             }
         }
 

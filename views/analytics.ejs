@@ -8,7 +8,14 @@
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Responsive Grid */
+    /* RESET & CORE FIXES */
+    html, body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    * { box-sizing: border-box; }
+
+    /* Responsive Grid (Used for Top and Bottom Rows) */
     .top-charts-row {
       display: flex;
       flex-wrap: wrap;
@@ -21,12 +28,12 @@
       min-width: 300px;
       background: #1e1e1e;
       border-radius: 12px;
-      padding: 10px;
+      padding: 15px;
       display: flex;
       flex-direction: column;
     }
 
-    /* Container adjustments */
+    /* Container adjustments inside blocks */
     .chart-half-width .chart-container {
       margin: 0;
       height: 100%;
@@ -34,6 +41,8 @@
       background: transparent;
       display: flex;
       flex-direction: column;
+      padding: 0;
+      border: none;
     }
 
     /* TEXT STAT DISPLAY STYLE */
@@ -43,14 +52,13 @@
         justify-content: center;
         align-items: center;
         flex-grow: 1;
-        min-height: 200px;
+        min-height: 180px;
         text-align: center;
     }
     .big-stat-number {
-        font-size: 4rem;
+        font-size: 3.5rem;
         font-weight: bold;
         color: #4CAF50;
-        /* Green */
         margin: 10px 0;
         line-height: 1;
     }
@@ -60,10 +68,12 @@
         font-weight: 500;
     }
 
+    /* Mobile Responsiveness */
     @media (max-width: 768px) {
-      .top-charts-row { flex-direction: column; }
+      .top-charts-row { flex-direction: column; gap: 15px; }
       .chart-half-width { width: 100%; min-width: 0; }
       .big-stat-number { font-size: 3rem; }
+      .container { padding: 0 15px; }
     }
   </style>
 </head>
@@ -73,7 +83,7 @@
     <h2>Productivity Tracker</h2>
     <div class="nav-links">
       <a href="/dashboard">Dashboard</a>
-      <a href="/calendar">Calendar</a>
+      <a href="/calendar">⭐️ Calendar</a>
       <a href="/analytics" class="active">Analytics</a>
       <a href="/settings">Settings</a>
       <a href="/logout">Logout</a>
@@ -85,12 +95,11 @@
     <br>
 
     <div class="top-charts-row">
-        
         <div class="chart-half-width">
             <div class="chart-container">
-                <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
                     <h2 style="font-size: 1.2rem; margin: 0;">Total Analysis</h2>
-                    <select id="distributionRange" class="period-selector" style="font-size: 0.85rem; padding: 6px;">
+                    <select id="distributionRange" class="period-selector" style="font-size: 0.85rem; padding: 6px; max-width: 100%;">
                         <option value="past_7_days">Total (Past 7 Days)</option>
                         <option value="recent_30_days">Total (Recent 30 Days)</option>
                         <option value="past_6_months">Total (Past 6 Months)</option>
@@ -111,8 +120,8 @@
 
         <div class="chart-half-width">
             <div class="chart-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <h2 style="font-size: 1.2rem; margin: 0;">Montly Study hours</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap;">
+                    <h2 style="font-size: 1.2rem; margin: 0;">Monthly History</h2>
                     <span id="historyDateRange" style="font-size: 0.8em; color: #888;"></span>
                 </div>
                 <p style="color: #666; font-size: 0.8em; margin-bottom: 10px;">Swipe to view past months</p>
@@ -131,7 +140,7 @@
      <div class="stat-card">
         <h3>Current Month Total</h3>
         <p class="stat-number"><%= currentMonthTotal %>h</p>
-      </div>
+     </div>
       <div class="stat-card">
         <h3>Current Month Avg/Day</h3>
         <p class="stat-number"><%= currentMonthAvg %>h</p>
@@ -171,14 +180,22 @@
       <div class="chart-wrapper"><canvas id="monthlyChart"></canvas></div>
     </div>
 
-    <div class="chart-grid">
-      <div class="chart-container-grid-item">
-        <h2 id="dayOfWeekTitle">Productivity by Day</h2>
-        <div class="chart-wrapper"><canvas id="dayOfWeekChart"></canvas></div>
+    <div class="top-charts-row">
+       <div class="chart-half-width">
+          <div class="chart-container">
+            <h2 id="dayOfWeekTitle">Productivity by Day</h2>
+            <div class="chart-wrapper" style="flex-grow: 1; min-height: 250px; position: relative; margin-top: 10px;">
+                <canvas id="dayOfWeekChart"></canvas>
+            </div>
+          </div>
       </div>
-      <div class="chart-container-grid-item">
-        <h2 id="goalAchievementTitle">Goal Achievement Rate</h2>
-        <div class="chart-wrapper"><canvas id="goalAchievementChart"></canvas></div>
+      <div class="chart-half-width">
+          <div class="chart-container">
+            <h2 id="goalAchievementTitle">Goal Achievement Rate</h2>
+            <div class="chart-wrapper" style="flex-grow: 1; min-height: 250px; position: relative; margin-top: 10px;">
+                <canvas id="goalAchievementChart"></canvas>
+            </div>
+          </div>
       </div>
     </div>
 
@@ -186,7 +203,7 @@
 
   <script>
     // --- Global Chart Vars ---
-    const dailyGoal = <%= user.dailyGoalHours %>;
+    const dailyGoal = Number('<%= user.dailyGoalHours %>') || 5; 
     let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart, monthlyHistoryChart;
 
     // --- 1. Update Distribution TEXT ---
@@ -200,7 +217,6 @@
             const response = await fetch(`/api/analytics?chart=distribution&range=${range}`);
             const data = await response.json();
             
-            // Robust check: Ensure data exists, otherwise default to 0
             if (!data || !Array.isArray(data) || data.length === 0) {
                  valEl.innerText = "0h";
                  labelEl.innerText = "No Data";
@@ -236,6 +252,7 @@
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const labels = data.map(d => `${monthNames[d._id.month - 1]} '${String(d._id.year).slice(2)}`);
             const values = data.map(d => d.total);
+            
             if (data.length > 0) {
                 const first = data[0]._id;
                 const last = data[data.length - 1]._id;
@@ -252,6 +269,7 @@
             }
             inner.style.width = chartWidth;
             inner.style.height = '100%';
+            
             const ctx = document.getElementById('monthlyHistoryChart').getContext('2d');
             if (monthlyHistoryChart) monthlyHistoryChart.destroy();
 
@@ -282,12 +300,13 @@
         } catch (error) { console.error(error); }
     }
 
-    // --- Standard Charts (Keep Existing Logic) ---
+    // --- Standard Charts ---
     function render30DayChart() {
         const ctx = document.getElementById('progressChart').getContext('2d');
         const logs = <%- JSON.stringify(logs) %>;
         const labels = logs.map(log => new Date(log.date).toLocaleDateString());
         const data = logs.map(log => log.hours);
+        
         if (progressChart) progressChart.destroy();
         progressChart = new Chart(ctx, {
             type: 'line',
@@ -317,8 +336,10 @@
         if (!startDate || !endDate) return;
         const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
         const data = await response.json();
+        
         if (dateRangeChart) dateRangeChart.destroy();
         const ctx = document.getElementById('dateRangeChart').getContext('2d');
+        
         dateRangeChart = new Chart(ctx, {
           type: 'bar',
           data: {
@@ -346,8 +367,10 @@
     async function renderMonthlyChart(month) {
       const response = await fetch(`/api/analytics?chart=monthly&month=${month}`);
       const data = await response.json();
+      
       if (monthlyChart) monthlyChart.destroy();
       const ctx = document.getElementById('monthlyChart').getContext('2d');
+      
       monthlyChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -369,7 +392,7 @@
             borderColor: '#FF5722',
             borderDash: [5, 5],
             pointRadius: 0,
-        }]
+          }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
       });
@@ -379,9 +402,11 @@
       if (dayOfWeekChart) dayOfWeekChart.destroy();
       const response = await fetch(`/api/analytics?chart=dayOfWeek&month=${month}`);
       const data = await response.json();
+      
       const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const chartData = Array(7).fill(0);
       data.forEach(item => { chartData[item._id - 1] = item.avgHours.toFixed(2); });
+      
       const ctx = document.getElementById('dayOfWeekChart').getContext('2d');
       dayOfWeekChart = new Chart(ctx, {
         type: 'bar',
@@ -390,7 +415,7 @@
           datasets: [{ label: 'Avg Hours', data: chartData, backgroundColor: 'rgba(253, 197, 0, 0.6)', borderColor: '#fdc500' }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
- });
+      });
       const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
       document.getElementById('dayOfWeekTitle').innerText = `Productivity by Day (${monthName})`;
     }
@@ -399,6 +424,7 @@
         if (goalAchievementChart) goalAchievementChart.destroy();
         const response = await fetch(`/api/analytics?chart=goalAchievement&month=${month}`);
         const data = await response.json();
+        
         const ctx = document.getElementById('goalAchievementChart').getContext('2d');
         goalAchievementChart = new Chart(ctx, {
             type: 'doughnut',
@@ -406,7 +432,7 @@
                 labels: ['Met', 'Below'],
                 datasets: [{ data: [data.met, data.notMet], backgroundColor: ['#4CAF50', '#FF5722'], borderColor: '#1e1e1e', borderWidth: 4 }]
             },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
         });
         const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
         document.getElementById('goalAchievementTitle').innerText = `Goal Achievement (${monthName})`;
@@ -424,41 +450,52 @@
       const todayStr = today.toISOString().split("T")[0];
 
       const monthPicker = document.getElementById('month-picker');
-      monthPicker.value = currentMonthStr;
-      monthPicker.max = currentMonthStr;
+      if(monthPicker) {
+          monthPicker.value = currentMonthStr;
+          monthPicker.max = currentMonthStr;
+      }
 
       const startDateInput = document.getElementById('start-date');
       const endDateInput = document.getElementById('end-date');
-      endDateInput.value = todayStr;
-      endDateInput.max = todayStr;
-      startDateInput.max = todayStr;
+      if(startDateInput && endDateInput) {
+          endDateInput.value = todayStr;
+          endDateInput.max = todayStr;
+          startDateInput.max = todayStr;
+      }
 
       render30DayChart();
       renderMonthlyChart(currentMonthStr);
       renderDayOfWeekChart(currentMonthStr);
       renderGoalAchievementChart(currentMonthStr);
       
-      monthPicker.addEventListener('change', (e) => {
-        const selectedMonth = e.target.value;
-        renderMonthlyChart(selectedMonth);
-        renderDayOfWeekChart(selectedMonth);
-        renderGoalAchievementChart(selectedMonth);
-      });
-      
-      document.getElementById('generate-range-chart').addEventListener('click', () => {
-        const startDate = startDateInput.value;
-        const endDate = endDateInput.value;
-        if (startDate && endDate && startDate <= endDate) {
-            renderDateRangeChart(startDate, endDate);
-        } else {
-            alert('Please select a valid start and end date.');
-        }
-      });
-      
-      // Distribution Select Listener
-      document.getElementById('distributionRange').addEventListener('change', (e) => {
-          updateDistributionStats(e.target.value);
-      });
+      if(monthPicker) {
+          monthPicker.addEventListener('change', (e) => {
+            const selectedMonth = e.target.value;
+            renderMonthlyChart(selectedMonth);
+            renderDayOfWeekChart(selectedMonth);
+            renderGoalAchievementChart(selectedMonth);
+          });
+      }
+
+      const generateBtn = document.getElementById('generate-range-chart');
+      if(generateBtn) {
+          generateBtn.addEventListener('click', () => {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            if (startDate && endDate && startDate <= endDate) {
+                renderDateRangeChart(startDate, endDate);
+            } else {
+                alert('Please select a valid start and end date.');
+            }
+          });
+      }
+
+      const distRange = document.getElementById('distributionRange');
+      if(distRange) {
+          distRange.addEventListener('change', (e) => {
+              updateDistributionStats(e.target.value);
+          });
+      }
     });
   </script>
 </body>

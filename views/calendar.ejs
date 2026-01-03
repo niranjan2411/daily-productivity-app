@@ -14,31 +14,38 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 
   <style>
-    #calendar-container { position: relative; min-height: 400px; }
+    #calendar-container { position: relative;
+      min-height: 400px; }
     .loader-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
       background: rgba(10, 10, 10, 0.7); display: none;
       justify-content: center; align-items: center; z-index: 10;
-      border-radius: 20px; backdrop-filter: blur(2px);
+      border-radius: 20px;
+      backdrop-filter: blur(2px);
     }
     .spinner {
       width: 40px; height: 40px;
       border: 4px solid rgba(255, 215, 0, 0.1);
       border-top: 4px solid #FFD700; border-radius: 50%;
       animation: spin 1s linear infinite;
-      will-change: transform; /* 🚀 Optimization: Hardware Acceleration */
+      will-change: transform;
+      /* 🚀 Optimization: Hardware Acceleration */
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes spin { 0% { transform: rotate(0deg);
+      } 100% { transform: rotate(360deg); } }
     
     /* Header Layout */
     .calendar-header { 
-      display: flex; flex-direction: column; align-items: center; 
+      display: flex;
+      flex-direction: column; align-items: center; 
       gap: 5px; margin-bottom: 20px; width: 100%;
     }
 
     /* New Tools Row for the Download Button */
     .tools-row {
-      width: 100%; display: flex; justify-content: flex-end; 
+      width: 100%;
+      display: flex; justify-content: flex-end; 
       padding: 0 5px; margin-bottom: -10px; 
     }
 
@@ -48,56 +55,70 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 50%; cursor: pointer;
         width: 36px; height: 36px; color: #888;
-        display: flex; align-items: center; justify-content: center;
+        display: flex;
+        align-items: center; justify-content: center;
         transition: all 0.2s ease;
     }
 
     .download-btn:hover {
-        background: rgba(255, 215, 0, 0.1); color: #FFD700;
+        background: rgba(255, 215, 0, 0.1);
+        color: #FFD700;
         border-color: rgba(255, 215, 0, 0.3); transform: scale(1.05);
     }
     
-    .download-btn svg { width: 18px; height: 18px; }
+    .download-btn svg { width: 18px;
+      height: 18px; }
 
     /* Navigation Row */
     .header-main { 
-      display: flex; justify-content: space-between; 
+      display: flex;
+      justify-content: space-between; 
       align-items: center; width: 100%; position: relative;
     }
     
     .month-summary { 
-      display: flex; justify-content: center; gap: 8px; 
+      display: flex;
+      justify-content: center; gap: 8px; 
       width: 100%; max-width: 500px; margin-top: 10px;
     }
     
     .summary-item { 
-      background: rgba(255, 215, 0, 0.1); padding: 8px 4px; 
+      background: rgba(255, 215, 0, 0.1);
+      padding: 8px 4px; 
       border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.3); 
       flex: 1; min-width: 0; display: flex; flex-direction: column;
       align-items: center; 
     }
     
     .summary-label { 
-      color: #b0b0b0; font-size: 0.65rem; text-transform: uppercase; 
+      color: #b0b0b0;
+      font-size: 0.65rem; text-transform: uppercase; 
       letter-spacing: 0.5px; margin-bottom: 2px; text-align: center;
     }
     
     .summary-value { 
-      color: #FFD700; font-weight: bold; font-size: 0.95rem; 
+      color: #FFD700; font-weight: bold;
+      font-size: 0.95rem; 
     }
 
     .calendar-view {
-        background-color: #121212; padding: 20px; border-radius: 10px;
+        background-color: #121212; padding: 20px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     @media (max-width: 480px) {
-      .calendar-view { padding: 15px 10px; }
-      .summary-item { padding: 6px 2px; }
+      .calendar-view { padding: 15px 10px;
+      }
+      .summary-item { padding: 6px 2px;
+      }
       .summary-value { font-size: 0.8rem; }
-      .summary-label { font-size: 0.55rem; letter-spacing: 0; }
-      .calendar-header h2 { font-size: 1.2rem; }
-      .month-summary { gap: 5px; }
+      .summary-label { font-size: 0.55rem;
+      letter-spacing: 0; }
+      .calendar-header h2 { font-size: 1.2rem;
+      }
+      .month-summary { gap: 5px;
+      }
     }
   </style>
 </head>
@@ -116,7 +137,8 @@
 
   <div class="container">
     <h1>Study Hour Calendar</h1>
-    <a href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block; text-decoration: none; padding: 5px; color:#ffd900; background-color: rgba(255, 255, 255, 0.1); border: 1px solid white; border-radius: 10px;"><span>⏱</span> Start Stopwatch</a>
+    <a href="https://stopwatch-theta-sooty.vercel.app/" target="_blank" style="display: inline-block; text-decoration: none; padding: 5px; color:#ffd900; background-color: rgba(255, 255, 255, 0.1); border: 1px solid white; border-radius: 10px;"><span>⏱</span> 
+      Start Stopwatch</a>
     <br><br>
     
     <div class="add-log-form">
@@ -128,7 +150,8 @@
         <div class="form-row">
           <div class="form-group">
             <label for="date">Date</label>
-           <input type="date" id="date" name="date" required>
+        
+            <input type="date" id="date" name="date" required>
           </div>
           <div class="form-group">
             <label for="hours">Hours</label>
@@ -139,6 +162,7 @@
       </form>
     </div>
 
+  
     <div id="calendar-container">
       <div class="loader-overlay" id="loader"><div class="spinner"></div></div>
       
@@ -179,10 +203,12 @@
             <div class="tools-row">
                 <button id="download-calendar-btn" class="download-btn" title="Download Calendar Image" data-html2canvas-ignore="true">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <path 
+                          d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
+            
                 </button>
             </div>
 
@@ -197,17 +223,20 @@
                 <div class="summary-item">
                     <span class="summary-label">Total Hours</span>
                     <span class="summary-value" id="monthTotal">0.0h</span>
+ 
                 </div>
             
                 <div class="summary-item">
                     <span class="summary-label">Days Logged</span>
                     <span class="summary-value" id="monthDays">0</span>
+            
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Avg/Day</span>
                     <span class="summary-value" id="monthAvg">0.00h</span>
                 </div>
             </div>
+        
         </div>
 
         <div class="calendar-grid">
@@ -241,6 +270,7 @@
         <div class="legend-item">
             <span class="legend-text">Goal Met</span>
             <span class="legend-color" style="background-color: #39d353;"></span>
+   
             <span class="legend-color" style="background-color: #26a641;"></span>
             <span class="legend-color" style="background-color: #006d32;"></span>
             <span class="legend-color" style="background-color: #0e4429;"></span>
@@ -270,6 +300,15 @@
 
     logForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Select the submit button
+      const submitBtn = logForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerText;
+      
+      // Change button state to "Saving..."
+      submitBtn.innerText = 'Saving...';
+      submitBtn.disabled = true;
+
       const formData = new URLSearchParams(new FormData(logForm));
       loader.style.display = 'flex';
       try {
@@ -284,9 +323,13 @@
         document.getElementById('date').value = new Date().toISOString().split('T')[0];
       } finally {
         loader.style.display = 'none';
+        
+        // Revert button state
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
       }
     });
-
+    
     document.addEventListener('click', (e) => {
       // Navigation
       const navLink = e.target.closest('.month-nav');
@@ -299,6 +342,7 @@
       }
 
       // Download Functionality
+   
       const downloadBtn = e.target.closest('#download-calendar-btn');
       if (downloadBtn) {
         e.preventDefault();
@@ -309,7 +353,8 @@
 
         // Check if html2canvas is loaded (since we deferred it)
         if (typeof html2canvas !== 'undefined') {
-            executeDownload(element, loader);
+       
+             executeDownload(element, loader);
         } else {
              // Fallback/Retry if clicked immediately
              console.log("Waiting for html2canvas...");
@@ -318,12 +363,12 @@
                  else {
                      alert("Feature is still loading. Please try again in a moment.");
                      if(loader) loader.style.display = 'none';
+   
                  }
              }, 1000);
         }
       }
     });
-
     function executeDownload(element, loader) {
         html2canvas(element, {
             scale: 2,
@@ -332,6 +377,7 @@
             useCORS: true
         }).then(canvas => {
             const link = document.createElement('a');
+           
             link.download = 'productivity-calendar-' + new Date().toISOString().split('T')[0] + '.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
@@ -363,6 +409,7 @@
             dateInput.value = todayString;
             dateInput.setAttribute('max', todayString);
         }
+    
     });
   </script>
 </body>
