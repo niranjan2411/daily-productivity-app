@@ -1,0 +1,44 @@
+<header class="app-header">
+  <a class="app-identity" href="/dashboard" aria-label="Go to dashboard">
+    <span class="app-avatar"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
+    <span class="app-identity-copy">
+      <strong><%= user.name %></strong>
+      <small title="<%= user.publicProfile ? 'Public profile' : 'Private profile' %>" aria-label="<%= user.publicProfile ? 'Public profile' : 'Private profile' %>">
+        <span class="profile-visibility-icon" aria-hidden="true"><%= user.publicProfile ? '🔓' : '🔒' %></span>
+      </small>
+    </span>
+  </a>
+
+  <nav class="app-actions" aria-label="Primary navigation">
+    <a class="app-action app-calendar-action" href="/calendar">
+      <span class="app-action-icon" aria-hidden="true">▣</span>
+      <span>Calendar</span>
+    </a>
+
+    <div class="app-menu">
+      <button type="button" class="app-action app-menu-trigger">
+        <span class="app-action-icon" aria-hidden="true">▤</span>
+        <span>Analysis</span>
+        <span class="app-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div class="app-menu-panel">
+        <a href="/analytics">Analytics</a>
+        <a href="/leaderboards">Leaderboards</a>
+        <a href="/achievements">Achievements</a>
+      </div>
+    </div>
+
+    <div class="app-menu app-profile-menu">
+      <button type="button" class="app-action app-profile-action app-menu-trigger" aria-label="Open profile menu">
+        <span class="app-avatar app-avatar-small"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
+        <span class="app-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div class="app-menu-panel">
+        <a href="/profile">Profile</a>
+        <a href="/private-groups">Private Groups</a>
+        <a href="/settings">Settings</a>
+        <a href="/logout">Logout</a>
+      </div>
+    </div>
+  </nav>
+</header>

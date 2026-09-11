@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Private Groups - Focus tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+  <style>
+    .groups-intro { margin: 34px 0 24px; }
+    .groups-intro h1 { margin-bottom: 6px; }
+    .groups-intro p { color: #999; }
+    .group-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 30px; }
+    .group-form { background: #151515; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 22px; }
+    .group-form h2 { margin-bottom: 6px; font-size: 1.1rem; }
+    .group-form p { color: #888; font-size: .85rem; margin-bottom: 16px; }
+    .group-form-row { display: flex; gap: 10px; }
+    .group-form input { flex: 1; min-width: 0; padding: 12px 13px; border: 1px solid rgba(255,255,255,.12); border-radius: 9px; background: #0d0d0d; color: #fff; }
+    .group-form button { border: 0; border-radius: 9px; padding: 0 16px; background: #a78bfa; color: #130d24; font-weight: 800; cursor: pointer; }
+    .group-form button:hover { background: #c4b5fd; }
+    .group-error { margin-bottom: 20px; padding: 12px 14px; border: 1px solid rgba(239,68,68,.35); border-radius: 9px; color: #fca5a5; background: rgba(127,29,29,.2); }
+    .group-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .group-card { display: flex; flex-direction: column; gap: 16px; padding: 20px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: #151515; }
+    .group-card h2 { font-size: 1.05rem; }
+    .group-card-meta { color: #888; font-size: .85rem; }
+    .group-code { display: inline-block; padding: 7px 9px; border: 1px dashed rgba(167,139,250,.5); border-radius: 7px; color: #c4b5fd; font-family: monospace; letter-spacing: 1.5px; }
+    .group-card-link { margin-top: auto; color: #2dd4bf; text-decoration: none; font-weight: 700; }
+    .empty-groups { padding: 34px; border: 1px dashed rgba(255,255,255,.15); border-radius: 14px; color: #888; text-align: center; }
+    @media (max-width: 700px) { .group-actions { grid-template-columns: 1fr; } .group-form-row { flex-direction: column; } .group-form button { min-height: 42px; } }
+  </style>
+</head>
+<body>
+  <%- include('partials/loader') %>
+  <%- include('partials/app-header') %>
+  <main class="container">
+    <section class="groups-intro">
+      <h1>Private groups</h1>
+      <p>Compete with people you invite. Each group supports up to 10 members.</p>
+    </section>
+
+    <% if (error) { %><div class="group-error"><%= error %></div><% } %>
+
+    <section class="group-actions" aria-label="Private group actions">
+      <form class="group-form" action="/private-groups/create" method="POST">
+        <h2>Create a group</h2>
+        <p>Name your focus competition and share its generated code.</p>
+        <div class="group-form-row">
+          <input type="text" name="name" maxlength="60" minlength="2" placeholder="e.g. Exam sprint" required>
+          <button type="submit">Create</button>
+        </div>
+      </form>
+      <form class="group-form" action="/private-groups/join" method="POST">
+        <h2>Join a group</h2>
+        <p>Enter the invite code shared by a group member.</p>
+        <div class="group-form-row">
+          <input type="text" name="code" maxlength="8" minlength="8" pattern="[A-Za-z0-9]{8}" placeholder="8-character code" required>
+          <button type="submit">Join</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2 style="margin-bottom:16px;">Your groups</h2>
+      <% if (groups.length) { %>
+        <div class="group-list">
+          <% groups.forEach(group => { %>
+            <article class="group-card">
+              <h2><%= group.name %></h2>
+              <div class="group-card-meta"><%= group.members.length %> / 10 members</div>
+              <div><span class="group-code"><%= group.code %></span></div>
+              <a class="group-card-link" href="/private-groups/<%= group._id %>">Open group &rarr;</a>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-groups">You have not joined a private group yet.</div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics - Productivity Tracker</title>
+  <title>Analytics - Focus tracker</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -79,16 +79,7 @@
 </head>
 <body>
   <%- include('partials/loader') %>
-  <nav class="navbar">
-    <h2>Productivity Tracker</h2>
-    <div class="nav-links">
-      <a href="/dashboard">Dashboard</a>
-      <a href="/calendar">⭐️ Calendar</a>
-      <a href="/analytics" class="active">Analytics</a>
-      <a href="/settings">Settings</a>
-      <a href="/logout">Logout</a>
-    </div>
-  </nav>
+  <%- include('partials/app-header') %>
 
   <div class="container">
     <h1>Your Analytics</h1>
@@ -103,7 +94,7 @@
                         <option value="past_7_days">Total (Past 7 Days)</option>
                         <option value="recent_30_days">Total (Recent 30 Days)</option>
                         <option value="past_6_months">Total (Past 6 Months)</option>
-                        <option value="all_time_hours" selected>Total (All Time)</option>
+                        <option value="all_time_hours" selected>Total (All Time <%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %>)</option>
                         <option disabled>──────────</option>
                         <option value="average_7_days">Avg (Past 7 Days)</option>
                         <option value="average_30_days">Avg (Past 30 Days)</option>
@@ -139,15 +130,15 @@
     <div class="stats-grid">
      <div class="stat-card">
         <h3>Current Month Total</h3>
-        <p class="stat-number"><%= currentMonthTotal %>h</p>
+        <p class="stat-number"><%= formatMinutes(currentMonthTotal, user.timeUnit) %></p>
      </div>
       <div class="stat-card">
         <h3>Current Month Avg/Day</h3>
-        <p class="stat-number"><%= currentMonthAvg %>h</p>
+        <p class="stat-number"><%= formatMinutes(currentMonthAvg, user.timeUnit) %></p>
       </div>
       <div class="stat-card">
         <h3>Daily Goal</h3>
-        <p class="stat-number"><%= user.dailyGoalHours %>h</p>
+                        <p class="stat-number"><%= formatMinutes(user.dailyGoalMinutes, user.timeUnit) %></p>
      </div>
     </div>
 
@@ -203,7 +194,12 @@
 
   <script>
     // --- Global Chart Vars ---
-    const dailyGoal = Number('<%= user.dailyGoalHours %>') || 5; 
+    const dailyGoal = Number('<%= user.dailyGoalMinutes %>') || 300;
+    const timeUnit = '<%= user.timeUnit || "minutes" %>';
+    const displayMinutes = value => timeUnit === 'hours'
+      ? Math.round((value / 60) * 10) / 10
+      : Math.round(value);
+    const displayLabel = timeUnit === 'hours' ? 'Hours' : 'Minutes';
     let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart, monthlyHistoryChart;
 
     // --- 1. Update Distribution TEXT ---
@@ -224,7 +220,7 @@
                  const value = (data[0].value !== undefined && data[0].value !== null) ? data[0].value : 0;
                  const label = data[0].label || "Total";
                  
-                 valEl.innerText = value + "h";
+                 valEl.innerText = displayMinutes(value) + (timeUnit === 'hours' ? 'h' : 'm');
                  labelEl.innerText = label;
             }
         } catch (error) {
@@ -251,7 +247,7 @@
 
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const labels = data.map(d => `${monthNames[d._id.month - 1]} '${String(d._id.year).slice(2)}`);
-            const values = data.map(d => d.total);
+            const values = data.map(d => displayMinutes(d.total));
             
             if (data.length > 0) {
                 const first = data[0]._id;
@@ -305,7 +301,7 @@
         const ctx = document.getElementById('progressChart').getContext('2d');
         const logs = <%- JSON.stringify(logs) %>;
         const labels = logs.map(log => new Date(log.date).toLocaleDateString());
-        const data = logs.map(log => log.hours);
+        const data = logs.map(log => log.minutes || 0);
         
         if (progressChart) progressChart.destroy();
         progressChart = new Chart(ctx, {
@@ -313,8 +309,8 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Hours',
-                    data: data,
+                    label: displayLabel,
+                    data: data.map(log => displayMinutes(log.minutes || 0)),
                     borderColor: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.2)',
                     tension: 0.4,
@@ -322,7 +318,7 @@
                     borderDash: [5, 5]
                  }, {
                     label: 'Goal',
-                    data: Array(labels.length).fill(dailyGoal),
+                    data: Array(labels.length).fill(displayMinutes(dailyGoal)),
                     borderColor: '#FF5722',
                     borderDash: [5, 5],
                     pointRadius: 0
@@ -345,15 +341,15 @@
           data: {
             labels: data.map(log => new Date(log.date).toLocaleDateString('en-CA', {timeZone: 'UTC'})),
             datasets: [{
-                label: 'Hours',
-                data: data.map(log => log.hours),
+                    label: displayLabel,
+                    data: data.map(log => displayMinutes(log.minutes || 0)),
                 backgroundColor: c => c.raw < dailyGoal ? 'rgba(255, 87, 34, 0.6)' : 'rgba(76, 175, 80, 0.6)',
                 borderColor: c => c.raw < dailyGoal ? '#FF5722' : '#4CAF50',
                 borderWidth: 1
               }, {
                 type: 'line',
                 label: 'Goal',
-                data: Array(data.length).fill(dailyGoal),
+                data: Array(data.length).fill(displayMinutes(dailyGoal)),
                 borderColor: '#fdc500', 
                 borderDash: [5,5], 
                 pointRadius: 0,
@@ -376,19 +372,19 @@
         data: {
           labels: data.map(log => new Date(log.date).toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' })),
           datasets: [{
-            label: 'Hours',
-            data: data.map(log => log.hours),
+            label: displayLabel,
+            data: data.map(log => displayMinutes(log.minutes || 0)),
             borderColor: '#4CAF50',
             backgroundColor: 'rgba(76, 175, 80, 0.2)',
             fill: true,
-            pointStyle: data.map(log => log.hours < dailyGoal ? 'crossRot' : 'circle'),
-            pointRadius: data.map(log => log.hours < dailyGoal ? 7 : 4),
-            pointBorderColor: data.map(log => log.hours < dailyGoal ? '#FF5722' : '#4CAF50'),
-            pointBackgroundColor: data.map(log => log.hours < dailyGoal ? '#FF5722' : '#4CAF50'),
+            pointStyle: data.map(log => (log.minutes || 0) < dailyGoal ? 'crossRot' : 'circle'),
+            pointRadius: data.map(log => (log.minutes || 0) < dailyGoal ? 7 : 4),
+            pointBorderColor: data.map(log => (log.minutes || 0) < dailyGoal ? '#FF5722' : '#4CAF50'),
+            pointBackgroundColor: data.map(log => (log.minutes || 0) < dailyGoal ? '#FF5722' : '#4CAF50'),
             borderDash: [5, 5]
           }, {
             label: 'Goal',
-            data: Array(data.length).fill(dailyGoal),
+            data: Array(data.length).fill(displayMinutes(dailyGoal)),
             borderColor: '#FF5722',
             borderDash: [5, 5],
             pointRadius: 0,
@@ -405,14 +401,14 @@
       
       const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const chartData = Array(7).fill(0);
-      data.forEach(item => { chartData[item._id - 1] = item.avgHours.toFixed(2); });
+      data.forEach(item => { chartData[item._id - 1] = item.avgMinutes.toFixed(0); });
       
       const ctx = document.getElementById('dayOfWeekChart').getContext('2d');
       dayOfWeekChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: dayLabels,
-          datasets: [{ label: 'Avg Hours', data: chartData, backgroundColor: 'rgba(253, 197, 0, 0.6)', borderColor: '#fdc500' }]
+          datasets: [{ label: 'Avg Minutes', data: chartData, backgroundColor: 'rgba(253, 197, 0, 0.6)', borderColor: '#fdc500' }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
       });

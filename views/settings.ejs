@@ -3,138 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings - Productivity Tracker</title>
+  <title>Settings - Focus tracker</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+  <style>
+    .settings-page { max-width: 1120px; margin: 0 auto; padding: 34px 24px 80px; }
+    .settings-heading { margin-bottom: 6px; font-size: 2rem; letter-spacing:-.03em; }
+    .settings-subtitle { margin-bottom: 26px; color: #888; }
+    .settings-overview { display:flex; align-items:center; gap:16px; margin-bottom:22px; padding:20px 24px; border:1px solid rgba(0,242,234,.18); border-radius:18px; background:linear-gradient(120deg, rgba(0,242,234,.1), rgba(20,20,20,.88) 65%, rgba(118,83,232,.1)); }
+    .settings-avatar { width:58px; height:58px; display:grid; place-items:center; flex:0 0 auto; border-radius:50%; background:#00f2ea; color:#041414; font-size:1.4rem; font-weight:800; }
+    .settings-overview h2 { margin:0 0 3px; font-size:1.15rem; }
+    .settings-overview p { margin:0; color:#999; font-size:.85rem; }
+    .settings-overview a { margin-left:auto; color:#2dd4bf; text-decoration:none; font-size:.85rem; font-weight:700; }
+    .settings-alert { margin-bottom:20px; padding:13px 15px; border-radius:10px; }
+    .settings-success { border:1px solid rgba(74,222,128,.35); color:#86efac; background:rgba(20,83,45,.2); }
+    .settings-error { border:1px solid rgba(239,68,68,.35); color:#fca5a5; background:rgba(127,29,29,.2); }
+    .settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:start; }
+    .settings-section { min-width:0; min-height:100%; margin-bottom:0; padding:24px; border:1px solid rgba(255,255,255,.08); border-radius:16px; background:#151515; }
+    .settings-section.danger-zone { grid-column:1 / -1; border-color:rgba(239,68,68,.23); background:linear-gradient(135deg,#151515,#1a1112); }
+    .settings-section-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+    .settings-section h2 { margin:0 0 5px; font-size:1.15rem; }
+    .settings-section-header p { margin:0; color:#888; font-size:.85rem; }
+    .settings-section-badge { color:#777; font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
+    .settings-form { max-width:560px; }
+    .settings-form-group { margin-bottom:16px; }
+    .settings-form-group label { display:block; margin-bottom:7px; color:#aaa; font-size:.85rem; font-weight:600; }
+    .settings-form-group input { width:100%; padding:12px 13px; border:1px solid rgba(255,255,255,.13); border-radius:9px; background:#0d0d0d; color:#fff; font:inherit; }
+    .settings-form-group input:focus { outline:none; border-color:#00f2ea; box-shadow:0 0 0 3px rgba(0,242,234,.1); }
+    .settings-time-select { width:100%; padding:12px 13px; border:1px solid rgba(255,255,255,.13); border-radius:9px; background:#0d0d0d; color:#fff; font:inherit; }
+    .settings-locked-identity { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:12px 13px; border:1px solid rgba(255,255,255,.1); border-radius:9px; background:#0d0d0d; }
+    .settings-locked-identity strong { color:#fff; }
+    .settings-locked-identity span { color:#777; font-size:.78rem; }
+    .settings-checkbox { display:flex; align-items:flex-start; gap:10px; margin-bottom:18px; color:#bbb; font-size:.85rem; }
+    .settings-checkbox input { margin-top:3px; accent-color:#00f2ea; }
+    .settings-form .btn { width:auto; min-width:150px; padding:11px 19px; border:0; cursor:pointer; font-size:.9rem; }
+    .settings-danger { border-color:rgba(239,68,68,.4) !important; background:transparent !important; color:#fca5a5 !important; }
+    .settings-danger:hover { background:rgba(127,29,29,.2) !important; box-shadow:none !important; }
+    @media (max-width:700px) { .settings-page { padding:26px 15px 60px; } .settings-grid { grid-template-columns:1fr; } .settings-overview { align-items:flex-start; flex-wrap:wrap; } .settings-overview a { width:100%; margin-left:74px; } .settings-section-header { flex-direction:column; } .settings-section.danger-zone { grid-column:auto; } }
+  </style>
 </head>
 <body>
   <%- include('partials/loader') %>
-  <nav class="navbar">
-    <h2>Productivity Tracker</h2>
-    <div class="nav-links">
-      <a href="/dashboard">Dashboard</a>
-      <a href="/calendar">⭐️ Calendar</a>
-      <a href="/analytics">Analytics</a>
-      <a href="/settings" class="active">Settings</a>
-      <a href="/logout">Logout</a>
-    </div>
-  </nav>
+  <%- include('partials/app-header') %>
 
-  <div class="container">
-    <h1 style="text-align: center;">Settings</h1>
-    
-    <div class="user-info form-box-new">
-      <h2>Account Information</h2>
-        <br>
-        <p><strong>Name:</strong> <%= user.name %></p>
-        <p><strong>Email:</strong> <%= user.email %></p>
-        <p><strong>Member Since:</strong> <%= user.createdAt.toLocaleDateString() %></p>
+  <main class="settings-page">
+    <h1 class="settings-heading">Account Settings</h1>
+    <p class="settings-subtitle">Manage your public identity, goals, security, and account data.</p>
+
+    <section class="settings-overview">
+      <div class="settings-avatar"><%= (user.username || user.name || '?').charAt(0).toUpperCase() %></div>
+      <div>
+        <h2><%= user.name %></h2>
+        <p>@<%= user.username %> &middot; <%= user.publicProfile ? 'Public profile' : 'Private profile' %></p>
       </div>
-    
-    <div class="form-box-new">
-      <h2>Update Daily Goal</h2>
-      <br>
-      <% if (success && success.includes('Goal')) { %>
-        <div class="success"><%= success %></div>
-      <% } %>
-      <% if (error && error.includes('goal')) { %>
-        <div class="error"><%= error %></div>
-      <% } %>
-      
-      <form action="/update-goal" method="POST">
-        <div class="form-group">
-          <label for="dailyGoalHours">Daily Goal (Hours)</label>
-          <input type="number" 
-            id="dailyGoalHours" 
-            name="dailyGoalHours" 
-            value="<%= user.dailyGoalHours %>" 
-            step="0.5" 
-            min="0.5" 
-            max="24" 
-            required>
-        </div>
-        <button type="submit" class="btn">Update Goal</button>
+      <a href="/profile">View profile &rarr;</a>
+    </section>
+
+    <% if (success) { %><div class="settings-alert settings-success"><%= success %></div><% } %>
+    <% if (error) { %><div class="settings-alert settings-error"><%= error %></div><% } %>
+
+    <div class="settings-grid">
+    <section class="settings-section">
+      <div class="settings-section-header"><div><h2>Public profile</h2><p>Control what other people can see and how they find you.</p></div><span class="settings-section-badge">Identity</span></div>
+      <form class="settings-form" action="/update-profile" method="POST">
+        <div class="settings-form-group"><label>Username</label><div class="settings-locked-identity"><strong>@<%= user.username %></strong><span>Locked after signup</span></div></div>
+        <label class="settings-checkbox"><input type="checkbox" name="publicProfile" value="true" <%= user.publicProfile ? 'checked' : '' %>> <span>Allow other users to view my public profile and leaderboard focus totals</span></label>
+        <button type="submit" class="btn">Save visibility</button>
       </form>
-    </div>
+    </section>
 
-    <div class="form-box-new">
-      <h2>Update Password</h2>
-      <br>
-      <% if (success && success.includes('Password')) { %>
-        <div class="success"><%= success %></div>
-      <% } %>
-      <% if (error && (error.includes('password') || error.includes('passwords'))) { %>
-        <div class="error"><%= error %></div>
-      <% } %>
-      <form action="/update-password" method="POST">
-        <div class="form-group">
-          <label for="currentPassword">Current Password</label>
-          <input type="password" id="currentPassword" name="currentPassword" minlength="6" required>
-        </div>
-        <div class="form-group">
-          <label for="newPassword">New Password</label>
-          <input type="password" id="newPassword" name="newPassword" minlength="6" required>
-        </div>
-        <div class="form-group">
-          <label for="confirmNewPassword">Confirm New Password</label>
-          <input type="password" id="confirmNewPassword" name="confirmNewPassword" minlength="6" required disabled>
-          <div id="password-match-message-update" class="password-match-message" style="display: none;">Passwords do not match</div>
-        </div>
-        <button type="submit" class="btn">Update Password</button>
+    <section class="settings-section">
+      <div class="settings-section-header"><div><h2>Daily focus goal</h2><p>Set the number of minutes you want to complete each day.</p></div><span class="settings-section-badge">Productivity</span></div>
+      <form class="settings-form" action="/update-goal" method="POST">
+        <div class="settings-form-group"><label for="dailyGoalMinutes">Daily goal in <%= user.timeUnit === 'hours' ? 'hours' : 'minutes' %></label><input type="number" id="dailyGoalMinutes" name="dailyGoalMinutes" value="<%= user.timeUnit === 'hours' ? Math.round((user.dailyGoalMinutes / 60) * 10) / 10 : user.dailyGoalMinutes %>" step="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" min="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" max="<%= user.timeUnit === 'hours' ? '24' : '1440' %>" required><input type="hidden" name="timeUnit" value="<%= user.timeUnit === 'hours' ? 'hours' : 'minutes' %>"></div>
+        <button type="submit" class="btn">Update goal</button>
       </form>
-    </div>
+    </section>
 
-    <div class="form-box-new">
-      <h2>Clear Account Data</h2>
-      <br>
-      <% if (success && success.includes('cleared')) { %>
-        <div class="success"><%= success %></div>
-      <% } %>
-      <% if (error && error.includes('clearing')) { %>
-        <div class="error"><%= error %></div>
-      <% } %>
-      <p>This will permanently delete all of your study logs. Your account will not be deleted. Please be certain.</p>
-      <br>
-      <form action="/clear-account-data" method="POST" onsubmit="return confirm('Are you sure you want to clear all your study data? This action cannot be undone.');">
-        <button type="submit" class="btn" style="background-color: #FF5722;">Clear All Data</button>
+    <section class="settings-section">
+      <div class="settings-section-header"><div><h2>Time display and input</h2><p>Choose whether focus values and time inputs use minutes or hours. Stored data remains consistent in minutes and seconds.</p></div><span class="settings-section-badge">Preference</span></div>
+      <form class="settings-form" action="/update-time-preference" method="POST">
+        <div class="settings-form-group"><label for="timeUnit">Time unit</label><select id="timeUnit" name="timeUnit" class="settings-time-select"><option value="minutes" <%= user.timeUnit !== 'hours' ? 'selected' : '' %>>Minutes</option><option value="hours" <%= user.timeUnit === 'hours' ? 'selected' : '' %>>Hours</option></select></div>
+        <button type="submit" class="btn">Save time preference</button>
       </form>
+    </section>
+
+    <section class="settings-section">
+      <div class="settings-section-header"><div><h2>Password</h2><p>Change the password used to protect your account.</p></div><span class="settings-section-badge">Security</span></div>
+      <form class="settings-form" action="/update-password" method="POST">
+        <div class="settings-form-group"><label for="currentPassword">Current password</label><input type="password" id="currentPassword" name="currentPassword" minlength="6" required></div>
+        <div class="settings-form-group"><label for="newPassword">New password</label><input type="password" id="newPassword" name="newPassword" minlength="6" required></div>
+        <div class="settings-form-group"><label for="confirmNewPassword">Confirm new password</label><input type="password" id="confirmNewPassword" name="confirmNewPassword" minlength="6" required></div>
+        <button type="submit" class="btn">Update password</button>
+      </form>
+    </section>
+
+    <section class="settings-section danger-zone">
+      <div class="settings-section-header"><div><h2>Clear account data</h2><p>Permanently delete study logs, focus sessions, and achievements. Your account will remain active.</p></div><span class="settings-section-badge">Danger zone</span></div>
+      <form class="settings-form" action="/clear-account-data" method="POST" onsubmit="return confirm('⚠️ Clear all study data, focus sessions, and achievements? This action cannot be undone.');">
+        <button type="submit" class="btn settings-danger">Clear all data</button>
+      </form>
+    </section>
     </div>
-  </div>
-
-  <script>
-    const newPasswordInput = document.getElementById('newPassword');
-    const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
-    const passwordMatchMessageUpdate = document.getElementById('password-match-message-update');
-
-    newPasswordInput.addEventListener('input', () => {
-      if (newPasswordInput.value.length > 0) {
-        confirmNewPasswordInput.disabled = false;
-      } else {
-        confirmNewPasswordInput.disabled = true;
-      }
-      validateNewPasswords();
-    });
-    confirmNewPasswordInput.addEventListener('input', validateNewPasswords);
-
-    function validateNewPasswords() {
-      if (confirmNewPasswordInput.value.length > 0 && newPasswordInput.value !== confirmNewPasswordInput.value) {
-        passwordMatchMessageUpdate.style.display = 'block';
-        newPasswordInput.classList.add('password-mismatch');
-        confirmNewPasswordInput.classList.add('password-mismatch');
-        newPasswordInput.classList.remove('password-match');
-        confirmNewPasswordInput.classList.remove('password-match');
-      } else if (confirmNewPasswordInput.value.length > 0 && newPasswordInput.value === confirmNewPasswordInput.value) {
-        passwordMatchMessageUpdate.style.display = 'none';
-        newPasswordInput.classList.remove('password-mismatch');
-        confirmNewPasswordInput.classList.remove('password-mismatch');
-        newPasswordInput.classList.add('password-match');
-        confirmNewPasswordInput.classList.add('password-match');
-      } else {
-        passwordMatchMessageUpdate.style.display = 'none';
-        newPasswordInput.classList.remove('password-mismatch', 'password-match');
-        confirmNewPasswordInput.classList.remove('password-mismatch', 'password-match');
-      }
-    }
-  </script>
+  </main>
 </body>
 </html>

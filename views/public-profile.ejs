@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= profile ? '@' + profile.username : isPrivate ? 'Private account' : 'Profile unavailable' %> - Focus tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+  <style>
+    .public-profile-page { max-width:760px; margin:0 auto; padding-top:70px; }
+    .public-profile-card { padding:34px; border:1px solid rgba(0,242,234,.18); border-radius:20px; background:linear-gradient(135deg, rgba(0,242,234,.1), rgba(20,20,20,.88)); }
+    .public-profile-identity { display:flex; align-items:center; gap:18px; margin-bottom:28px; }
+    .public-profile-avatar { width:72px; height:72px; display:grid; place-items:center; border-radius:50%; background:#00f2ea; color:#041414; font-size:1.8rem; font-weight:800; }
+    .public-profile-card h1 { margin:0 0 4px; }
+    .public-profile-username { color:#00f2ea; }
+    .public-profile-label { color:#999; font-size:.82rem; }
+    .public-profile-stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+    .public-profile-stat { padding:18px 12px; border-radius:10px; background:rgba(255,255,255,.06); text-align:center; }
+    .public-profile-stat strong { display:block; color:#ffd700; font-size:1.4rem; margin-bottom:5px; }
+    .public-profile-stat span { color:#888; font-size:.75rem; }
+    .public-profile-note { margin-top:20px; color:#888; font-size:.85rem; }
+    .public-profile-unavailable { text-align:center; }
+    @media (max-width:600px) { .public-profile-page { padding:30px 15px; } .public-profile-card { padding:24px; } .public-profile-stats { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class="public-profile-page">
+    <section class="public-profile-card">
+      <% if (profile) { %>
+        <div class="public-profile-identity">
+          <div class="public-profile-avatar"><%= (profile.username || '?').charAt(0).toUpperCase() %></div>
+          <div>
+            <h1><%= profile.name %></h1>
+            <div class="public-profile-username">@<%= profile.username %></div>
+          </div>
+        </div>
+        <div class="public-profile-label">Public profile</div>
+        <div class="public-profile-stats">
+          <div class="public-profile-stat"><strong><%= formatMinutes(profile.totalFocusMinutes, profile.timeUnit) %></strong><span>All-time focus</span></div>
+          <div class="public-profile-stat"><strong><%= formatMinutes(profile.averageWeeklyFocusMinutes, profile.timeUnit) %></strong><span>Weekly average</span></div>
+          <div class="public-profile-stat"><strong><%= formatMinutes(profile.averageMonthlyFocusMinutes, profile.timeUnit) %></strong><span>Monthly average</span></div>
+        </div>
+        <p class="public-profile-note">Only public focus summaries are shared. Private account details and settings are hidden.</p>
+      <% } else if (isPrivate) { %>
+        <div class="public-profile-unavailable">
+          <div class="public-profile-avatar" style="margin:0 auto 18px; background:#2a2a2a; color:#bbb;">🔒</div>
+          <h1>This account is private</h1>
+          <p class="public-profile-note">Only approved public profile information can be viewed.</p>
+        </div>
+      <% } else { %>
+        <div class="public-profile-unavailable">
+          <h1>Profile unavailable</h1>
+          <p class="public-profile-note">This username does not exist or the profile is private.</p>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

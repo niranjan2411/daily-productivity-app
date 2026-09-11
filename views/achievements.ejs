@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Achievements - Productivity Tracker</title>
+  <title>My Achievements - Focus tracker</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -404,16 +404,7 @@
 </head>
 <body>
   <%- include('partials/loader') %>
-  <nav class="navbar">
-    <h2>Productivity Tracker</h2>
-    <div class="nav-links">
-      <a href="/dashboard">Dashboard</a>
-      <a href="/calendar">⭐️ Calendar</a>
-      <a href="/analytics">Analytics</a>
-      <a href="/settings">Settings</a>
-      <a href="/logout">Logout</a>
-    </div>
-  </nav>
+  <%- include('partials/app-header') %>
 
   <% 
     const countCompleted = completed.length;
@@ -513,9 +504,9 @@
                required = achievement.requiredDays;
                progress = Math.min(100, (current / required) * 100);
              } else if (achievement.type === 'total_hours') {
-               current = Math.floor(totalStudyHours);
-               required = achievement.requiredHours;
-               unit = 'Hours';
+               current = Math.floor(totalFocusMinutes);
+               required = achievement.requiredHours * 60;
+               unit = 'Minutes';
                progress = Math.min(100, (current / required) * 100);
              }
         %>
@@ -609,7 +600,7 @@
     window.shareAchievement = async function(platform, name, description) {
       const text = `I just unlocked the "${name}" achievement on TrackU! 🚀\n\n"${description}"\n\nLeveling up my productivity daily.`;
       const url = "https://tracku.me";
-      const hashtags = "productivity,studygram,TrackU";
+      const hashtags = "productivity,studygram,Focustracker";
       
       const encodedText = encodeURIComponent(text);
       const encodedUrl = encodeURIComponent(url);
@@ -634,7 +625,7 @@
           if (navigator.share) {
             try {
               await navigator.share({
-                title: 'TrackU Achievement Unlocked!',
+                title: 'Focus tracker Achievement Unlocked!',
                 text: text,
                 url: url
               });
@@ -663,7 +654,7 @@
           <div class="modal-meta-box">
             <div class="meta-row">
               <i class="bi bi-crosshair"></i>
-              <span>Goal Target Met: ${goalValue} Hours/Day</span>
+              <span>Goal Target Met: ${goalValue} Minutes/Day</span>
             </div>
           </div>
         `;

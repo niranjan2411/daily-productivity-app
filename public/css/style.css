@@ -34,8 +34,211 @@ body {
 }
 
 /* =========================================
-   2. NAVIGATION
+   2. APPLICATION HEADER
    ========================================= */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 86px;
+  padding: 16px 4%;
+  background: rgba(8, 8, 8, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.app-identity,
+.app-action,
+.app-menu-panel a {
+  color: var(--text-white);
+  text-decoration: none;
+}
+
+.app-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.app-avatar {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #a9b4ff, #6366f1);
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.app-avatar-small {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 1rem;
+}
+
+.app-identity-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-identity-copy strong {
+  overflow: hidden;
+  font-size: 1.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-identity-copy small {
+  color: var(--text-gray);
+  font-size: 0.78rem;
+}
+
+.profile-visibility-icon {
+  margin-right: 4px;
+}
+
+.app-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.app-menu-trigger {
+  color: var(--text-white);
+  font-family: inherit;
+}
+
+.app-action:hover {
+  border-color: rgba(167, 139, 250, 0.7);
+  background: rgba(124, 92, 246, 0.2);
+  transform: translateY(-1px);
+}
+
+.app-calendar-action {
+  border-color: rgba(45, 212, 191, 0.45);
+  background: rgba(20, 184, 166, 0.14);
+}
+
+.app-action-icon {
+  color: #a78bfa;
+  font-size: 1.2rem;
+}
+
+.app-calendar-action .app-action-icon {
+  color: #2dd4bf;
+}
+
+.app-chevron {
+  color: #aaa;
+  font-size: 1.1rem;
+}
+
+.app-profile-action {
+  min-width: 76px;
+  padding: 7px 11px;
+}
+
+.app-menu {
+  position: relative;
+}
+
+.app-menu::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 100%;
+  height: 10px;
+}
+
+.app-menu-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  display: block;
+  min-width: 180px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: #171717;
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+}
+
+.app-menu:hover > .app-menu-panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.app-menu-panel a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 9px;
+}
+
+.app-menu-panel a:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.navbar {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .app-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 12px 15px;
+  }
+
+  .app-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .app-action {
+    min-height: 44px;
+    padding: 7px 11px;
+    border-radius: 13px;
+  }
+
+  .app-action span:not(.app-action-icon):not(.app-chevron):not(.app-avatar) {
+    display: none;
+  }
+}
 .navbar {
     display: flex;
     justify-content: space-between;

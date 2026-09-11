@@ -10,11 +10,11 @@ const studyLogSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  hours: {
+  minutes: {
     type: Number,
     required: true,
     min: 0,
-    max: 24
+    max: 1440
   },
   createdAt: {
     type: Date,

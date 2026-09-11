@@ -31,8 +31,13 @@ const achievementsList = [
     { id: 'hours-5000', name: 'Legendary Sage', description: 'Study for 5,000 hours in total.', type: 'total_hours', requiredHours: 5000, icon: `<i class="bi bi-infinity"></i>`, check: (logs, user) => checkTotalHours(logs, 5000) },
 ];
 
+const getLogMinutes = (log) => log.minutes ?? Math.round((log.hours || 0) * 60);
+const getGoalMinutes = (user) => user.dailyGoalHours && user.dailyGoalMinutes === 300 && user.dailyGoalHours !== 5
+    ? Math.round(user.dailyGoalHours * 60)
+    : (user.dailyGoalMinutes || 300);
+
 function checkConsistency(logs, requiredStreak) {
-    const validLogs = logs.filter(log => log.hours > 0);
+    const validLogs = logs.filter(log => getLogMinutes(log) > 0);
     if (validLogs.length < requiredStreak) return false;
     let currentStreak = validLogs.length > 0 ? 1 : 0;
     if (currentStreak >= requiredStreak) return true;
@@ -53,14 +58,14 @@ function checkConsistency(logs, requiredStreak) {
 }
 
 function checkGoalStreak(logs, user, requiredStreak) {
-    const goalMetLogs = logs.filter(log => log.hours >= user.dailyGoalHours);
+    const goalMetLogs = logs.filter(log => getLogMinutes(log) >= getGoalMinutes(user));
     return checkConsistency(goalMetLogs, requiredStreak);
 }
 
 // **NEW: Check Function for Total Hours**
 function checkTotalHours(logs, requiredHours) {
-    const total = logs.reduce((acc, log) => acc + log.hours, 0);
-    return total >= requiredHours;
+    const total = logs.reduce((acc, log) => acc + getLogMinutes(log), 0);
+    return total >= requiredHours * 60;
 }
 
 router.get('/check', authenticateUser, async (req, res) => {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Productivity Tracker</title>
+  <title>Dashboard - Focus tracker</title>
   
   <link rel="preload" href="/css/style.css" as="style">
   <link rel="stylesheet" href="/css/style.css">
@@ -160,6 +160,30 @@
       display: grid;
       grid-template-columns: 1.1fr 0.9fr; gap: 25px; margin-bottom: 30px;
       position: relative; z-index: 1;
+    }
+
+    .focus-timer-panel {
+      display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      margin-bottom: 25px; padding: 22px 25px;
+      background: linear-gradient(135deg, rgba(0, 242, 234, 0.08), rgba(20, 20, 20, 0.7));
+      border: 1px solid rgba(0, 242, 234, 0.16); border-radius: var(--card-radius);
+    }
+    .focus-timer-copy h2 { margin: 0 0 5px; font-size: 1.15rem; }
+    .focus-timer-copy p { margin: 0; color: #888; font-size: 0.85rem; }
+    .focus-timer-display { display: flex; align-items: center; gap: 18px; }
+    #focus-timer-value { min-width: 92px; color: var(--neon-blue); font-size: 2rem; font-variant-numeric: tabular-nums; text-align: center; }
+    .focus-timer-actions { display: flex; gap: 8px; }
+    .focus-timer-actions button { border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+    #focus-start { background: var(--neon-blue); color: #041414; }
+    #focus-stop { background: #ff0055; color: #fff; }
+    #focus-timer-status { min-width: 150px; color: #777; font-size: 0.78rem; }
+    #focus-timer-status[data-state="running"] { color: var(--neon-blue); }
+    #focus-timer-status[data-state="pending"] { color: var(--neon-gold); }
+    @media (max-width: 600px) {
+      .focus-timer-panel, .focus-timer-display { align-items: flex-start; flex-direction: column; }
+      .focus-timer-display { width: 100%; gap: 10px; }
+      .focus-timer-actions { width: 100%; }
+      .focus-timer-actions button { flex: 1; }
     }
     
     .card-panel {
@@ -346,21 +370,37 @@
       .s-data { width: 100%; display: flex; flex-direction: column; align-items: center; }
       .hero-text h1 { font-size: 1.8rem; }
     }
+    .dashboard-focus-row { display:grid; grid-template-columns:minmax(260px,.72fr) minmax(0,1.28fr); gap:18px; align-items:stretch; margin-bottom:30px; }
+    .dashboard-focus-row .level-section { min-width:0; margin-bottom:0; padding:22px; flex-direction:column; align-items:stretch; gap:18px; }
+    .dashboard-focus-row .level-ring { width:76px; height:76px; align-self:flex-start; }
+    .dashboard-focus-row .level-ring::after { width:66px; height:66px; }
+    .dashboard-focus-row .xp-header { gap:8px; }
+    .dashboard-focus-row .xp-pill { padding:6px 10px; font-size:.82rem; }
+    .dashboard-focus-row .focus-timer-panel { min-height:238px; margin-bottom:0; padding:28px; flex-direction:column; align-items:stretch; justify-content:space-between; }
+    .dashboard-focus-row .focus-timer-panel { position:relative; }
+    .focus-timer-panel:fullscreen { width:100vw; height:100vh; min-height:100vh; margin:0; border-radius:0; justify-content:center; align-items:center; gap:38px; background:#070707; }
+    .focus-timer-panel:fullscreen .focus-timer-copy, .focus-timer-panel:fullscreen .focus-timer-display { width:min(620px,90vw); }
+    .focus-fullscreen { position:absolute; top:14px; right:14px; width:34px; height:34px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.13); border-radius:8px; background:rgba(255,255,255,.05); color:#aaa; cursor:pointer; }
+    .focus-fullscreen:hover { color:#fff; background:rgba(255,255,255,.12); }
+    .focus-fullscreen svg { width:17px; height:17px; }
+    .dashboard-focus-row .focus-timer-copy h2 { font-size:1.25rem; }
+    .dashboard-focus-row .focus-timer-display { justify-content:space-between; align-items:flex-end; }
+    .dashboard-focus-row #focus-timer-value { font-size:3rem; }
+    .focus-timer-actions button { width:48px; height:48px; display:grid; place-items:center; padding:0; border-radius:50%; }
+    .focus-timer-actions button svg { width:20px; height:20px; }
+    .focus-timer-actions button:hover { transform:translateY(-2px); filter:brightness(1.12); }
+    .quick-log-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .quick-log-options .form-group { margin-bottom:0; }
+    .log-mode-toggle { display:flex; gap:4px; padding:4px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:#111; }
+    .log-mode-toggle button { flex:1; border:0; border-radius:7px; padding:9px 10px; background:transparent; color:#888; font-weight:800; cursor:pointer; }
+    .log-mode-toggle button.active { background:#7653e8; color:#fff; }
+    @media (max-width:800px) { .dashboard-focus-row { grid-template-columns:1fr; } .dashboard-focus-row .level-section { flex-direction:row; align-items:center; } .dashboard-focus-row .level-ring { align-self:center; } }
   </style>
 </head>
 <body>
   <%- include('partials/loader') %>
   
-  <nav class="navbar">
-    <h2>Productivity Tracker</h2>
-    <div class="nav-links">
-      <a href="/dashboard" class="active">Dashboard</a>
-      <a href="/calendar">⭐️ Calendar</a>
-      <a href="/analytics">Analytics</a>
-      <a href="/settings">Settings</a>
-      <a href="/logout">Logout</a>
-    </div>
-  </nav>
+  <%- include('partials/app-header') %>
 
   <div class="container">
     
@@ -372,7 +412,7 @@
       </div>
       <button id="open-track-modal" class="btn-log-session">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
-        Log Study Hours
+        Log Focus <%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %>
       </button>
     </div>
 
@@ -383,6 +423,7 @@
         const progressPercent = (currentLevelXp / XP_PER_LEVEL) * 100;
         const circleDeg = (currentLevelXp / XP_PER_LEVEL) * 360;
     %>
+    <div class="dashboard-focus-row">
     <div class="level-section animate-up delay-1">
       <div class="level-ring" style="background: conic-gradient(var(--neon-gold) <%= circleDeg %>deg, rgba(255,255,255,0.05) 0deg);">
          <div class="level-text">
@@ -407,7 +448,7 @@
                   margin-bottom:8px; font-size:0.9rem;">XP Rules</h4>
                   <ul style="padding-left:15px;
                   font-size:0.8rem; color:#bbb; line-height:1.6;">
-                     <li>+10 XP per hour studied</li>
+                     <li>+10 XP per 60 minutes focused</li>
                      <li>+50 XP for meeting daily goal</li>
                      <li>+100 XP per each new achievement</li>
                      
@@ -430,19 +471,39 @@
     </div>
 
     <%
-      const goal = user.dailyGoalHours;
+      const rawTodayMinutes = typeof todayMinutes !== 'undefined' && Number.isFinite(Number(todayMinutes))
+        ? Number(todayMinutes)
+        : 0;
+      const displayedTodayMinutes = Math.round(rawTodayMinutes);
+      const goal = user.dailyGoalMinutes || 300;
       let focusColor = '#ef4444'; 
-      if (todayHours >= goal) focusColor = '#4ade80'; 
-      else if (todayHours > 0) focusColor = 
+      if (displayedTodayMinutes >= goal) focusColor = '#4ade80';
+      else if (displayedTodayMinutes > 0) focusColor =
       '#FFD700';
 
-      const percentage = Math.round((todayHours / goal) * 100);
-      const focusDeg = Math.min((todayHours / goal) * 360, 360);
+      const percentage = Math.round((displayedTodayMinutes / goal) * 100);
+      const focusDeg = Math.min((displayedTodayMinutes / goal) * 360, 360);
       
       let percentageText = percentage + "% Complete";
       if(percentage >= 100) percentageText = percentage + "% (Goal Met)";
       if(percentage === 0) percentageText = "0% Started";
     %>
+    <section class="focus-timer-panel animate-up delay-2" id="focus-timer" data-user-id="<%= user.userId %>" data-time-unit="<%= user.timeUnit || 'minutes' %>" data-goal-minutes="<%= goal %>" data-today-log-minutes="<%= todayLogMinutes %>" data-today-focus-seconds="<%= typeof todayFocusSeconds !== 'undefined' ? todayFocusSeconds : 0 %>">
+      <button type="button" class="focus-fullscreen" id="focus-fullscreen" aria-label="Enter fullscreen timer" title="Enter fullscreen timer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
+      <div class="focus-timer-copy">
+        <h2>Focus session</h2>
+        <p>Start when you begin. Stop when you finish.</p>
+        <span id="focus-timer-status" aria-live="polite">Ready to focus</span>
+      </div>
+      <div class="focus-timer-display">
+        <strong id="focus-timer-value" aria-live="off">00:00</strong>
+        <div class="focus-timer-actions">
+          <button type="button" id="focus-toggle" aria-label="Start focus timer" title="Start focus timer"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.1-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z"/></svg></button>
+        </div>
+      </div>
+    </section>
+    </div>
+
     <div class="dashboard-grid animate-up delay-2">
        <div class="card-panel">
          
@@ -453,18 +514,18 @@
  
              </div>
              <span style="font-size:0.9rem;
-             color:#888;">Goal: <%= goal %>h</span>
+             color:#888;">Goal: <%= formatMinutes(goal, user.timeUnit) %></span>
           </div>
           
           <div class="focus-display">
-             <div class="wheel-outer" style="background: conic-gradient(<%= focusColor %> <%= focusDeg %>deg, #1c1c1c 0deg);">
+             <div class="wheel-outer" id="today-focus-wheel" style="background: conic-gradient(<%= focusColor %> <%= focusDeg %>deg, #1c1c1c 0deg);">
                 <div class="wheel-inner">
-                   <div class="wheel-val" style="color: <%= focusColor %>"><%= todayHours.toFixed(1) 
+                   <div class="wheel-val" id="today-focus-minutes" style="color: <%= focusColor %>"><%= formatMinutes(displayedTodayMinutes, user.timeUnit)
                    %></div>
-                   <div class="wheel-lbl">HOURS</div>
+                   <div class="wheel-lbl"><%= user.timeUnit === 'hours' ? 'HOURS' : 'MINUTES' %></div>
                 </div>
              </div>
-             <div class="goal-text-gradient"><%= percentageText %></div>
+             <div class="goal-text-gradient" id="today-focus-progress"><%= percentageText %></div>
           </div>
        </div>
 
@@ -474,7 +535,7 @@
            const history = [];
            const now = new Date();
            const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-           const g = user.dailyGoalHours || 5; 
+           const g = user.dailyGoalMinutes || 300;
 
            for(let i=3; i>=1; i--) {
               const d = new 
@@ -489,7 +550,7 @@
                          ld.getUTCDate() === d.getUTCDate();
               });
 
-              const h = log ? log.hours : 0;
+              const h = log ? (log.minutes || 0) : 0;
               let status = 'low';
               if(h >= g) status = 'high';
               else if(h > 0) status = 'med';
@@ -501,7 +562,7 @@
 
               history.push({ 
                  day: d.toLocaleDateString('en-US', { weekday: 'short' }),
-                 hours: h, 
+                 minutes: h,
                  status,
                  visualPct, // For CSS height (max 100%)
          
@@ -526,7 +587,7 @@
           <div class="chart-box">
              <% momentumData.forEach(day => { %>
                <div class="chart-col">
-                  <span class="col-val"><%= day.hours.toFixed(1) %>h (<%= day.displayPct %>%)</span>
+                  <span class="col-val"><%= day.minutes %>m (<%= day.displayPct %>%)</span>
                   <div class="bar-wrapper">
            
                       <div class="bar-fill <%= day.status %>" style="height: <%= day.visualPct === 0 ?
@@ -588,7 +649,7 @@
                <% recentLogs.slice(0, 5).forEach(log => { 
                    const d = new Date(log.date);
    
-                   const isMet = log.hours >= user.dailyGoalHours;
+                   const isMet = (log.minutes || 0) >= (user.dailyGoalMinutes || 300);
                %>
                <li class="log-entry">
                   <div class="le-left">
@@ -599,7 +660,7 @@
                      </div>
                      <div>
           
-                        <div class="le-info-h"><%= log.hours.toFixed(1) %> Hours</div>
+                        <div class="le-info-h"><%= log.minutes || 0 %> Minutes</div>
                         <div class="le-info-status" style="color: <%= isMet ? '#4ade80' : '#ef4444' %>">
                            <div class="status-dot" style="background: <%= isMet ? '#4ade80' : '#ef4444' %>"></div>
              
@@ -621,8 +682,10 @@
           
           <div class="total-stat-box">
  
-             <div class="ts-label">All Time Working Hours</div>
-             <div class="ts-val animate-num" data-suffix="h"><%= totalHours.toFixed(1) %>h</div>
+             <% const rawDisplayedTotalMinutes = typeof totalMinutes !== 'undefined' && Number.isFinite(Number(totalMinutes)) ? Number(totalMinutes) : 0; %>
+             <% const displayedTotalMinutes = Math.round(rawDisplayedTotalMinutes); %>
+             <div class="ts-label">All Time Focus <%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %></div>
+             <div class="ts-val animate-num" data-suffix="<%= user.timeUnit === 'hours' ? 'h' : 'm' %>" data-time-unit="<%= user.timeUnit || 'minutes' %>" data-total-focus-minutes="<%= rawDisplayedTotalMinutes %>"><%= formatMinutes(displayedTotalMinutes, user.timeUnit) %></div>
           </div>
 
           <a href="/achievements" class="btn-hero-achieve">
@@ -644,7 +707,7 @@
        
           
           <a href="/settings" class="btn-secondary">
-             <span>⚙️ Update Goal Hours</span>
+            <span>⚙️ Update Goal</span>
              <span>→</span>
           </a>
 
@@ -655,17 +718,18 @@
     <div class="modal-content">
         <span class="modal-close" id="close-track-modal">&times;</span>
         <h2 style="text-align: center;
-        margin-bottom: 20px; color: #ffd700;">Add Study Hours</h2>
-        <form id="quickLogForm">
+        margin-bottom: 20px; color: #ffd700;">Add Focus <%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %></h2>
+          <form id="quickLogForm">
+            <input type="hidden" name="timeUnit" value="<%= user.timeUnit || 'minutes' %>">
+            <div class="quick-log-options">
+              <div class="form-group"><label>Update mode</label><div class="log-mode-toggle" role="group" aria-label="Focus update mode"><button type="button" class="active" data-log-mode="add">Add</button><button type="button" data-log-mode="reset">Reset</button></div><input type="hidden" id="modal-mode" name="mode" value="add"></div>
+              <div class="form-group"><label for="modal-minutes"><%= user.timeUnit === 'hours' ? 'Hours Focused' : 'Minutes Focused' %></label>
+                <input type="number" id="modal-minutes" name="minutes" step="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" min="0" max="<%= user.timeUnit === 'hours' ? '24' : '1440' %>" required style="width: 100%; padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box;">
+              </div>
+            </div>
             <div class="form-group" style="margin-bottom: 15px;">
                 <label for="modal-date">Date</label>
                 <input type="date" id="modal-date" name="date" required style="width: 100%;
-                padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 8px;
-                box-sizing: border-box;">
-            </div>
-            <div class="form-group" style="margin-bottom: 25px;">
-                <label for="modal-hours">Hours Studied</label>
-                <input type="number" id="modal-hours" name="hours" step="0.5" min="0" max="24" required style="width: 100%;
                 padding: 12px; background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 8px;
                 box-sizing: border-box;">
             </div>
@@ -683,10 +747,11 @@
       </div>
   </div>
       <footer style="padding: 50px 15px;text-align: center;border-top: 1px solid var(--border-light);">
-        <p style="color: #666;">&copy; 2025 TrackU. All rights reserved. <a href="mailto:tracku.contact@gmail.com" style="color:rgb(115, 115, 115);">Message our suggestion/queries</a></p>
+        <p style="color: #666;">&copy; 2025 Focus tracker. All rights reserved. <a href="mailto:tracku.contact@gmail.com" style="color:rgb(115, 115, 115);">Message our suggestion/queries</a></p>
     </footer>
 
   <script src="/js/achievements.js" defer></script>
+  <script src="/js/dashboard.js" defer></script>
   <script>
     // Modal & Form Logic
     const trackModal = document.getElementById('trackModal');
@@ -716,13 +781,18 @@
         submitBtn.disabled = true;
         const formData = new URLSearchParams(new FormData(quickLogForm));
         try {
-            await fetch('/add-study-log', {
+            const response = await fetch('/add-study-log', {
           
                 method: 'POST',
                 body: formData,
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' }
             });
-            window.location.reload(); 
+            if (!response.ok) throw new Error('Unable to save focus log');
+            const result = await response.json();
+            if (window.focusTrackerSyncToday) window.focusTrackerSyncToday(result);
+            trackModal.style.display = 'none';
+            submitBtn.innerText = originalText;
+            submitBtn.disabled = false;
         } catch (err) {
             console.error(err);
         
@@ -731,6 +801,10 @@
             submitBtn.disabled = false;
         }
     });
+    quickLogForm.querySelectorAll('[data-log-mode]').forEach(button => button.addEventListener('click', () => {
+      quickLogForm.querySelectorAll('[data-log-mode]').forEach(item => item.classList.toggle('active', item === button));
+      document.getElementById('modal-mode').value = button.dataset.logMode;
+    }));
     // XP Popup Logic
     const xpCounter = document.getElementById('xp-counter');
     const xpPopup = document.getElementById('xp-history-popup');

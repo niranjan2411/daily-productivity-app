@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= group.name %> - Focus tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+  <style>
+    .group-detail-head { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin:34px 0 24px; }
+    .group-detail-head h1 { margin-bottom:6px; }
+    .group-detail-head p { color:#999; }
+    .group-detail-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .group-code-large { padding:11px 14px; border:1px dashed rgba(167,139,250,.55); border-radius:9px; color:#c4b5fd; background:rgba(124,92,246,.1); font-family:monospace; letter-spacing:2px; }
+    .group-back { color:#2dd4bf; text-decoration:none; font-weight:700; }
+    .group-leave { border:1px solid rgba(239,68,68,.4); border-radius:8px; padding:10px 12px; background:transparent; color:#fca5a5; cursor:pointer; }
+    .group-leave:hover { background:rgba(127,29,29,.2); }
+    .group-delete { border:0; border-radius:8px; padding:10px 12px; background:#ef4444; color:#fff; font-weight:700; cursor:pointer; }
+    .group-delete:hover { background:#dc2626; }
+    .group-table-wrap { overflow-x:auto; border:1px solid rgba(255,255,255,.08); border-radius:14px; background:#151515; }
+    .group-table { width:100%; min-width:700px; border-collapse:collapse; }
+    .group-table th, .group-table td { padding:15px 17px; border-bottom:1px solid rgba(255,255,255,.07); text-align:left; }
+    .group-table th { color:#888; font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
+    .group-table tr:last-child td { border-bottom:0; }
+    .group-rank { color:#ffd700; font-weight:800; width:65px; }
+    .group-member { display:flex; align-items:center; gap:10px; }
+    .group-member-avatar { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:#6366f1; color:#fff; font-weight:800; }
+    .group-member small { display:block; color:#777; font-size:.75rem; }
+    .group-stat { color:#2dd4bf; font-variant-numeric:tabular-nums; font-weight:700; }
+    .group-manage { text-align:right !important; }
+    .group-remove { border:1px solid rgba(239,68,68,.35); border-radius:7px; padding:7px 9px; background:transparent; color:#fca5a5; cursor:pointer; font-size:.78rem; }
+    .group-remove:hover { background:rgba(127,29,29,.2); }
+    .group-period-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:20px 0 14px; }
+    .group-period-tab { border:1px solid rgba(255,255,255,.14); border-radius:8px; padding:9px 14px; background:#1d1d1d; color:#fff; cursor:pointer; }
+    .group-period-tab.active { border-color:#00f2ea; background:#00f2ea; color:#041414; font-weight:800; }
+    .group-note { margin:16px 0; color:#888; font-size:.85rem; }
+    .group-error { margin-bottom:20px; padding:12px 14px; border:1px solid rgba(239,68,68,.35); border-radius:9px; color:#fca5a5; background:rgba(127,29,29,.2); }
+    @media (max-width:700px) { .group-detail-head { flex-direction:column; } .group-detail-actions { width:100%; } }
+  </style>
+</head>
+<body>
+  <%- include('partials/loader') %>
+  <%- include('partials/app-header') %>
+  <main class="container">
+    <section class="group-detail-head">
+      <div>
+        <a class="group-back" href="/private-groups">&larr; All groups</a>
+        <h1><%= group.name %></h1>
+        <p><%= stats.length %> / 10 members &middot; Share this code to invite people</p>
+      </div>
+      <div class="group-detail-actions">
+        <span class="group-code-large"><%= group.code %></span>
+        <% if (isOwner) { %>
+          <form action="/private-groups/<%= group._id %>/delete" method="POST" onsubmit="return confirm('⚠️ Delete this private group permanently? All membership data will be removed from the database.');">
+            <button class="group-delete" type="submit">Delete group</button>
+          </form>
+        <% } else { %>
+          <form action="/private-groups/<%= group._id %>/leave" method="POST">
+            <button class="group-leave" type="submit">Leave group</button>
+          </form>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (typeof queryError !== 'undefined' && queryError) { %><div class="group-error"><%= queryError %></div><% } %>
+
+    <p class="group-note">Rankings are based on focus minutes from timer sessions and manual focus logs. Private members can participate here without appearing in public rankings.</p>
+    <div class="group-period-tabs" role="tablist" aria-label="Group ranking period">
+      <button type="button" class="group-period-tab active" data-period="today">Daily</button>
+      <button type="button" class="group-period-tab" data-period="week">Weekly</button>
+      <button type="button" class="group-period-tab" data-period="month">Monthly</button>
+    </div>
+    <section class="group-table-wrap" aria-label="Private group focus leaderboard">
+      <table class="group-table">
+        <thead>
+          <tr><th>Rank</th><th>Member</th><th id="group-period-heading">Daily focus</th><% if (isOwner) { %><th class="group-manage">Manage</th><% } %></tr>
+        </thead>
+        <tbody>
+          <% stats.forEach((member, index) => { %>
+            <tr data-today="<%= member.todayMinutes %>" data-week="<%= member.weekMinutes %>" data-month="<%= member.monthMinutes %>">
+              <td class="group-rank" data-rank>#<%= index + 1 %></td>
+              <td>
+                <div class="group-member">
+                  <span class="group-member-avatar"><%= (member.name || '?').charAt(0).toUpperCase() %></span>
+                  <span><strong><%= member.name %></strong><small>@<%= member.username || 'focususer' %></small></span>
+                </div>
+              </td>
+              <td class="group-stat" data-period-value><%= formatMinutes(member.todayMinutes, user.timeUnit) %></td>
+              <% if (isOwner) { %>
+                <td class="group-manage">
+                  <% if (String(member._id) !== String(group.ownerId)) { %>
+                    <form action="/private-groups/<%= group._id %>/remove-member" method="POST" onsubmit="return confirm('⚠️ Remove this member from the group? They will lose access to this private leaderboard.');">
+                      <input type="hidden" name="memberId" value="<%= member._id %>">
+                      <button class="group-remove" type="submit">Remove</button>
+                    </form>
+                  <% } else { %>
+                    <span style="color:#777; font-size:.78rem;">Owner</span>
+                  <% } %>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    const groupPeriodHeading = document.getElementById('group-period-heading');
+    const groupPeriodTabs = document.querySelectorAll('[data-period]');
+    const groupRows = [...document.querySelectorAll('tbody tr[data-today]')];
+    const periodLabels = { today: 'Daily focus', week: 'Weekly focus', month: 'Monthly focus' };
+
+    function renderGroupRanking(period) {
+      groupRows.sort((first, second) => Number(second.dataset[period]) - Number(first.dataset[period]));
+      groupRows.forEach((row, index) => {
+        row.querySelector('[data-rank]').textContent = `#${index + 1}`;
+        row.querySelector('[data-period-value]').textContent = formatGroupTime(Number(row.dataset[period]));
+        row.parentElement.appendChild(row);
+      });
+      groupPeriodHeading.textContent = periodLabels[period];
+      groupPeriodTabs.forEach(tab => tab.classList.toggle('active', tab.dataset.period === period));
+    }
+
+    function formatGroupTime(minutes) {
+      const value = <%= user.timeUnit === 'hours' ? 'Math.round((minutes / 60) * 10) / 10' : 'Math.round(minutes)' %>;
+      return `${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}<%= user.timeUnit === 'hours' ? 'h' : 'm' %>`;
+    }
+
+    groupPeriodTabs.forEach(tab => tab.addEventListener('click', () => renderGroupRanking(tab.dataset.period)));
+    renderGroupRanking('today');
+  </script>
+</body>
+</html>

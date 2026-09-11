@@ -4,7 +4,7 @@ function showAchievementPopup(name, description, type, goalValue, icon) {
 
   let goalInfo = '';
   if (type === 'goal' && goalValue) {
-    goalInfo = `<p class="popup-goal-value">Achieved with a daily goal of ${goalValue} hours!</p>`;
+    goalInfo = `<p class="popup-goal-value">Achieved with a daily goal of ${goalValue} minutes!</p>`;
   }
 
   const popup = document.createElement('div');

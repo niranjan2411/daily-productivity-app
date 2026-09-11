@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboards - Focus tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .leaderboard-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:20px 0; }
+    .leaderboard-tabs button { border:1px solid rgba(255,255,255,.15); background:#1d1d1d; color:#fff; border-radius:8px; padding:10px 16px; cursor:pointer; }
+    .leaderboard-tabs button.active { background:#00f2ea; color:#041414; }
+    .leaderboard-list { background:#151515; border:1px solid rgba(255,255,255,.08); border-radius:14px; overflow:hidden; }
+    .leaderboard-row { display:grid; grid-template-columns:70px 1fr 150px; gap:12px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.07); align-items:center; }
+    .leaderboard-row:last-child { border-bottom:0; }
+    .leaderboard-head { color:#888; font-size:.78rem; text-transform:uppercase; }
+    .leaderboard-rank { color:#ffd700; font-weight:800; }
+    .leaderboard-time { text-align:right; color:#00f2ea; font-variant-numeric:tabular-nums; }
+    .leaderboard-message { padding:32px 20px; text-align:center; color:#999; }
+    @media (max-width:600px) { .leaderboard-row { grid-template-columns:42px 1fr 100px; padding:14px 12px; } }
+  </style>
+</head>
+<body>
+  <%- include('partials/loader') %>
+  <%- include('partials/app-header') %>
+  <main class="container">
+    <h1>Global Leaderboards</h1>
+    <p style="color:#999;">Only users who opted into a public profile appear here.</p>
+    <div class="leaderboard-tabs" role="tablist">
+      <button type="button" data-range="daily" class="active">Daily Top</button>
+      <button type="button" data-range="weekly">Weekly Top</button>
+      <button type="button" data-range="monthly">Monthly Top</button>
+      <button type="button" data-range="yearly">Yearly Top</button>
+    </div>
+    <section class="leaderboard-list" aria-live="polite" data-time-unit="<%= user.timeUnit || 'minutes' %>">
+      <div class="leaderboard-row leaderboard-head"><span>Rank</span><span>Username</span><span style="text-align:right;">Focused time</span></div>
+      <div id="leaderboard-content" class="leaderboard-message">Loading leaderboard...</div>
+    </section>
+  </main>
+  <script>
+    const content = document.getElementById('leaderboard-content');
+    const buttons = document.querySelectorAll('[data-range]');
+    const timeUnit = document.querySelector('.leaderboard-list').dataset.timeUnit;
+    const formatTime = seconds => {
+      const minutes = Math.floor(seconds / 60);
+      if (timeUnit === 'hours') {
+        const hours = Math.round((minutes / 60) * 10) / 10;
+        return `${hours % 1 === 0 ? hours.toFixed(0) : hours.toFixed(1)}h`;
+      }
+      return `${minutes}m`;
+    };
+    async function loadLeaderboard(range) {
+      content.className = 'leaderboard-message';
+      content.textContent = 'Loading leaderboard...';
+      try {
+        const response = await fetch(`/api/leaderboards?range=${range}`, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error('Unable to load leaderboard');
+        const rows = await response.json();
+        if (!rows.length) {
+          content.textContent = 'No public focus sessions for this period yet.';
+          return;
+        }
+        content.className = '';
+        content.innerHTML = rows.map(row => `<div class="leaderboard-row"><span class="leaderboard-rank">#${row.rank}</span><strong>@${row.username}</strong><span class="leaderboard-time">${formatTime(row.totalSeconds)}</span></div>`).join('');
+      } catch (error) {
+        content.className = 'leaderboard-message';
+        content.textContent = 'Unable to load leaderboard. Please try again.';
+      }
+    }
+    buttons.forEach(button => button.addEventListener('click', () => {
+      buttons.forEach(item => item.classList.toggle('active', item === button));
+      loadLeaderboard(button.dataset.range);
+    }));
+    loadLeaderboard('daily');
+  </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Focus tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+  <style>
+    .profile-page { max-width:1080px; margin:0 auto; padding:34px 20px 80px; }
+    .profile-hero { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:26px 30px; background:linear-gradient(120deg, rgba(0,242,234,.13), rgba(20,20,20,.92) 62%, rgba(118,83,232,.12)); border:1px solid rgba(0,242,234,.2); border-radius:22px; }
+    .profile-identity { display:flex; align-items:center; gap:18px; }
+    .profile-avatar { width:78px; height:78px; display:grid; place-items:center; border:3px solid rgba(255,255,255,.22); border-radius:24px; background:linear-gradient(145deg,#a9b4ff,#6366f1); color:#fff; font-size:2rem; font-weight:800; }
+    .profile-hero h1 { margin:0 0 4px; font-size:1.8rem; }
+    .profile-username { color:#2dd4bf; font-size:.95rem; }
+    .profile-visibility { margin-top:8px; color:#999; font-size:.78rem; }
+    .profile-hero-actions { display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end; }
+    .profile-hero-actions .btn { width:auto; padding:10px 14px; font-size:.82rem; border-radius:10px; }
+    .profile-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
+    .profile-stat { padding:18px 16px; border:1px solid rgba(255,255,255,.08); border-radius:14px; background:#151515; }
+    .profile-stat strong { display:block; color:#ffd700; font-size:1.45rem; margin-bottom:5px; }
+    .profile-stat span { color:#888; font-size:.76rem; }
+    .profile-grid { display:grid; grid-template-columns:1.05fr .95fr; gap:18px; }
+    .profile-section { min-width:0; background:#151515; border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:24px; }
+    .profile-section h2 { margin:0 0 18px; font-size:1.05rem; }
+    .profile-section-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .profile-section-heading span { color:#777; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
+    .profile-detail { display:flex; justify-content:space-between; gap:20px; padding:13px 0; border-bottom:1px solid rgba(255,255,255,.07); }
+    .profile-detail:last-child { border-bottom:0; }
+    .profile-detail span:first-child { color:#888; }
+    .profile-detail span:last-child { text-align:right; overflow-wrap:anywhere; }
+    .profile-actions { display:flex; gap:10px; margin-top:20px; }
+    .profile-actions .btn { width:auto; padding:10px 14px; border-radius:9px; font-size:.82rem; }
+    @media (max-width:700px) { .profile-grid, .profile-stats { grid-template-columns:1fr; } .profile-hero { align-items:flex-start; flex-direction:column; padding:22px; } .profile-hero-actions { justify-content:flex-start; } }
+  </style>
+</head>
+<body>
+  <%- include('partials/loader') %>
+  <%- include('partials/app-header') %>
+
+  <main class="profile-page">
+    <section class="profile-hero">
+      <div class="profile-identity">
+        <div class="profile-avatar"><%= (user.username || user.name || '?').charAt(0).toUpperCase() %></div>
+        <div>
+          <h1><%= user.name %></h1>
+          <div class="profile-username">@<%= user.username %></div>
+          <div class="profile-visibility"><%= user.publicProfile ? '🔓 Public profile' : '🔒 Private profile' %></div>
+        </div>
+      </div>
+      <div class="profile-hero-actions">
+        <a class="btn" href="/settings">Settings</a>
+        <a class="btn" href="/private-groups">Groups</a>
+        <% if (user.publicProfile) { %><a class="btn" href="/profile/<%= user.username %>">View public profile</a><% } %>
+      </div>
+    </section>
+
+    <div class="profile-stats">
+      <div class="profile-stat"><strong><%= formatMinutes(user.totalFocusMinutes, user.timeUnit) %></strong><span>All-time focus</span></div>
+      <div class="profile-stat"><strong><%= formatMinutes(user.averageWeeklyFocusMinutes, user.timeUnit) %></strong><span>Weekly average</span></div>
+      <div class="profile-stat"><strong><%= formatMinutes(user.averageMonthlyFocusMinutes, user.timeUnit) %></strong><span>Monthly average</span></div>
+    </div>
+
+    <div class="profile-grid">
+      <section class="profile-section">
+        <div class="profile-section-heading"><h2>Account details</h2><span>Identity</span></div>
+        <div class="profile-detail"><span>Username</span><span>@<%= user.username %></span></div>
+        <div class="profile-detail"><span>Email</span><span><%= user.email %></span></div>
+        <div class="profile-detail"><span>Member since</span><span><%= user.createdAt.toLocaleDateString() %></span></div>
+        <div class="profile-detail"><span>Public profile</span><span><%= user.publicProfile ? 'Enabled' : 'Private' %></span></div>
+      </section>
+
+      <section class="profile-section">
+        <div class="profile-section-heading"><h2>Focus settings</h2><span>Routine</span></div>
+        <div class="profile-detail"><span>Daily goal</span><span><%= formatMinutes(user.dailyGoalMinutes || 300, user.timeUnit) %></span></div>
+        <div class="profile-detail"><span>Display unit</span><span><%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %></span></div>
+        <div class="profile-actions"><a class="btn" href="/settings">Manage settings</a></div>
+      </section>
+    </div>
+
+  </main>
+</body>
+</html>
