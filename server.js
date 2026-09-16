@@ -11,16 +11,25 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 
 const dbConnect = require('./lib/dbConnect');
-// Trigger the main app DB connection immediately to warm up the server
-dbConnect().catch(err => console.error("Main DB Connection Error:", err));
-
 const User = require('./models/User');
 const StudyLog = require('./models/StudyLog');
 const FocusSession = require('./models/FocusSession');
 const Achievement = require('./models/Achievement');
 const PrivateGroup = require('./models/PrivateGroup');
+const DailyPlanner = require('./models/DailyPlanner');
 const { authenticateUser } = require('./middleware/auth');
 const { achievementsList, router: achievementRouter } = require('./routes/achievements');
+
+// Trigger the main app DB connection immediately to warm up the server
+dbConnect()
+  .then(() => StudyLog.updateMany(
+    {
+      hours: { $type: 'number', $gt: 0 },
+      $or: [{ minutes: { $exists: false } }, { minutes: null }, { minutes: 0 }]
+    },
+    [{ $set: { minutes: { $round: [{ $multiply: ['$hours', 60] }, 2] } } }]
+  ))
+  .catch(err => console.error("Main DB Connection Error:", err));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -87,13 +96,74 @@ app.get('/ping', async (req, res) => {
 
 app.use('/api/achievements', achievementRouter);
 
+app.get('/api/planner', authenticateUser, noCache, async (req, res) => {
+  try {
+    const date = String(req.query.date || '');
+    if (!isPlannerDate(date)) return res.status(400).json({ error: 'Invalid planner date' });
+    await dbConnect();
+    const planner = await DailyPlanner.findOne({ userId: req.session.userId, date }).lean();
+    res.json({ date, lists: planner?.lists || [], note: planner?.note || '' });
+  } catch (error) {
+    console.error('Planner load error:', error);
+    res.status(500).json({ error: 'Unable to load planner' });
+  }
+});
+
+app.get('/api/planner/calendar', authenticateUser, noCache, async (req, res) => {
+  try {
+    const from = String(req.query.from || '');
+    const to = String(req.query.to || '');
+    if (!isPlannerDate(from) || !isPlannerDate(to) || from > to) {
+      return res.status(400).json({ error: 'Invalid planner range' });
+    }
+    await dbConnect();
+    const planners = await DailyPlanner.find({
+      userId: req.session.userId,
+      date: { $gte: from, $lte: to }
+    }).select('date lists note').lean();
+    res.json(planners.map(planner => ({
+      date: planner.date,
+      taskCount: planner.lists.reduce((total, list) => total + list.tasks.length, 0),
+      completedCount: planner.lists.reduce((total, list) => total + list.tasks.filter(task => task.completed).length, 0),
+      hasNote: Boolean(planner.note?.trim())
+    })));
+  } catch (error) {
+    console.error('Planner calendar error:', error);
+    res.status(500).json({ error: 'Unable to load planner dates' });
+  }
+});
+
+app.put('/api/planner', authenticateUser, noCache, async (req, res) => {
+  try {
+    const date = String(req.body.date || '');
+    if (!isPlannerDate(date)) return res.status(400).json({ error: 'Invalid planner date' });
+    await dbConnect();
+    const planner = await DailyPlanner.findOneAndUpdate(
+      { userId: req.session.userId, date },
+      { $set: cleanPlanner(req.body) },
+      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+    ).lean();
+    res.json({ date: planner.date, lists: planner.lists, note: planner.note });
+  } catch (error) {
+    console.error('Planner save error:', error);
+    res.status(500).json({ error: 'Unable to save planner' });
+  }
+});
+
 // XP Logic
 const XP_PER_HOUR = 10;
 const XP_FOR_GOAL = 50;
 const XP_FOR_ACHIEVEMENT = 100;
 const XP_PER_LEVEL = 1000;
 
-const getLogMinutes = (log) => log.minutes ?? Math.round((log.hours || 0) * 60);
+const getLogMinutes = (log) => {
+  const minutes = Number(log.minutes);
+  const hours = Number(log.hours);
+  if (Number.isFinite(hours) && hours > 0 && (!Number.isFinite(minutes) || minutes <= 0)) {
+    return Math.round(hours * 60 * 100) / 100;
+  }
+  return Number.isFinite(minutes) ? minutes : 0;
+};
 const getGoalMinutes = (user) => user.dailyGoalHours && user.dailyGoalMinutes === 300 && user.dailyGoalHours !== 5
   ? Math.round(user.dailyGoalHours * 60)
   : (user.dailyGoalMinutes || 300);
@@ -108,6 +178,27 @@ const formatMinutes = (minutes, unit = 'minutes') => {
   }
   return `${Math.round(value)}m`;
 };
+
+const plannerDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+const isPlannerDate = (value) => {
+  if (!plannerDatePattern.test(String(value || ''))) return false;
+  const [year, month, day] = String(value).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
+const cleanPlanner = (payload = {}) => ({
+  lists: (Array.isArray(payload.lists) ? payload.lists : []).slice(0, 30).map(list => ({
+    listId: String(list.listId || crypto.randomUUID()),
+    title: String(list.title || 'Untitled list').trim().slice(0, 80) || 'Untitled list',
+    tasks: (Array.isArray(list.tasks) ? list.tasks : []).slice(0, 100).map(task => ({
+      taskId: String(task.taskId || crypto.randomUUID()),
+      title: String(task.title || '').trim().slice(0, 240),
+      completed: Boolean(task.completed)
+    })).filter(task => task.title)
+  })),
+  note: String(payload.note || '').slice(0, 10000)
+});
 
 app.locals.formatMinutes = formatMinutes;
 
@@ -723,10 +814,95 @@ app.post('/api/focus-sessions', authenticateUser, noCache, async (req, res) => {
   }
 });
 
+app.get('/api/calendar/day', authenticateUser, noCache, async (req, res) => {
+  try {
+    await dbConnect();
+    const date = String(req.query.date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date' });
+    const [year, month, day] = date.split('-').map(Number);
+    const dayStart = new Date(Date.UTC(year, month - 1, day));
+    const dayEnd = new Date(dayStart);
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+    const userId = req.session.userId;
+    const [user, log, sessions, planner, groups] = await Promise.all([
+      User.findById(userId).select('name username publicProfile dailyGoalMinutes timeUnit').lean(),
+      StudyLog.findOne({ userId, date: dayStart }).lean(),
+      FocusSession.find({ userId, status: 'completed', startTime: { $gte: dayStart, $lt: dayEnd } }).select('durationSeconds').lean(),
+      DailyPlanner.findOne({ userId, date }).lean(),
+      PrivateGroup.find({ members: userId }).select('name members').lean()
+    ]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const loggedMinutes = getLogMinutes(log || { minutes: 0 });
+    const timerMinutes = sessions.reduce((total, session) => total + session.durationSeconds / 60, 0);
+    const totalMinutes = Math.round(loggedMinutes + timerMinutes);
+    const goalMinutes = user.dailyGoalMinutes || 300;
+    const tasks = (planner?.lists || []).flatMap(list => list.tasks || []).map(task => ({
+      title: task.title,
+      completed: Boolean(task.completed)
+    }));
+
+    let publicRank = null;
+    if (user.publicProfile) {
+      const publicUsers = await User.find({ publicProfile: true }).select('_id username').lean();
+      const publicIds = publicUsers.map(publicUser => publicUser._id);
+      const [publicSessions, publicLogs] = await Promise.all([
+        FocusSession.aggregate([
+          { $match: { userId: { $in: publicIds }, status: 'completed', startTime: { $gte: dayStart, $lt: dayEnd } } },
+          { $group: { _id: '$userId', seconds: { $sum: '$durationSeconds' } } }
+        ]),
+        StudyLog.find({ userId: { $in: publicIds }, date: dayStart }).select('userId minutes hours').lean()
+      ]);
+      const totals = new Map(publicIds.map(id => [String(id), 0]));
+      publicSessions.forEach(item => totals.set(String(item._id), (totals.get(String(item._id)) || 0) + item.seconds / 60));
+      publicLogs.forEach(item => totals.set(String(item.userId), (totals.get(String(item.userId)) || 0) + getLogMinutes(item)));
+      const ranked = publicUsers.map(publicUser => ({ id: String(publicUser._id), username: publicUser.username, minutes: totals.get(String(publicUser._id)) || 0 }))
+        .filter(item => item.minutes > 0)
+        .sort((first, second) => second.minutes - first.minutes || first.username.localeCompare(second.username));
+      const index = ranked.findIndex(item => item.id === String(userId));
+      if (index >= 0) publicRank = { rank: index + 1, total: ranked.length };
+    }
+
+    const groupRanks = [];
+    for (const group of groups) {
+      const members = await User.find({ _id: { $in: group.members } }).select('_id username').lean();
+      const memberIds = members.map(member => member._id);
+      const [groupSessions, groupLogs] = await Promise.all([
+        FocusSession.aggregate([
+          { $match: { userId: { $in: memberIds }, status: 'completed', startTime: { $gte: dayStart, $lt: dayEnd } } },
+          { $group: { _id: '$userId', seconds: { $sum: '$durationSeconds' } } }
+        ]),
+        StudyLog.find({ userId: { $in: memberIds }, date: dayStart }).select('userId minutes hours').lean()
+      ]);
+      const totals = new Map(memberIds.map(id => [String(id), 0]));
+      groupSessions.forEach(item => totals.set(String(item._id), (totals.get(String(item._id)) || 0) + item.seconds / 60));
+      groupLogs.forEach(item => totals.set(String(item.userId), (totals.get(String(item.userId)) || 0) + getLogMinutes(item)));
+      const ranked = members.map(member => ({ id: String(member._id), minutes: totals.get(String(member._id)) || 0 }))
+        .sort((first, second) => second.minutes - first.minutes);
+      const index = ranked.findIndex(item => item.id === String(userId));
+      if (index >= 0) groupRanks.push({ name: group.name, rank: index + 1, total: ranked.length });
+    }
+
+    res.json({ date, totalMinutes, goalMinutes, percentage: Math.min(100, Math.round((totalMinutes / goalMinutes) * 100)), tasks, completedTasks: tasks.filter(task => task.completed).length, note: planner?.note || '', publicRank, groupRanks });
+  } catch (error) {
+    console.error('Calendar day details error:', error);
+    res.status(500).json({ error: 'Unable to load calendar day' });
+  }
+});
+
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
   try {
     await dbConnect();
     const userId = req.session.userId;
+
+    await StudyLog.updateMany(
+      {
+        userId,
+        hours: { $type: 'number', $gt: 0 },
+        $or: [{ minutes: { $exists: false } }, { minutes: null }, { minutes: 0 }]
+      },
+      [{ $set: { minutes: { $round: [{ $multiply: ['$hours', 60] }, 2] } } }]
+    );
 
     const [user, allLogs, achievements] = await Promise.all([
       User.findById(userId),
@@ -843,7 +1019,7 @@ app.post('/add-study-log', authenticateUser, noCache, [
 
     await StudyLog.findOneAndUpdate(
       { userId, date: logDate },
-      { $set: { minutes: Math.round(nextManualMinutes) }, $unset: { hours: 1 } },
+      { $set: { minutes: Math.round(nextManualMinutes) } },
       { upsert: true, new: true }
     );
 
@@ -1186,7 +1362,10 @@ app.get('/api/leaderboards', authenticateUser, noCache, async (req, res) => {
     if (range === 'monthly') end.setUTCMonth(end.getUTCMonth() + 1);
     if (range === 'yearly') end.setUTCFullYear(end.getUTCFullYear() + 1);
 
-    const publicUsers = await User.find({ publicProfile: true }).select('_id username').lean();
+    const [publicUsers, currentUser] = await Promise.all([
+      User.find({ publicProfile: true }).select('_id username').lean(),
+      User.findById(req.session.userId).select('_id publicProfile').lean()
+    ]);
     const publicUserIds = publicUsers.map(user => user._id);
     const [sessions, logs] = await Promise.all([
       FocusSession.aggregate([
@@ -1200,12 +1379,22 @@ app.get('/api/leaderboards', authenticateUser, noCache, async (req, res) => {
     const totals = new Map(publicUsers.map(user => [String(user._id), 0]));
     sessions.forEach(session => totals.set(String(session._id), (totals.get(String(session._id)) || 0) + session.totalSeconds));
     logs.forEach(log => totals.set(String(log.userId), (totals.get(String(log.userId)) || 0) + getLogMinutes(log) * 60));
-    const rows = publicUsers
+    const rankedRows = publicUsers
       .map(user => ({ username: user.username, totalSeconds: totals.get(String(user._id)) || 0 }))
       .filter(row => row.totalSeconds > 0)
       .sort((first, second) => second.totalSeconds - first.totalSeconds || first.username.localeCompare(second.username))
-      .slice(0, 100);
-    res.json(rows.map((row, index) => ({ rank: index + 1, ...row })));
+      .map((row, index) => ({ rank: index + 1, ...row }));
+    const topRows = range === 'daily' ? rankedRows.slice(0, 50) : rankedRows.slice(0, 100);
+    const currentPublicUser = currentUser?.publicProfile
+      ? publicUsers.find(user => String(user._id) === String(currentUser._id))
+      : null;
+    const currentRow = currentPublicUser
+      ? rankedRows.find(row => row.username === currentPublicUser.username)
+      : null;
+    const rows = currentRow && !topRows.some(row => row.rank === currentRow.rank)
+      ? [...topRows, { ...currentRow, isCurrentUser: true }]
+      : topRows.map(row => ({ ...row, isCurrentUser: currentUser?.publicProfile && row.rank === currentRow?.rank }));
+    res.json(rows);
   } catch (error) {
     console.error('Leaderboard API error:', error);
     res.status(500).json({ error: 'Unable to load leaderboard' });
@@ -1400,14 +1589,18 @@ app.get('/profile/:username', noCache, async (req, res) => {
 app.get('/profile', authenticateUser, noCache, async (req, res) => {
   try {
     await dbConnect();
-    const [user, logs] = await Promise.all([
+    const [user, logs, achievements] = await Promise.all([
       User.findById(req.session.userId),
-      StudyLog.find({ userId: req.session.userId })
+      StudyLog.find({ userId: req.session.userId }),
+      Achievement.find({ userId: req.session.userId })
     ]);
     if (!user) return req.session.destroy(() => res.redirect('/login'));
     await ensureUserIdentity(user);
     const focusStats = await syncFocusStats(user._id, logs);
     Object.assign(user, focusStats);
+    const xpData = await calculateXpAndLevel(user._id, user, logs, achievements);
+    user.xp = xpData.xp;
+    user.level = xpData.level;
     res.render('profile', {
       user,
       success: req.query.profileSuccess || null,

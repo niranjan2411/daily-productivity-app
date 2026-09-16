@@ -14,6 +14,7 @@
     .leaderboard-row:last-child { border-bottom:0; }
     .leaderboard-head { color:#888; font-size:.78rem; text-transform:uppercase; }
     .leaderboard-rank { color:#ffd700; font-weight:800; }
+    .leaderboard-row.current-user { background:rgba(0,242,234,.08); }
     .leaderboard-time { text-align:right; color:#00f2ea; font-variant-numeric:tabular-nums; }
     .leaderboard-message { padding:32px 20px; text-align:center; color:#999; }
     @media (max-width:600px) { .leaderboard-row { grid-template-columns:42px 1fr 100px; padding:14px 12px; } }
@@ -60,7 +61,7 @@
           return;
         }
         content.className = '';
-        content.innerHTML = rows.map(row => `<div class="leaderboard-row"><span class="leaderboard-rank">#${row.rank}</span><strong>@${row.username}</strong><span class="leaderboard-time">${formatTime(row.totalSeconds)}</span></div>`).join('');
+        content.innerHTML = rows.map(row => `<div class="leaderboard-row${row.isCurrentUser ? ' current-user' : ''}"><span class="leaderboard-rank">#${row.rank}</span><strong>@${row.username}${row.isCurrentUser ? ' (You)' : ''}</strong><span class="leaderboard-time">${formatTime(row.totalSeconds)}</span></div>`).join('');
       } catch (error) {
         content.className = 'leaderboard-message';
         content.textContent = 'Unable to load leaderboard. Please try again.';

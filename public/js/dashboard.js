@@ -29,6 +29,7 @@
   const dailyGoalMinutes = Number(timer.dataset.goalMinutes || 300);
   const timeUnit = timer.dataset.timeUnit === 'hours' ? 'hours' : 'minutes';
   let tickHandle = null;
+  let toggleInProgress = false;
 
   function readJson(key) {
     try {
@@ -75,7 +76,7 @@
       ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5a2 2 0 0 1 2 2v10a2 2 0 1 1-4 0V7a2 2 0 0 1 2-2Zm10 0a2 2 0 0 1 2 2v10a2 2 0 1 1-4 0V7a2 2 0 0 1 2-2Z"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.1-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z"/></svg>';
     toggleButton.setAttribute('aria-label', running ? 'Pause focus timer' : 'Start focus timer');
-    toggleButton.title = running ? 'Pause focus timer' : 'Start focus timer';
+    toggleButton.title = 'Play / Pause (P)';
     toggleButton.dataset.running = running ? 'true' : 'false';
   }
 
@@ -174,7 +175,10 @@
     else if (!activeSession) setStatus('Session saved', 'saved');
   }
 
-  toggleButton.addEventListener('click', () => {
+  function toggleTimer() {
+    if (toggleInProgress) return;
+    toggleInProgress = true;
+
     if (activeSession) {
       const endTime = Date.now();
       const completedSession = {
@@ -195,16 +199,38 @@
       renderTimer();
       setStatus('Saving session...', 'saving');
       flushPendingSessions();
+      toggleInProgress = false;
       return;
     }
     activeSession = { sessionId: makeSessionId(), startTime: Date.now(), status: 'active' };
     if (!writeJson(activeStorageKey, activeSession)) {
       activeSession = null;
       setStatus('Could not start timer storage', 'error');
+      toggleInProgress = false;
       return;
     }
     setStatus('Focus session running', 'running');
     renderTimer();
+    toggleInProgress = false;
+  }
+
+  toggleButton.addEventListener('pointerup', event => {
+    if (event.button !== 0) return;
+    toggleTimer();
+  });
+
+  toggleButton.addEventListener('click', event => {
+    if (event.detail > 0) return;
+    toggleTimer();
+  });
+
+  document.addEventListener('keydown', event => {
+    const target = event.target;
+    const isTextEntry = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement || target.isContentEditable;
+    if (isTextEntry || event.repeat || event.key.toLowerCase() !== 'p') return;
+    event.preventDefault();
+    toggleTimer();
   });
 
   fullscreenButton?.addEventListener('click', async () => {

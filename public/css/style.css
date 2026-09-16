@@ -64,6 +64,26 @@ body {
   min-width: 0;
 }
 
+.focus-signal {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(167, 168, 255, 0.55);
+  border-radius: 14px;
+  background: radial-gradient(circle, rgba(167, 168, 255, 0.35) 0 18%, transparent 19% 42%, rgba(167, 168, 255, 0.16) 43% 45%, transparent 46%), #15151d;
+  box-shadow: 0 0 22px rgba(167, 168, 255, 0.14);
+}
+
+.focus-signal span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c9caff;
+  box-shadow: 0 0 12px #a7a8ff;
+}
+
 .app-avatar {
   width: 58px;
   height: 58px;
@@ -101,6 +121,19 @@ body {
 .app-identity-copy small {
   color: var(--text-gray);
   font-size: 0.78rem;
+}
+
+.profile-signal {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(167, 168, 255, 0.45);
+  border-radius: 10px;
+  background: rgba(167, 168, 255, 0.12);
+  color: #d4d5ff;
+  font-size: .8rem;
+  font-weight: 800;
 }
 
 .profile-visibility-icon {

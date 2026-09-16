@@ -12,7 +12,17 @@
   const timeUnit = user.timeUnit || 'minutes';
   const getEntry = (year, month, day) => logs.find(log => { const date = new Date(log.date); return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day; });
   const getYearEntry = (year, month, day) => yearLogs.find(log => { const date = new Date(log.date); return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day; });
-  const getState = (minutes, dateKey) => minutes > goalMinutes ? 'extra' : minutes > 0 ? 'focused' : dateKey >= accountStartKey && dateKey <= todayKey ? 'missed' : 'future';
+  const getState = (minutes, dateKey) => minutes >= goalMinutes ? 'extra' : minutes > 0 ? 'focused' : dateKey >= accountStartKey && dateKey < todayKey ? 'missed' : 'future';
+  const getCellStyle = (minutes, dateKey) => {
+    if (dateKey >= todayKey) return '';
+    if (minutes <= 0) return 'background:linear-gradient(145deg,rgba(220,53,69,.34),rgba(55,12,16,.92));';
+    if (minutes >= goalMinutes) {
+      const intensity = Math.min(1, minutes / goalMinutes);
+      return `background:linear-gradient(145deg,rgba(57,211,83,${(0.2 + intensity * 0.25).toFixed(2)}),rgba(8,35,18,.94));`;
+    }
+    const progress = Math.min(1, minutes / goalMinutes);
+    return `background:linear-gradient(145deg,rgba(255,210,30,${(0.1 + progress * 0.42).toFixed(2)}),rgba(39,31,5,.94));`;
+  };
   const monthValues = Array.from({ length: daysInMonth }, (_, index) => Number(getEntry(yearValue, monthValue, index + 1)?.minutes || 0));
   const monthTotal = monthValues.reduce((sum, value) => sum + value, 0);
   const monthLoggedDays = monthValues.filter(value => value > 0).length;
@@ -40,25 +50,25 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <style>
-    :root { --calendar-purple:#7653e8; --calendar-purple-soft:#a78bfa; --calendar-panel:#111; --calendar-line:rgba(255,255,255,.13); --calendar-muted:#858b9d; }
+    :root { --calendar-accent:#2dd4bf; --calendar-accent-soft:#8ee7c9; --calendar-yellow:#f3c969; --calendar-red:#f07a82; --calendar-panel:#111; --calendar-line:rgba(255,255,255,.13); --calendar-muted:#858b9d; }
     body { background:#050505; }
     .goal-calendar { max-width:1240px; margin:0 auto; padding:22px 54px 60px; }
     .calendar-topbar, .calendar-periodbar, .calendar-surface { border:1px solid var(--calendar-line); border-radius:20px; background:#111; }
     .calendar-topbar { display:flex; align-items:center; justify-content:space-between; gap:18px; min-height:88px; padding:16px 22px; }
-    .calendar-brand { display:flex; align-items:center; gap:16px; color:var(--calendar-purple-soft); }
+    .calendar-brand { display:flex; align-items:center; gap:16px; color:var(--calendar-accent-soft); }
     .calendar-back { width:48px; height:48px; display:grid; place-items:center; border-radius:12px; background:#222; color:#fff; font-size:2rem; text-decoration:none; }
     .calendar-brand-icon { font-size:2.25rem; line-height:1; }
     .calendar-brand h1 { margin:0; font-size:1.55rem; letter-spacing:-.03em; }
     .calendar-tabs { display:flex; gap:3px; padding:4px; border:1px solid var(--calendar-line); border-radius:12px; background:#050505; }
     .calendar-tab { min-width:86px; border:0; border-radius:8px; padding:9px 14px; background:transparent; color:var(--calendar-muted); font:inherit; font-size:.85rem; font-weight:800; cursor:pointer; transition:background .22s ease,color .22s ease; }
-    .calendar-tab.active { background:var(--calendar-purple); color:#fff; }
+    .calendar-tab.active { background:var(--calendar-accent); color:#041414; }
     .calendar-periodbar { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-top:16px; padding:14px 20px; }
     .calendar-period-title { display:flex; align-items:center; gap:20px; }
     .calendar-period-title h2 { margin:0; min-width:210px; color:#fff; font-size:1.25rem; }
     .calendar-arrow { width:34px; height:34px; border:0; border-radius:9px; background:#222; color:#fff; font-size:1.35rem; cursor:pointer; text-decoration:none; display:grid; place-items:center; transition:background .2s ease,transform .2s ease; }
-    .calendar-arrow:hover { background:#302850; transform:translateY(-1px); }
+    .calendar-arrow:hover { background:rgba(45,212,191,.16); color:var(--calendar-accent-soft); transform:translateY(-1px); }
     .calendar-actions { display:flex; align-items:center; gap:10px; }
-    .calendar-add { border:0; border-radius:8px; padding:10px 15px; background:var(--calendar-purple); color:#fff; font:inherit; font-size:.85rem; font-weight:800; cursor:pointer; }
+    .calendar-add { border:0; border-radius:8px; padding:10px 15px; background:var(--calendar-accent); color:#041414; font:inherit; font-size:.85rem; font-weight:800; cursor:pointer; }
     .calendar-add:hover, .calendar-tab:hover { filter:brightness(1.12); }
     .calendar-form { margin-top:14px; padding:20px; border:1px solid var(--calendar-line); border-radius:16px; background:#111; }
     .calendar-form[hidden] { display:none; }
@@ -68,11 +78,11 @@
     .calendar-form button { border:0; border-radius:8px; padding:11px 18px; background:#2dd4bf; color:#041414; font-weight:800; cursor:pointer; }
     .calendar-mode-toggle { display:flex; gap:4px; padding:4px; border:1px solid var(--calendar-line); border-radius:9px; background:#080808; }
     .calendar-mode-toggle button { flex:1; border:0; border-radius:6px; padding:8px 12px; background:transparent; color:var(--calendar-muted); font-weight:800; cursor:pointer; }
-    .calendar-mode-toggle button.active { background:var(--calendar-purple); color:#fff; }
+    .calendar-mode-toggle button.active { background:var(--calendar-accent); color:#041414; }
     .calendar-summary { display:flex; gap:8px; margin-top:12px; }
     .calendar-summary-item { min-width:110px; padding:8px 12px; border:1px solid var(--calendar-line); border-radius:9px; background:#191919; }
     .calendar-summary-item span { display:block; color:var(--calendar-muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; }
-    .calendar-summary-item strong { display:block; margin-top:3px; color:var(--calendar-purple-soft); font-size:1.05rem; }
+    .calendar-summary-item strong { display:block; margin-top:3px; color:var(--calendar-accent-soft); font-size:1.05rem; }
     .calendar-view { margin-top:18px; }
     .calendar-view[hidden] { display:none; }
     .month-grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); overflow:hidden; border:1px solid var(--calendar-line); border-radius:16px; background:#090909; }
@@ -82,17 +92,17 @@
     .month-cell.empty { background:#0a0a0a; }
     .month-cell .date-number { position:relative; z-index:2; color:#aeb3c0; font-size:.82rem; font-weight:800; }
     .month-cell .focus-value { position:absolute; inset:38px 8px 8px; display:grid; place-items:center; color:#fff; font-size:1.2rem; font-weight:800; }
-    .month-cell.today::before { content:'•'; position:absolute; top:5px; right:7px; z-index:3; color:#a78bfa; font-size:1.1rem; line-height:1; }
-    .month-cell.focused { background:linear-gradient(145deg,rgba(255,210,30,.28),#171507); }
-    .month-cell.extra { background:linear-gradient(145deg,rgba(57,211,83,.34),#0b1b10); }
-    .month-cell.missed { background:#111; }
+    .month-cell.today::before { content:'•'; position:absolute; top:5px; right:7px; z-index:3; color:var(--calendar-accent); font-size:1.1rem; line-height:1; }
+    .month-cell.focused { background:linear-gradient(145deg,rgba(255,210,30,.16),#171507); }
+    .month-cell.extra { background:linear-gradient(145deg,rgba(57,211,83,.24),#0b1b10); }
+    .month-cell.missed { background:linear-gradient(145deg,rgba(220,53,69,.24),#170b0e); }
     .month-cell.missed .focus-value { color:#ff7076; font-size:4rem; font-weight:300; line-height:1; text-shadow:0 0 22px rgba(255,80,90,.45); }
     .month-cell.missed::after { content:''; position:absolute; inset:42px 18px 16px; border-radius:50%; background:rgba(255,55,65,.08); filter:blur(15px); }
     .week-grid { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:18px; }
     .week-card { min-height:290px; padding:18px; border:1px solid var(--calendar-line); border-radius:14px; background:#111; }
     .week-card h3 { margin:0 0 5px; color:#fff; font-size:1.35rem; }
     .week-card .week-range { color:var(--calendar-muted); font-size:.85rem; }
-    .week-card .week-total { margin-top:18px; color:var(--calendar-purple-soft); font-weight:800; }
+    .week-card .week-total { margin-top:18px; color:var(--calendar-accent-soft); font-weight:800; }
     .week-card .week-average { margin-top:4px; color:var(--calendar-muted); font-size:.8rem; }
     .week-bars { display:flex; align-items:flex-end; gap:7px; height:145px; margin-top:16px; padding-top:10px; border-bottom:1px solid var(--calendar-line); }
     .week-day { height:100%; flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:7px; }
@@ -103,23 +113,57 @@
     .week-day-label { color:var(--calendar-muted); font-size:.7rem; }
     .year-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:18px; }
     .year-card { padding:14px; border:1px solid var(--calendar-line); border-radius:13px; background:#111; cursor:pointer; transition:border-color .2s ease,transform .2s ease; }
-    .year-card:hover { border-color:var(--calendar-purple-soft); transform:translateY(-2px); }
+    .year-card:hover { border-color:var(--calendar-accent-soft); transform:translateY(-2px); }
     .year-card.current-month { border-color:#ffd21e; box-shadow:0 0 0 2px rgba(255,210,30,.18),0 0 20px rgba(255,210,30,.12); }
-    .year-card h3 { margin:0 0 3px; color:var(--calendar-purple-soft); font-size:1.2rem; }
+    .year-card h3 { margin:0 0 3px; color:var(--calendar-accent-soft); font-size:1.2rem; }
     .year-card-summary { margin-bottom:15px; color:var(--calendar-muted); font-size:.75rem; }
     .year-weekdays, .year-days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
     .year-weekdays span { color:var(--calendar-muted); font-size:.6rem; text-align:center; }
-    .year-day { position:relative; aspect-ratio:1; display:grid; place-items:center; border-radius:5px; background:#202020; color:#aeb3c0; font-size:.65rem; }
+    .year-day { position:relative; aspect-ratio:1; display:grid; place-items:center; border-radius:5px; background:#202020; color:rgba(174,179,192,.42); font-size:.65rem; }
     .year-day.empty { background:transparent; }
-    .year-day.focused { background:#806d13; color:#fff; }
-    .year-day.extra { background:#207b36; color:#fff; }
-    .year-day.missed { background:rgba(255,62,72,.14); color:#ff7076; }
+    .year-day.focused { background:#806d13; color:rgba(255,255,255,.24); }
+    .year-day.extra { background:#207b36; color:rgba(255,255,255,.24); }
+    .year-day.missed { background:rgba(255,62,72,.14); color:rgba(255,112,118,.58); }
     .year-day.missed::after { content:'×'; position:absolute; font-size:1.1rem; }
     .year-day.missed span { opacity:.45; }
     .calendar-legend { display:flex; justify-content:flex-end; gap:18px; margin-top:14px; color:var(--calendar-muted); font-size:.75rem; }
     .legend-dot { display:inline-block; width:10px; height:10px; margin-right:5px; border-radius:50%; background:#ffd21e; }
     .legend-dot.green { background:#39d353; }
     .legend-dot.red { background:#ff626c; }
+    .month-cell[data-date] { cursor:pointer; transition:transform .18s ease, border-color .18s ease, filter .18s ease; }
+    .month-cell[data-date]:hover, .month-cell[data-date]:focus-visible { z-index:4; border-color:rgba(142,231,201,.72); box-shadow:inset 0 0 0 .5px rgba(142,231,201,.85); background:rgba(142,231,201,.07); filter:none; transform:translateY(-1px); outline:none; }
+    .day-details-overlay { display:none; position:fixed; inset:0; z-index:1200; place-items:center; padding:20px; background:rgba(2,2,5,.78); backdrop-filter:blur(10px); }
+    .day-details-overlay.is-open { display:grid; }
+    .day-details-modal { position:relative; width:min(720px,100%); max-height:min(780px,92vh); overflow:auto; padding:30px; border:1px solid rgba(45,212,191,.34); border-radius:24px; background:linear-gradient(145deg,#17181b,#090a0c 78%); box-shadow:0 30px 100px rgba(0,0,0,.62),0 0 50px rgba(0,0,0,.3); }
+    .day-details-close { position:absolute; top:17px; right:18px; width:34px; height:34px; display:grid; place-items:center; border:0; border-radius:50%; background:rgba(255,255,255,.06); color:#aeb0bd; font-size:1.5rem; cursor:pointer; }
+    .day-details-close:hover { background:rgba(255,255,255,.13); color:#fff; }
+    .day-details-kicker { margin:0 0 5px; color:var(--calendar-accent-soft); font-size:.7rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    .day-details-modal h2 { margin:0; color:#fff; font-size:1.75rem; letter-spacing:-.03em; }
+    .day-details-summary { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:10px; margin:24px 0; }
+    .day-stat { padding:14px; border:1px solid rgba(255,255,255,.09); border-radius:14px; background:rgba(255,255,255,.045); }
+    .day-stat span { display:block; color:#8f91a0; font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .day-stat strong { display:block; margin-top:5px; color:#fff; font-size:1.35rem; }
+    .day-stat:first-child strong { color:var(--calendar-accent-soft); }
+    .day-stat.study-success { border-color:rgba(45,212,191,.42); background:rgba(45,212,191,.1); }
+    .day-stat.study-success strong { color:var(--calendar-accent-soft); }
+    .day-stat.study-progress { border-color:rgba(243,201,105,.42); background:rgba(243,201,105,.1); }
+    .day-stat.study-progress strong { color:var(--calendar-yellow); }
+    .day-stat.study-empty { border-color:rgba(240,122,130,.4); background:rgba(240,122,130,.1); }
+    .day-stat.study-empty strong { color:var(--calendar-red); }
+    .day-details-section { margin-top:22px; }
+    .day-details-section h3 { margin:0 0 10px; color:#d8d9e4; font-size:.83rem; letter-spacing:.07em; text-transform:uppercase; }
+    .day-task-list { display:grid; gap:7px; }
+    .day-task { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.045); color:#e7e7ed; font-size:.88rem; }
+    .day-task i { color:#777b8c; font-size:.9rem; }
+    .day-task.completed { color:#777b8c; text-decoration:line-through; }
+    .day-task.completed i { color:#61d69a; }
+    .day-empty { padding:13px 0; color:#777b8c; font-size:.86rem; }
+    .day-note { position:relative; margin-top:12px; padding:18px 20px; border:1px solid rgba(255,255,255,.1); border-left:2px solid rgba(142,231,201,.65); border-radius:10px; background:linear-gradient(145deg,#151619,#0d0e10); color:#d8dadd; font-family:'Segoe UI',Tahoma,sans-serif; font-size:.96rem; line-height:1.85; letter-spacing:.01em; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .day-note.empty { color:#777b82; font-style:normal; }
+    .day-rank-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; }
+    .day-rank { padding:11px 12px; border:1px solid rgba(45,212,191,.22); border-radius:10px; background:rgba(45,212,191,.08); color:#d8e9e5; font-size:.82rem; }
+    .day-rank strong { display:block; margin-top:3px; color:var(--calendar-accent-soft); font-size:1.1rem; }
+    @media (max-width:600px) { .day-details-overlay { padding:12px; } .day-details-modal { padding:24px 18px; border-radius:18px; } .day-details-modal h2 { font-size:1.4rem; } .day-details-summary { grid-template-columns:1fr; margin:18px 0; } }
     @media (max-width:900px) { .calendar-topbar, .calendar-periodbar { align-items:flex-start; flex-direction:column; } .calendar-tabs { width:100%; } .calendar-tab { flex:1; } .calendar-periodbar { flex-wrap:wrap; } .week-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .year-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
     @media (max-width:600px) { .goal-calendar { padding:16px 12px 50px; } .calendar-topbar, .calendar-periodbar { padding:14px; } .calendar-brand h1 { font-size:1.35rem; } .calendar-period-title { width:100%; justify-content:space-between; gap:8px; } .calendar-period-title h2 { min-width:0; font-size:1.1rem; } .calendar-actions, .calendar-summary { width:100%; } .calendar-summary-item { flex:1; min-width:0; } .calendar-form-grid, .week-grid, .year-grid { grid-template-columns:1fr; } .month-cell { padding:7px 5px; } .month-cell .focus-value { inset:28px 2px 4px; font-size:.85rem; } .month-cell.missed .focus-value { font-size:2.2rem; } .weekday { padding:9px 2px; font-size:.55rem; } }
   </style>
@@ -160,7 +204,7 @@
       <div class="month-grid">
         <% ['MON','TUE','WED','THU','FRI','SAT','SUN'].forEach(day => { %><div class="weekday"><%= day %></div><% }) %>
         <% for (let blank = 0; blank < firstDay; blank++) { %><div class="month-cell empty"></div><% } %>
-        <% for (let day = 1; day <= daysInMonth; day++) { const value = monthValues[day - 1]; const dateKey = Date.UTC(yearValue, monthValue, day); const state = getState(value, dateKey); const isToday = dateKey === todayKey; %><div class="month-cell <%= state %> <%= isToday ? 'today' : '' %>"><span class="date-number"><%= day %></span><span class="focus-value"><%= state === 'missed' ? '×' : value ? formatMinutes(value, timeUnit) : '' %></span></div><% } %>
+        <% for (let day = 1; day <= daysInMonth; day++) { const value = monthValues[day - 1]; const dateKey = Date.UTC(yearValue, monthValue, day); const state = getState(value, dateKey); const isToday = dateKey === todayKey; const dayString = `${yearValue}-${String(monthValue + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; %><div class="month-cell <%= state %> <%= isToday ? 'today' : '' %>" style="<%= getCellStyle(value, dateKey) %>" data-date="<%= dayString %>" tabindex="0" role="button" aria-label="Open details for <%= dayString %>"><span class="date-number"><%= day %></span><span class="focus-value"><%= state === 'missed' ? '×' : value ? formatMinutes(value, timeUnit) : '' %></span></div><% } %>
       </div>
       <div class="calendar-legend"><span><i class="legend-dot red"></i>No input</span><span><i class="legend-dot"></i>Goal progress</span><span><i class="legend-dot green"></i>Above goal</span></div>
     </section>
@@ -168,7 +212,7 @@
     <section class="calendar-view" data-view="week" hidden>
       <div class="week-grid">
         <% for (let week = 0; week < weekCount; week++) { const startDay = week * 7 + 1; const endDay = Math.min(startDay + 6, daysInMonth); const values = monthValues.slice(startDay - 1, endDay); const total = values.reduce((sum, value) => sum + value, 0); const logged = values.filter(value => value > 0).length; const average = logged ? total / logged : 0; const maxBar = Math.max(...values, goalMinutes, 1); %>
-          <article class="week-card" data-week-index="<%= week %>" data-week-total="<%= total %>" data-week-average="<%= average %>"><h3>Week <%= week + 1 %></h3><div class="week-range"><%= startDay %> - <%= endDay %> <%= currentMonth.toLocaleDateString('en-US', { month:'short', timeZone:'UTC' }) %></div><div class="week-bars"><% values.forEach((value, index) => { %><div class="week-day"><% if (value > 0) { %><div class="week-day-bar <%= value > goalMinutes ? 'extra' : '' %>" data-value="<%= formatMinutes(value, timeUnit) %>" title="<%= formatMinutes(value, timeUnit) %>" style="height:<%= Math.max(4, Math.round(value / maxBar * 100)) %>%"></div><% } %><span class="week-day-label"><%= startDay + index %></span></div><% }) %></div><div class="week-total">Total <%= formatMinutes(total, timeUnit) %></div><div class="week-average">Average <%= formatMinutes(average, timeUnit) %> per logged day</div></article>
+          <article class="week-card" data-week-index="<%= week %>" data-week-total="<%= total %>" data-week-average="<%= average %>"><h3>Week <%= week + 1 %></h3><div class="week-range"><%= startDay %> - <%= endDay %> <%= currentMonth.toLocaleDateString('en-US', { month:'short', timeZone:'UTC' }) %></div><div class="week-bars"><% values.forEach((value, index) => { %><div class="week-day"><% if (value > 0) { %><div class="week-day-bar <%= value >= goalMinutes ? 'extra' : '' %>" data-value="<%= formatMinutes(value, timeUnit) %>" title="<%= formatMinutes(value, timeUnit) %>" style="height:<%= Math.max(4, Math.round(value / maxBar * 100)) %>%"></div><% } %><span class="week-day-label"><%= startDay + index %></span></div><% }) %></div><div class="week-total">Total <%= formatMinutes(total, timeUnit) %></div><div class="week-average">Average <%= formatMinutes(average, timeUnit) %> per logged day</div></article>
         <% } %>
       </div>
     </section>
@@ -176,11 +220,22 @@
     <section class="calendar-view" data-view="year" hidden>
       <div class="year-grid">
         <% for (let month = 0; month < 12; month++) { const monthDate = new Date(Date.UTC(yearValue, month, 1)); const length = new Date(Date.UTC(yearValue, month + 1, 0)).getUTCDate(); const offset = (monthDate.getUTCDay() + 6) % 7; const values = Array.from({ length }, (_, index) => Number(getYearEntry(yearValue, month, index + 1)?.minutes || 0)); const total = values.reduce((sum, value) => sum + value, 0); const logged = values.filter(value => value > 0).length; %>
-          <article class="year-card <%= yearValue === today.getUTCFullYear() && month === today.getUTCMonth() ? 'current-month' : '' %>" data-month="<%= month %>"><h3><%= monthDate.toLocaleDateString('en-US', { month:'long', timeZone:'UTC' }) %></h3><div class="year-card-summary">Click to open month view</div><div class="year-weekdays"><% ['M','T','W','T','F','S','S'].forEach(day => { %><span><%= day %></span><% }) %></div><div class="year-days"><% for (let blank = 0; blank < offset; blank++) { %><span class="year-day empty"></span><% } %><% values.forEach((value, index) => { const day = index + 1; const state = getState(value, Date.UTC(yearValue, month, day)); %><span class="year-day <%= state %>"><span><%= day %></span></span><% }) %></div></article>
+          <article class="year-card <%= yearValue === today.getUTCFullYear() && month === today.getUTCMonth() ? 'current-month' : '' %>" data-month="<%= month %>"><h3><%= monthDate.toLocaleDateString('en-US', { month:'long', timeZone:'UTC' }) %></h3><div class="year-card-summary">Click to open month view</div><div class="year-weekdays"><% ['M','T','W','T','F','S','S'].forEach(day => { %><span><%= day %></span><% }) %></div><div class="year-days"><% for (let blank = 0; blank < offset; blank++) { %><span class="year-day empty"></span><% } %><% values.forEach((value, index) => { const day = index + 1; const dateKey = Date.UTC(yearValue, month, day); const state = getState(value, dateKey); %><span class="year-day <%= state %>" style="<%= getCellStyle(value, dateKey) %>"><span><%= day %></span></span><% }) %></div></article>
         <% } %>
       </div>
     </section>
   </main>
+  <div class="day-details-overlay" id="day-details-overlay" role="dialog" aria-modal="true" aria-labelledby="day-details-title">
+    <section class="day-details-modal">
+      <button type="button" class="day-details-close" id="day-details-close" aria-label="Close day details">&times;</button>
+      <p class="day-details-kicker">Day details</p>
+      <h2 id="day-details-title">Loading day...</h2>
+      <div class="day-details-summary"><div class="day-stat" id="day-study-stat"><span>Total studied</span><strong id="day-total">--</strong></div><div class="day-stat"><span>Completion</span><strong id="day-percentage">--</strong></div><div class="day-stat"><span>Daily goal</span><strong id="day-goal">--</strong></div></div>
+      <div class="day-details-section"><h3>To-do list <span id="day-task-count"></span></h3><div class="day-task-list" id="day-task-list"></div></div>
+      <div class="day-details-section"><h3>Note for the day</h3><div class="day-note" id="day-note"></div></div>
+      <div class="day-details-section" id="day-ranking-section"><h3>Rankings</h3><div class="day-rank-grid" id="day-rankings"></div></div>
+    </section>
+  </div>
   <script>
     let activeMode = 'month';
     let root = document.querySelector('.goal-calendar');
@@ -214,6 +269,12 @@
       document.querySelectorAll('.year-card').forEach(card => card.addEventListener('click', () => {
         navigateCalendar(`${root.dataset.year}-${String(Number(card.dataset.month) + 1).padStart(2, '0')}`, 'month');
       }));
+      document.querySelectorAll('.month-cell[data-date]').forEach(cell => {
+        cell.addEventListener('click', () => openDayDetails(cell.dataset.date));
+        cell.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDayDetails(cell.dataset.date); }
+        });
+      });
       document.querySelectorAll('[data-period-nav]').forEach(button => button.addEventListener('click', () => {
         const current = new Date(Date.UTC(Number(root.dataset.year), Number(root.dataset.month), 1));
         if (activeMode === 'year') current.setUTCFullYear(current.getUTCFullYear() + (button.dataset.periodNav === 'next' ? 1 : -1));
@@ -228,6 +289,100 @@
         document.getElementById('calendar-mode').value = button.dataset.calendarLogMode;
       }));
       bindLogForm();
+    }
+
+    const dayDetailsOverlay = document.getElementById('day-details-overlay');
+    const dayDetailsClose = document.getElementById('day-details-close');
+    const closeDayDetails = () => dayDetailsOverlay?.classList.remove('is-open');
+    dayDetailsClose?.addEventListener('click', closeDayDetails);
+    dayDetailsOverlay?.addEventListener('click', event => { if (event.target === dayDetailsOverlay) closeDayDetails(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeDayDetails(); });
+
+    async function openDayDetails(date) {
+      if (!dayDetailsOverlay) return;
+      const title = document.getElementById('day-details-title');
+      const total = document.getElementById('day-total');
+      const studyStat = document.getElementById('day-study-stat');
+      const percentage = document.getElementById('day-percentage');
+      const goal = document.getElementById('day-goal');
+      const taskCount = document.getElementById('day-task-count');
+      const taskList = document.getElementById('day-task-list');
+      const note = document.getElementById('day-note');
+      const rankings = document.getElementById('day-rankings');
+      const rankingSection = document.getElementById('day-ranking-section');
+      title.textContent = 'Loading day...';
+      total.textContent = '--';
+      studyStat.classList.remove('study-success', 'study-progress', 'study-empty');
+      percentage.textContent = '--';
+      goal.textContent = '--';
+      taskCount.textContent = '';
+      taskList.replaceChildren();
+      note.textContent = '';
+      rankings.replaceChildren();
+      dayDetailsOverlay.classList.add('is-open');
+      try {
+        const response = await fetch(`/api/calendar/day?date=${encodeURIComponent(date)}`, { credentials:'same-origin' });
+        if (!response.ok) throw new Error('Unable to load day details');
+        const data = await response.json();
+        const displayDate = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+        title.textContent = displayDate;
+        const selectedDate = new Date(`${date}T00:00:00`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const isFuture = selectedDate > today;
+        total.textContent = isFuture ? 'N/A' : formatValue(data.totalMinutes);
+        percentage.textContent = isFuture ? 'N/A' : `${data.percentage}%`;
+        goal.textContent = formatValue(data.goalMinutes);
+        if (!isFuture) {
+          studyStat.classList.add(data.totalMinutes >= data.goalMinutes ? 'study-success' : data.totalMinutes > 0 ? 'study-progress' : 'study-empty');
+        }
+        taskCount.textContent = `(${data.completedTasks}/${data.tasks.length} complete)`;
+        if (!data.tasks.length) {
+          taskList.innerHTML = '<div class="day-empty">No tasks were planned for this day.</div>';
+        } else {
+          data.tasks.forEach(task => {
+            const item = document.createElement('div');
+            item.className = `day-task${task.completed ? ' completed' : ''}`;
+            const icon = document.createElement('i');
+            icon.className = task.completed ? 'bi bi-check-circle-fill' : 'bi bi-circle';
+            icon.setAttribute('aria-hidden', 'true');
+            const text = document.createElement('span');
+            text.textContent = task.title;
+            item.append(icon, text);
+            taskList.append(item);
+          });
+        }
+        note.textContent = data.note.trim() || 'No note was added for this day.';
+        note.classList.toggle('empty', !data.note.trim());
+        if (!data.publicRank && !data.groupRanks.length) {
+          rankingSection.hidden = true;
+        } else {
+          rankingSection.hidden = false;
+          if (data.publicRank) {
+            const publicCard = document.createElement('div');
+            publicCard.className = 'day-rank';
+            publicCard.textContent = 'Global leaderboard';
+            const publicValue = document.createElement('strong');
+            publicValue.textContent = `#${data.publicRank.rank} of ${data.publicRank.total}`;
+            publicCard.append(publicValue);
+            rankings.append(publicCard);
+          }
+          data.groupRanks.forEach(group => {
+            const groupCard = document.createElement('div');
+            groupCard.className = 'day-rank';
+            groupCard.textContent = group.name;
+            const groupValue = document.createElement('strong');
+            groupValue.textContent = `#${group.rank} of ${group.total}`;
+            groupCard.append(groupValue);
+            rankings.append(groupCard);
+          });
+        }
+      } catch (error) {
+        title.textContent = 'Day details unavailable';
+        note.textContent = 'We could not load this day right now.';
+        note.classList.add('empty');
+        console.error('Calendar day details failed', error);
+      }
     }
 
     function updateSummary(mode) {

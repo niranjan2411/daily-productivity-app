@@ -20,6 +20,19 @@
     .profile-stat { padding:18px 16px; border:1px solid rgba(255,255,255,.08); border-radius:14px; background:#151515; }
     .profile-stat strong { display:block; color:#ffd700; font-size:1.45rem; margin-bottom:5px; }
     .profile-stat span { color:#888; font-size:.76rem; }
+    .profile-level { display:flex; align-items:center; gap:24px; margin-bottom:18px; padding:22px 24px; border:1px solid rgba(255,215,0,.18); border-radius:16px; background:linear-gradient(120deg,rgba(255,215,0,.09),#151515 62%,rgba(188,19,254,.08)); }
+    .profile-level-ring { position:relative; width:76px; height:76px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; }
+    .profile-level-ring::after { content:''; position:absolute; inset:5px; border-radius:50%; background:#111; }
+    .profile-level-text { position:relative; z-index:1; text-align:center; line-height:1; }
+    .profile-level-text strong { display:block; color:#fff; font-size:1.55rem; }
+    .profile-level-text span { color:#ffd700; font-size:.62rem; font-weight:800; letter-spacing:.08em; }
+    .profile-xp { min-width:0; flex:1; }
+    .profile-xp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .profile-xp-pill { border:1px solid rgba(255,215,0,.25); border-radius:9px; padding:7px 10px; background:rgba(255,215,0,.1); color:#ffd700; font-weight:800; cursor:pointer; }
+    .profile-xp-bar { height:8px; overflow:hidden; border-radius:10px; background:rgba(255,255,255,.06); }
+    .profile-xp-fill { height:100%; border-radius:inherit; background:linear-gradient(90deg,#ffd700,#ff9100); }
+    .profile-xp-meta { display:flex; justify-content:space-between; margin-top:7px; color:#777; font-size:.75rem; }
+    .profile-xp-info { color:#888; font-size:.75rem; }
     .profile-grid { display:grid; grid-template-columns:1.05fr .95fr; gap:18px; }
     .profile-section { min-width:0; background:#151515; border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:24px; }
     .profile-section h2 { margin:0 0 18px; font-size:1.05rem; }
@@ -32,6 +45,7 @@
     .profile-actions { display:flex; gap:10px; margin-top:20px; }
     .profile-actions .btn { width:auto; padding:10px 14px; border-radius:9px; font-size:.82rem; }
     @media (max-width:700px) { .profile-grid, .profile-stats { grid-template-columns:1fr; } .profile-hero { align-items:flex-start; flex-direction:column; padding:22px; } .profile-hero-actions { justify-content:flex-start; } }
+    @media (max-width:500px) { .profile-level { align-items:flex-start; flex-direction:column; } .profile-xp { width:100%; } }
   </style>
 </head>
 <body>
@@ -61,6 +75,16 @@
       <div class="profile-stat"><strong><%= formatMinutes(user.averageMonthlyFocusMinutes, user.timeUnit) %></strong><span>Monthly average</span></div>
     </div>
 
+    <% const profileXpPerLevel = 1000; const profileCurrentXp = user.xp % profileXpPerLevel; const profileProgress = (profileCurrentXp / profileXpPerLevel) * 100; %>
+    <section class="profile-level">
+      <div class="profile-level-ring" style="background:conic-gradient(#ffd700 <%= (profileCurrentXp / profileXpPerLevel) * 360 %>deg, rgba(255,255,255,.06) 0deg);"><div class="profile-level-text"><strong><%= user.level %></strong><span>LEVEL</span></div></div>
+      <div class="profile-xp">
+        <div class="profile-xp-head"><button type="button" class="profile-xp-pill" id="xp-counter"><span><%= user.xp %> XP</span></button><span class="profile-xp-info">+10/hour · +50 daily goal · +100 achievement</span></div>
+        <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:<%= profileProgress %>%"></div></div>
+        <div class="profile-xp-meta"><span>Current progress</span><span><%= profileCurrentXp %> / <%= profileXpPerLevel %> XP</span></div>
+      </div>
+    </section>
+
     <div class="profile-grid">
       <section class="profile-section">
         <div class="profile-section-heading"><h2>Account details</h2><span>Identity</span></div>
@@ -79,5 +103,21 @@
     </div>
 
   </main>
+  <div id="xp-history-popup" class="xp-popup" style="display:none;"><div class="xp-popup-content"><button type="button" class="xp-popup-close" id="xp-popup-close">&times;</button><h2>XP Credit History</h2><div id="xp-history-list" class="xp-history-list"></div></div></div>
+  <script>
+    const profileXpButton = document.getElementById('xp-counter');
+    const profileXpPopup = document.getElementById('xp-history-popup');
+    const profileXpClose = document.getElementById('xp-popup-close');
+    profileXpButton?.addEventListener('click', async () => {
+      const list = document.getElementById('xp-history-list');
+      try {
+        const response = await fetch('/api/xp-history');
+        const data = await response.json();
+        list.innerHTML = `<h3>Achievements</h3><ul>${data.achievements.map(item => `<li>${item}</li>`).join('') || '<li>No achievement XP earned yet.</li>'}</ul><h3>Study Logs</h3><ul>${data.logs.map(item => `<li>${item}</li>`).join('') || '<li>No study XP earned yet.</li>'}</ul>`;
+      } catch (error) { list.textContent = 'Could not load XP history.'; }
+      profileXpPopup.style.display = 'block';
+    });
+    profileXpClose?.addEventListener('click', () => { profileXpPopup.style.display = 'none'; });
+  </script>
 </body>
 </html>

@@ -1,11 +1,9 @@
 <header class="app-header">
   <a class="app-identity" href="/dashboard" aria-label="Go to dashboard">
-    <span class="app-avatar"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
+    <span class="focus-signal" aria-hidden="true"><span></span></span>
     <span class="app-identity-copy">
       <strong><%= user.name %></strong>
-      <small title="<%= user.publicProfile ? 'Public profile' : 'Private profile' %>" aria-label="<%= user.publicProfile ? 'Public profile' : 'Private profile' %>">
-        <span class="profile-visibility-icon" aria-hidden="true"><%= user.publicProfile ? '🔓' : '🔒' %></span>
-      </small>
+      <small>Focus is your edge</small>
     </span>
   </a>
 
@@ -30,7 +28,7 @@
 
     <div class="app-menu app-profile-menu">
       <button type="button" class="app-action app-profile-action app-menu-trigger" aria-label="Open profile menu">
-        <span class="app-avatar app-avatar-small"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
+        <span class="profile-signal"><%= (user.name || '?').charAt(0).toUpperCase() %></span>
         <span class="app-chevron" aria-hidden="true">⌄</span>
       </button>
       <div class="app-menu-panel">
