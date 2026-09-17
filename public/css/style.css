@@ -65,23 +65,48 @@ body {
 }
 
 .focus-signal {
-  width: 44px;
-  height: 44px;
+  position: relative;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid rgba(167, 168, 255, 0.55);
-  border-radius: 14px;
-  background: radial-gradient(circle, rgba(167, 168, 255, 0.35) 0 18%, transparent 19% 42%, rgba(167, 168, 255, 0.16) 43% 45%, transparent 46%), #15151d;
-  box-shadow: 0 0 22px rgba(167, 168, 255, 0.14);
+  visibility: visible;
+  width: 58px;
+  height: 58px;
+  border: 2px solid #7275c6;
+  border-radius: 20px;
+  background: #101018;
+  box-shadow: 0 0 18px rgba(114, 117, 198, 0.14);
 }
 
 .focus-signal span {
-  width: 7px;
-  height: 7px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(114, 117, 198, 0.35);
   border-radius: 50%;
-  background: #c9caff;
-  box-shadow: 0 0 12px #a7a8ff;
+  background: rgba(114, 117, 198, 0.06);
+  box-shadow: 0 0 12px rgba(114, 117, 198, 0.12);
+}
+
+.focus-signal span::after {
+  content: '';
+  width: 13px;
+  height: 13px;
+  border: 3px solid #b8b9ff;
+  border-radius: 50%;
+  background: #9698ff;
+  box-shadow: 0 0 12px rgba(150, 152, 255, 0.9);
+}
+
+.focus-signal.is-running {
+  animation: focus-signal-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes focus-signal-pulse {
+  0%, 100% { opacity: .65; transform: scale(.85); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 .app-avatar {

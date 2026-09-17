@@ -417,7 +417,19 @@
     @media (max-width: 1000px) { .dashboard-workspace { grid-template-columns:1fr; } .dashboard-side { order:1; } .planner-panel { order:2; min-height:0; } }
     @media (max-width: 900px) { .dashboard-grid, .bottom-split { grid-template-columns: 1fr; } }
     
-    @media (max-width: 600px) { 
+    @media (max-width: 600px) {
+      .dashboard-workspace { display:flex; flex-direction:column; align-items:stretch; gap:16px; width:100%; }
+      .dashboard-workspace > .planner-panel { order:3; }
+      .dashboard-workspace > .dashboard-side { display:contents; }
+      .dashboard-workspace .focus-timer-panel,
+      .dashboard-workspace .today-focus-panel,
+      .dashboard-workspace .streak-deck,
+      .dashboard-workspace .action-panel,
+      .dashboard-workspace > .planner-panel { width:100%; min-width:0; max-width:none; }
+      .dashboard-workspace .focus-timer-panel { order:1; }
+      .dashboard-workspace .today-focus-panel { order:2; }
+      .dashboard-workspace .streak-deck { order:4; }
+      .dashboard-workspace .action-panel { order:5; }
       .container { padding: 0 6px 80px 6px; }
       .planner-panel { padding:22px 16px; border-radius:22px; }
       .planner-heading { flex-direction:column-reverse; }

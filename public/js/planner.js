@@ -24,6 +24,7 @@
   const state = { date: todayKey, tasks: [], savedNote: '', note: '', noteEditing: false, taskSaveTimer: null, dropIndex: null };
   const draftKey = suffix => `focus-tracker.planner-draft.v1:${userKey}:${state.date}:${suffix}`;
   let draggedTaskId = null;
+  let loadRequestId = 0;
 
   const setSaveState = value => { if (saveState) saveState.textContent = value; };
   const updateEditMode = () => {
@@ -195,6 +196,7 @@
   }
 
   async function loadDate(key) {
+    const requestId = ++loadRequestId;
     state.date = key;
     state.noteEditing = false;
     const selected = dateFromKey(key);
@@ -202,22 +204,47 @@
     dateInput.value = key;
     updateEditMode();
     setSaveState('Loading...');
+
+    let localTasks = null;
+    try { localTasks = JSON.parse(localStorage.getItem(draftKey('tasks')) || 'null'); } catch (error) { localTasks = null; }
+    const localNote = localStorage.getItem(draftKey('note'));
+    state.tasks = Array.isArray(localTasks) ? localTasks : [];
+    state.savedNote = '';
+    state.note = '';
+    noteInput.value = '';
+    renderTasks();
+    renderNote();
+
     try {
-      const response = await fetch(`/api/planner?date=${key}`, { credentials: 'same-origin' });
-      if (!response.ok) throw new Error('Unable to load planner');
-      const data = await response.json();
-      const serverTasks = (data.lists || []).flatMap(list => list.tasks || []);
-      let localTasks = null;
-      try { localTasks = JSON.parse(localStorage.getItem(draftKey('tasks')) || 'null'); } catch (error) { localTasks = null; }
-      state.tasks = Array.isArray(localTasks) ? localTasks : serverTasks;
-      state.savedNote = data.note || '';
-      state.note = localStorage.getItem(draftKey('note')) ?? state.savedNote;
-      noteInput.value = state.note;
-      renderNote();
-      updateEditMode();
+      const taskResponse = await fetch(`/api/planner?date=${key}&part=tasks`, { credentials: 'same-origin' });
+      if (!taskResponse.ok) throw new Error('Unable to load planner tasks');
+      const taskData = await taskResponse.json();
+      if (requestId !== loadRequestId) return;
+      const serverTasks = (taskData.lists || []).flatMap(list => list.tasks || []);
+      if (!Array.isArray(localTasks)) state.tasks = serverTasks;
       renderTasks();
-      setSaveState(localStorage.getItem(draftKey('tasks')) || localStorage.getItem(draftKey('note')) ? 'Unsaved local changes' : 'Saved');
-    } catch (error) { setSaveState('Offline'); console.error('Planner load failed', error); }
+      setSaveState(localTasks || localNote ? 'Unsaved local changes' : 'Tasks loaded');
+
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      try {
+        const noteResponse = await fetch(`/api/planner?date=${key}&part=note`, { credentials: 'same-origin' });
+        if (!noteResponse.ok) throw new Error('Unable to load planner note');
+        const noteData = await noteResponse.json();
+        if (requestId !== loadRequestId) return;
+        state.savedNote = noteData.note || '';
+        state.note = localNote ?? state.savedNote;
+        noteInput.value = state.note;
+        renderNote();
+        updateEditMode();
+        setSaveState(localTasks || localNote ? 'Unsaved local changes' : 'Saved');
+      } catch (error) {
+        if (requestId === loadRequestId) setSaveState('Tasks loaded');
+        console.error('Planner note load failed', error);
+      }
+    } catch (error) {
+      if (requestId === loadRequestId) setSaveState('Offline');
+      console.error('Planner task load failed', error);
+    }
   }
 
   taskForm.addEventListener('submit', event => {

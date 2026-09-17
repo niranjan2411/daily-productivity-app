@@ -101,7 +101,11 @@ app.get('/api/planner', authenticateUser, noCache, async (req, res) => {
     const date = String(req.query.date || '');
     if (!isPlannerDate(date)) return res.status(400).json({ error: 'Invalid planner date' });
     await dbConnect();
-    const planner = await DailyPlanner.findOne({ userId: req.session.userId, date }).lean();
+    const part = String(req.query.part || 'all');
+    const projection = part === 'tasks' ? 'lists' : part === 'note' ? 'note' : 'lists note';
+    const planner = await DailyPlanner.findOne({ userId: req.session.userId, date }).select(projection).lean();
+    if (part === 'tasks') return res.json({ date, lists: planner?.lists || [] });
+    if (part === 'note') return res.json({ date, note: planner?.note || '' });
     res.json({ date, lists: planner?.lists || [], note: planner?.note || '' });
   } catch (error) {
     console.error('Planner load error:', error);
@@ -890,87 +894,62 @@ app.get('/api/calendar/day', authenticateUser, noCache, async (req, res) => {
   }
 });
 
+app.get('/api/calendar/data', authenticateUser, noCache, async (req, res) => {
+  try {
+    await dbConnect();
+    const [year, month] = String(req.query.month || '').split('-').map(Number);
+    if (!year || !month || month < 1 || month > 12) return res.status(400).json({ error: 'Invalid calendar month' });
+
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 1));
+    const yearStart = new Date(Date.UTC(year, 0, 1));
+    const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+    const [monthLogs, monthFocusSessions, yearLogs, yearFocusSessions] = await Promise.all([
+      StudyLog.find({ userId: req.session.userId, date: { $gte: monthStart, $lt: monthEnd } }).lean(),
+      FocusSession.find({ userId: req.session.userId, status: 'completed', startTime: { $gte: monthStart, $lt: monthEnd } }).select('startTime durationSeconds').lean(),
+      StudyLog.find({ userId: req.session.userId, date: { $gte: yearStart, $lt: yearEnd } }).lean(),
+      FocusSession.find({ userId: req.session.userId, status: 'completed', startTime: { $gte: yearStart, $lt: yearEnd } }).select('startTime durationSeconds').lean()
+    ]);
+
+    res.json({
+      logs: buildCalendarLogs(monthLogs, monthFocusSessions),
+      yearLogs: buildCalendarLogs(yearLogs, yearFocusSessions)
+    });
+  } catch (error) {
+    console.error('Calendar data error:', error);
+    res.status(500).json({ error: 'Unable to load calendar data' });
+  }
+});
+
 app.get('/calendar', authenticateUser, noCache, async (req, res) => {
   try {
     await dbConnect();
     const userId = req.session.userId;
-
-    await StudyLog.updateMany(
-      {
-        userId,
-        hours: { $type: 'number', $gt: 0 },
-        $or: [{ minutes: { $exists: false } }, { minutes: null }, { minutes: 0 }]
-      },
-      [{ $set: { minutes: { $round: [{ $multiply: ['$hours', 60] }, 2] } } }]
-    );
-
-    const [user, allLogs, achievements] = await Promise.all([
-      User.findById(userId),
-      StudyLog.find({ userId }),
-      Achievement.find({ userId, achieved: true })
-    ]);
-
-    if (!user) {
-      return req.session.destroy(() => { res.redirect('/login'); });
-    }
-
-    const focusStats = await syncFocusStats(userId, allLogs);
-    Object.assign(user, focusStats);
-
-    const xpData = await calculateXpAndLevel(userId, user, allLogs, achievements);
-    user.xp = xpData.xp;
-    user.level = xpData.level;
 
     let currentMonth;
     if (req.query.month) {
       const [year, month] = req.query.month.split('-').map(Number);
       currentMonth = new Date(Date.UTC(year, month - 1, 1));
     } else {
-      currentMonth = new Date();
-      currentMonth.setUTCDate(1);
+      const now = new Date();
+      currentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     }
     currentMonth.setUTCHours(0, 0, 0, 0);
 
-    const nextMonth = new Date(currentMonth);
-    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    const user = await User.findById(userId).select('userId name username createdAt dailyGoalMinutes timeUnit publicProfile').lean();
 
-    const monthLogs = allLogs.filter(log =>
-      log.date >= currentMonth && log.date < nextMonth
-    );
-    const monthFocusSessions = await FocusSession.find({
-      userId,
-      status: 'completed',
-      startTime: { $gte: currentMonth, $lt: nextMonth }
-    }).select('startTime durationSeconds');
-
-    const weekCalendarStart = new Date(currentMonth);
-    weekCalendarStart.setUTCDate(weekCalendarStart.getUTCDate() - ((weekCalendarStart.getUTCDay() + 6) % 7));
-    const weekCalendarEnd = new Date(weekCalendarStart);
-    weekCalendarEnd.setUTCDate(weekCalendarEnd.getUTCDate() + 42);
-    const [weekLogs, weekFocusSessions] = await Promise.all([
-      StudyLog.find({ userId, date: { $gte: weekCalendarStart, $lt: weekCalendarEnd } }),
-      FocusSession.find({ userId, status: 'completed', startTime: { $gte: weekCalendarStart, $lt: weekCalendarEnd } })
-        .select('startTime durationSeconds')
-    ]);
-
-    const yearStart = new Date(Date.UTC(currentMonth.getUTCFullYear(), 0, 1));
-    const nextYear = new Date(Date.UTC(currentMonth.getUTCFullYear() + 1, 0, 1));
-    const [yearLogs, yearFocusSessions] = await Promise.all([
-      StudyLog.find({ userId, date: { $gte: yearStart, $lt: nextYear } }),
-      FocusSession.find({ userId, status: 'completed', startTime: { $gte: yearStart, $lt: nextYear } })
-        .select('startTime durationSeconds')
-    ]);
-
-    const isPartial = req.query.partial === 'true';
+    if (!user) {
+      return req.session.destroy(() => { res.redirect('/login'); });
+    }
 
     res.render('calendar', {
       user,
-      logs: buildCalendarLogs(monthLogs, monthFocusSessions),
-      weekLogs: buildCalendarLogs(weekLogs, weekFocusSessions),
-      yearLogs: buildCalendarLogs(yearLogs, yearFocusSessions),
+      logs: [],
+      weekLogs: [],
+      yearLogs: [],
       currentMonth,
       error: null,
-      partial: isPartial
+      partial: req.query.partial === 'true'
     });
   } catch (error) {
     console.error(error);
@@ -1574,11 +1553,10 @@ app.get('/profile/:username', noCache, async (req, res) => {
     await dbConnect();
     const username = normalizeUsername(req.params.username);
     const profile = await User.findOne({ username })
-      .select('name username publicProfile timeUnit totalFocusMinutes averageWeeklyFocusMinutes averageMonthlyFocusMinutes createdAt');
+      .select('name username publicProfile timeUnit totalFocusMinutes averageWeeklyFocusMinutes averageMonthlyFocusMinutes createdAt')
+      .lean();
     if (!profile) return res.status(404).render('public-profile', { profile: null, isPrivate: false });
     if (!profile.publicProfile) return res.render('public-profile', { profile: null, isPrivate: true });
-    const focusStats = await syncFocusStats(profile._id);
-    Object.assign(profile, focusStats);
     res.render('public-profile', { profile, isPrivate: false });
   } catch (error) {
     console.error('Public profile page error:', error);
@@ -1660,7 +1638,10 @@ app.post('/update-profile', authenticateUser, noCache, [
     }
     user.publicProfile = req.body.publicProfile === 'true' || req.body.publicProfile === 'on';
     await user.save();
-    res.redirect('/settings?profileSuccess=Profile%20updated');
+    const visibilityMessage = user.publicProfile
+      ? 'Your profile is now public.'
+      : 'Your profile is now private.';
+    res.redirect(`/settings?profileSuccess=${encodeURIComponent(visibilityMessage)}`);
   } catch (error) {
     console.error('Profile update error:', error);
     res.redirect('/settings?profileError=Unable%20to%20update%20profile');

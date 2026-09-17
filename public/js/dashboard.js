@@ -4,6 +4,9 @@
   const fullscreenButton = document.getElementById('focus-fullscreen');
   const timerValue = document.getElementById('focus-timer-value');
   const timerStatus = document.getElementById('focus-timer-status');
+  const focusSignal = document.querySelector('.focus-signal');
+  const faviconLink = document.querySelector('link[rel="icon"]');
+  const defaultFavicon = faviconLink?.getAttribute('href') || '/images/icon.svg';
   const totalValue = document.querySelector('[data-total-focus-minutes]');
   const todayMinutesValue = document.getElementById('today-focus-minutes');
   const todayFocusWheel = document.getElementById('today-focus-wheel');
@@ -30,6 +33,7 @@
   const timeUnit = timer.dataset.timeUnit === 'hours' ? 'hours' : 'minutes';
   let tickHandle = null;
   let toggleInProgress = false;
+  let shutdownHandled = false;
 
   function readJson(key) {
     try {
@@ -70,8 +74,22 @@
     timerStatus.dataset.state = state;
   }
 
+  function renderFavicon(running) {
+    if (!faviconLink) return;
+    if (!running) {
+      faviconLink.setAttribute('href', defaultFavicon);
+      return;
+    }
+
+    const faviconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><filter id="glow"><feGaussianBlur stdDeviation="2"/></filter></defs><circle cx="16" cy="16" r="8" fill="#4ade80" opacity=".8" filter="url(#glow)"/><circle cx="16" cy="16" r="5" fill="#4ade80"/></svg>';
+    faviconLink.setAttribute('href', `data:image/svg+xml,${encodeURIComponent(faviconSvg)}`);
+  }
+
   function renderToggle() {
     const running = Boolean(activeSession);
+    focusSignal?.classList.toggle('is-running', running);
+    renderFavicon(running);
+    document.title = 'Dashboard - Focus tracker';
     toggleButton.innerHTML = running
       ? '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5a2 2 0 0 1 2 2v10a2 2 0 1 1-4 0V7a2 2 0 0 1 2-2Zm10 0a2 2 0 0 1 2 2v10a2 2 0 1 1-4 0V7a2 2 0 0 1 2-2Z"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.1-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14Z"/></svg>';
@@ -146,6 +164,32 @@
     }
   }
 
+  function buildCompletedSession() {
+    if (!activeSession) return null;
+    const endTime = Date.now();
+    return {
+      sessionId: activeSession.sessionId,
+      startTime: new Date(activeSession.startTime).toISOString(),
+      endTime: new Date(endTime).toISOString(),
+      durationSeconds: Math.max(0, Math.round((endTime - activeSession.startTime) / 1000)),
+      status: 'completed'
+    };
+  }
+
+  function stopTimerOnPageHide() {
+    if (!activeSession || shutdownHandled) return;
+    shutdownHandled = true;
+    const completedSession = buildCompletedSession();
+    const payload = JSON.stringify(completedSession);
+    const sent = typeof navigator.sendBeacon === 'function'
+      ? navigator.sendBeacon('/api/focus-sessions', new Blob([payload], { type: 'application/json' }))
+      : false;
+    if (!sent) enqueue(completedSession);
+    activeSession = null;
+    localStorage.removeItem(activeStorageKey);
+    if (tickHandle) clearInterval(tickHandle);
+  }
+
   async function flushPendingSessions() {
     if (!pendingSessions.length) return;
     let firstUnsyncedIndex = pendingSessions.length;
@@ -180,14 +224,7 @@
     toggleInProgress = true;
 
     if (activeSession) {
-      const endTime = Date.now();
-      const completedSession = {
-        sessionId: activeSession.sessionId,
-        startTime: new Date(activeSession.startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        durationSeconds: Math.max(0, Math.round((endTime - activeSession.startTime) / 1000)),
-        status: 'completed'
-      };
+      const completedSession = buildCompletedSession();
       displayTotalSeconds += completedSession.durationSeconds;
       dailyFocusSeconds += completedSession.durationSeconds;
       writeJson(dailyStorageKey, { date: todayKey, seconds: dailyFocusSeconds });
@@ -237,6 +274,8 @@
     if (document.fullscreenElement) await document.exitFullscreen();
     else await timer.requestFullscreen();
   });
+
+  window.addEventListener('pagehide', stopTimerOnPageHide);
 
   document.addEventListener('fullscreenchange', () => {
     const isFullscreen = document.fullscreenElement === timer;

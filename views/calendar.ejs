@@ -38,7 +38,6 @@
   const nextMonth = new Date(Date.UTC(yearValue, monthValue + 1, 1));
   const previousMonthString = `${previousMonth.getUTCFullYear()}-${String(previousMonth.getUTCMonth() + 1).padStart(2, '0')}`;
   const nextMonthString = `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, '0')}`;
-  const isFutureMonth = nextMonth.getTime() > Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1);
   const weekCount = Math.ceil(daysInMonth / 7);
 %>
 <!DOCTYPE html>
@@ -165,7 +164,7 @@
     .day-rank strong { display:block; margin-top:3px; color:var(--calendar-accent-soft); font-size:1.1rem; }
     @media (max-width:600px) { .day-details-overlay { padding:12px; } .day-details-modal { padding:24px 18px; border-radius:18px; } .day-details-modal h2 { font-size:1.4rem; } .day-details-summary { grid-template-columns:1fr; margin:18px 0; } }
     @media (max-width:900px) { .calendar-topbar, .calendar-periodbar { align-items:flex-start; flex-direction:column; } .calendar-tabs { width:100%; } .calendar-tab { flex:1; } .calendar-periodbar { flex-wrap:wrap; } .week-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .year-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-    @media (max-width:600px) { .goal-calendar { padding:16px 12px 50px; } .calendar-topbar, .calendar-periodbar { padding:14px; } .calendar-brand h1 { font-size:1.35rem; } .calendar-period-title { width:100%; justify-content:space-between; gap:8px; } .calendar-period-title h2 { min-width:0; font-size:1.1rem; } .calendar-actions, .calendar-summary { width:100%; } .calendar-summary-item { flex:1; min-width:0; } .calendar-form-grid, .week-grid, .year-grid { grid-template-columns:1fr; } .month-cell { padding:7px 5px; } .month-cell .focus-value { inset:28px 2px 4px; font-size:.85rem; } .month-cell.missed .focus-value { font-size:2.2rem; } .weekday { padding:9px 2px; font-size:.55rem; } }
+    @media (max-width:600px) { .goal-calendar { padding:16px 12px 50px; } .calendar-topbar, .calendar-periodbar { padding:14px; } .calendar-brand h1 { font-size:1.35rem; } .calendar-period-title { width:100%; justify-content:space-between; gap:8px; } .calendar-period-title h2 { min-width:0; font-size:1.1rem; } .calendar-actions, .calendar-summary { width:100%; } .calendar-summary-item { flex:1; min-width:0; } .calendar-form-grid, .week-grid, .year-grid { grid-template-columns:1fr; } .month-cell { position:relative; padding:4px 3px; } .month-cell .date-number { position:absolute; top:4px; left:5px; z-index:2; font-size:.58rem; line-height:1.1; } .month-cell .focus-value { inset:18px 2px 2px; font-size:.58rem; line-height:1.1; letter-spacing:-.02em; } .month-cell.missed .focus-value { font-size:1.3rem; } .month-cell.missed::after { inset:20px 8px 8px; } .weekday { padding:9px 2px; font-size:.53rem; } }
   </style>
 </head>
 <body>
@@ -182,7 +181,7 @@
     </header>
 
     <section class="calendar-periodbar">
-      <div class="calendar-period-title"><button class="calendar-arrow" type="button" data-period-nav="previous" aria-label="Previous period">&lsaquo;</button><h2 id="period-title"><%= monthName %></h2><button class="calendar-arrow <%= isFutureMonth ? 'disabled' : '' %>" type="button" data-period-nav="next" aria-label="Next period">&rsaquo;</button></div>
+      <div class="calendar-period-title"><button class="calendar-arrow" type="button" data-period-nav="previous" aria-label="Previous period">&lsaquo;</button><h2 id="period-title"><%= monthName %></h2><button class="calendar-arrow" type="button" data-period-nav="next" aria-label="Next period">&rsaquo;</button></div>
       <div class="calendar-actions"><button class="calendar-add" id="toggle-log" type="button">＋ Add focus</button></div>
     </section>
 
@@ -239,6 +238,7 @@
   <script>
     let activeMode = 'month';
     let root = document.querySelector('.goal-calendar');
+    let dataRequestId = 0;
     const timeUnit = '<%= timeUnit %>';
     const formatValue = minutes => timeUnit === 'hours'
       ? `${(Math.round((minutes / 60) * 10) / 10).toFixed(1)}h`
@@ -279,7 +279,6 @@
         const current = new Date(Date.UTC(Number(root.dataset.year), Number(root.dataset.month), 1));
         if (activeMode === 'year') current.setUTCFullYear(current.getUTCFullYear() + (button.dataset.periodNav === 'next' ? 1 : -1));
         else current.setUTCMonth(current.getUTCMonth() + (button.dataset.periodNav === 'next' ? 1 : -1));
-        if (current > new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))) return;
         navigateCalendar(`${current.getUTCFullYear()}-${String(current.getUTCMonth() + 1).padStart(2, '0')}`, activeMode);
       }));
       const dateInput = document.getElementById('calendar-date');
@@ -394,6 +393,57 @@
       document.getElementById('summary-average').textContent = formatValue(average);
     }
 
+    function applyCalendarData(data) {
+      const goalMinutes = Number(root.dataset.goalMinutes || 300);
+      const accountStartKey = Date.parse(root.dataset.accountStart || '') || 0;
+      const today = new Date();
+      const todayKey = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+      const monthValues = new Map((data.logs || []).map(log => [String(log.date).slice(0, 10), Number(log.minutes) || 0]));
+      const yearValues = new Map((data.yearLogs || []).map(log => [String(log.date).slice(0, 10), Number(log.minutes) || 0]));
+      let monthTotal = 0;
+      let monthLoggedDays = 0;
+      document.querySelectorAll('.month-cell[data-date]').forEach(cell => {
+        const value = monthValues.get(cell.dataset.date) || 0;
+        const dateKey = Date.parse(`${cell.dataset.date}T00:00:00Z`);
+        const state = value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : dateKey >= accountStartKey && dateKey < todayKey ? 'missed' : 'future';
+        monthTotal += value;
+        if (value > 0) monthLoggedDays += 1;
+        cell.classList.remove('extra', 'focused', 'missed', 'future');
+        cell.classList.add(state);
+        cell.querySelector('.focus-value').textContent = state === 'missed' ? '×' : value ? formatValue(value) : '';
+        if (dateKey >= todayKey || !value) cell.style.background = '';
+        else if (value >= goalMinutes) cell.style.background = `linear-gradient(145deg,rgba(57,211,83,${Math.min(1, .2 + value / goalMinutes * .25).toFixed(2)}),rgba(8,35,18,.94))`;
+        else cell.style.background = `linear-gradient(145deg,rgba(255,210,30,${(.1 + Math.min(1, value / goalMinutes) * .42).toFixed(2)}),rgba(39,31,5,.94))`;
+      });
+      document.querySelectorAll('.year-card').forEach(card => {
+        const year = Number(root.dataset.year);
+        const month = Number(card.dataset.month);
+        card.querySelectorAll('.year-day:not(.empty)').forEach(dayCell => {
+          const day = dayCell.querySelector('span')?.textContent;
+          const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const value = yearValues.get(key) || 0;
+          dayCell.classList.remove('extra', 'focused', 'missed', 'future');
+          dayCell.classList.add(value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : 'future');
+        });
+      });
+      root.dataset.monthTotal = monthTotal;
+      root.dataset.monthAverage = monthLoggedDays ? monthTotal / monthLoggedDays : 0;
+      updateSummary(activeMode);
+    }
+
+    async function hydrateCalendarData() {
+      const requestId = ++dataRequestId;
+      const month = `${root.dataset.year}-${String(Number(root.dataset.month) + 1).padStart(2, '0')}`;
+      try {
+        const response = await fetch(`/api/calendar/data?month=${month}`, { credentials:'same-origin' });
+        if (!response.ok) throw new Error('Unable to load calendar data');
+        const data = await response.json();
+        if (requestId === dataRequestId) applyCalendarData(data);
+      } catch (error) {
+        if (requestId === dataRequestId) console.error('Calendar data hydration failed', error);
+      }
+    }
+
 
     async function navigateCalendar(month, mode) {
       const response = await fetch(`/calendar?month=${month}`);
@@ -407,6 +457,7 @@
       bindCalendar();
       document.querySelector(`[data-mode="${mode}"]`)?.click();
       window.history.pushState({}, '', `/calendar?month=${month}`);
+      hydrateCalendarData();
     }
 
     function bindLogForm() {
@@ -445,7 +496,10 @@
       });
     }
 
+    root.dataset.goalMinutes = '<%= goalMinutes %>';
+    root.dataset.accountStart = '<%= accountStartDate.toISOString() %>';
     bindCalendar();
+    hydrateCalendarData();
   </script>
 </body>
 </html>
