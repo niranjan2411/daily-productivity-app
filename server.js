@@ -51,6 +51,7 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI, // Safer than clientPromise for this setup
+    ...(process.env.MONGODB_DB ? { dbName: process.env.MONGODB_DB } : {}),
     ttl: 14 * 24 * 60 * 60, // 14 days
     autoRemove: 'native'
   }),
@@ -1567,10 +1568,18 @@ app.get('/profile/:username', noCache, async (req, res) => {
 app.get('/profile', authenticateUser, noCache, async (req, res) => {
   try {
     await dbConnect();
-    const [user, logs, achievements] = await Promise.all([
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const heatmapStart = new Date(todayUTC);
+    heatmapStart.setUTCDate(heatmapStart.getUTCDate() - 364);
+    heatmapStart.setUTCDate(heatmapStart.getUTCDate() - ((heatmapStart.getUTCDay() + 6) % 7));
+    const heatmapEnd = new Date(heatmapStart);
+    heatmapEnd.setUTCDate(heatmapEnd.getUTCDate() + 53 * 7);
+    const [user, logs, achievements, focusSessions] = await Promise.all([
       User.findById(req.session.userId),
       StudyLog.find({ userId: req.session.userId }),
-      Achievement.find({ userId: req.session.userId })
+      Achievement.find({ userId: req.session.userId }),
+      FocusSession.find({ userId: req.session.userId, status: 'completed', startTime: { $gte: heatmapStart, $lt: heatmapEnd } }).select('startTime durationSeconds').lean()
     ]);
     if (!user) return req.session.destroy(() => res.redirect('/login'));
     await ensureUserIdentity(user);
@@ -1579,8 +1588,11 @@ app.get('/profile', authenticateUser, noCache, async (req, res) => {
     const xpData = await calculateXpAndLevel(user._id, user, logs, achievements);
     user.xp = xpData.xp;
     user.level = xpData.level;
+    const heatmapLogs = buildCalendarLogs(logs.filter(log => log.date >= heatmapStart && log.date < heatmapEnd), focusSessions);
     res.render('profile', {
       user,
+      heatmapLogs,
+      heatmapStart,
       success: req.query.profileSuccess || null,
       error: req.query.profileError || null
     });
@@ -1624,7 +1636,8 @@ app.get('/settings', authenticateUser, noCache, async (req, res) => {
 
 app.post('/update-profile', authenticateUser, noCache, [
   body('username').optional().trim().toLowerCase().matches(/^[a-z0-9_]{3,30}$/),
-  body('publicProfile').optional().isBoolean()
+  body('publicProfile').isBoolean(),
+  body('publicProfileEnabled').optional().isBoolean()
 ], async (req, res) => {
   try {
     await dbConnect();
@@ -1636,9 +1649,18 @@ app.post('/update-profile', authenticateUser, noCache, [
     if (submittedUsername && submittedUsername !== user.username) {
       return res.redirect('/settings?profileError=Username%20cannot%20be%20changed%20after%20signup');
     }
-    user.publicProfile = req.body.publicProfile === 'true' || req.body.publicProfile === 'on';
-    await user.save();
-    const visibilityMessage = user.publicProfile
+    const publicProfile = req.body.publicProfileEnabled === true
+      || req.body.publicProfileEnabled === 'true'
+      || req.body.publicProfileEnabled === 'on';
+    const updatedUser = await User.findByIdAndUpdate(
+      req.session.userId,
+      { $set: { publicProfile } },
+      { new: true, runValidators: false }
+    ).select('publicProfile');
+    if (!updatedUser || updatedUser.publicProfile !== publicProfile) {
+      return res.redirect('/settings?profileError=Unable%20to%20save%20profile%20visibility');
+    }
+    const visibilityMessage = publicProfile
       ? 'Your profile is now public.'
       : 'Your profile is now private.';
     res.redirect(`/settings?profileSuccess=${encodeURIComponent(visibilityMessage)}`);

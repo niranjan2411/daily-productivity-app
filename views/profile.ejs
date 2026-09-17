@@ -1,3 +1,26 @@
+<%
+  const heatmapValues = new Map((heatmapLogs || []).map(log => [new Date(log.date).toISOString().slice(0, 10), Number(log.minutes) || 0]));
+  const heatmapGridStart = new Date(heatmapStart);
+  const heatmapTodayKey = new Date();
+  heatmapTodayKey.setHours(0, 0, 0, 0);
+  const heatmapMonthLabels = Array.from({ length: 53 }, (_, week) => {
+    const date = new Date(heatmapGridStart);
+    date.setUTCDate(date.getUTCDate() + week * 7);
+    return date.getUTCDate() <= 7 ? date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }) : '';
+  });
+  const heatmapColor = (minutes, date) => {
+    if (date > heatmapTodayKey) return '#10171a';
+    if (!minutes) return '#4a1720';
+    const goal = user.dailyGoalMinutes || 300;
+    const ratio = minutes / goal;
+    if (ratio < .25) return '#FFFF00';
+    if (ratio < .5) return '#FFE44D';
+    if (ratio < 1) return '#FEBE10';
+    if (ratio < 1.5) return '#32CD32';
+    if (ratio < 2) return '#228B22';
+    return '#006400';
+  };
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,7 +67,33 @@
     .profile-detail span:last-child { text-align:right; overflow-wrap:anywhere; }
     .profile-actions { display:flex; gap:10px; margin-top:20px; }
     .profile-actions .btn { width:auto; padding:10px 14px; border-radius:9px; font-size:.82rem; }
-    @media (max-width:700px) { .profile-grid, .profile-stats { grid-template-columns:1fr; } .profile-hero { align-items:flex-start; flex-direction:column; padding:22px; } .profile-hero-actions { justify-content:flex-start; } }
+    .profile-heatmap { margin-bottom:18px; padding:28px 30px 24px; border:1px solid rgba(45,212,191,.2); border-radius:20px; background:#0d1114; box-shadow:0 18px 45px rgba(0,0,0,.2); }
+    .profile-heatmap-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:24px; border-bottom:1px solid rgba(255,255,255,.07); }
+    .profile-heatmap-title { display:flex; align-items:center; gap:14px; }
+    .profile-heatmap-pulse { color:#42dfad; font-size:1.8rem; line-height:1; }
+    .profile-heatmap h2 { margin:0; color:#f3f7f6; font-size:1.45rem; letter-spacing:-.03em; }
+    .profile-heatmap-action { display:flex; align-items:center; gap:9px; padding:10px 17px; border:1px solid rgba(45,212,191,.6); border-radius:14px; background:rgba(20,91,71,.16); color:#62e2b4; font:inherit; font-weight:800; }
+    .profile-heatmap-scroll { overflow-x:auto; padding:34px 0 10px; }
+    .profile-heatmap-chart { min-width:860px; }
+    .profile-heatmap-months { display:grid; grid-template-columns:repeat(53,minmax(10px,1fr)); gap:6px; margin-left:46px; height:22px; color:#8f98a5; font-size:.78rem; }
+    .profile-heatmap-months span { white-space:nowrap; }
+    .profile-heatmap-body { display:grid; grid-template-columns:38px 1fr; gap:8px; }
+    .profile-heatmap-weekdays { display:grid; grid-template-rows:repeat(7,13px); gap:6px; color:#8f98a5; font-size:.75rem; }
+    .profile-heatmap-weekdays span { align-self:center; }
+    .profile-heatmap-grid { display:grid; grid-template-columns:repeat(53,minmax(10px,1fr)); grid-template-rows:repeat(7,13px); grid-auto-flow:column; gap:6px; }
+    .profile-heatmap-cell { position:relative; border:1px solid rgba(255,255,255,.08); border-radius:3px; cursor:default; transition:transform .16s ease,filter .16s ease; }
+    .profile-heatmap-cell:hover { z-index:2; transform:scale(1.35); filter:brightness(1.18); border-color:#d8fff0; }
+    .profile-heatmap-cell::after { content:attr(data-tooltip); position:absolute; right:50%; bottom:calc(100% + 8px); z-index:3; width:max-content; max-width:180px; padding:6px 8px; border:1px solid rgba(255,255,255,.12); border-radius:6px; background:#050708; color:#eefaf6; font-size:.68rem; opacity:0; pointer-events:none; transform:translateX(50%) translateY(3px); transition:opacity .16s ease,transform .16s ease; }
+    .profile-heatmap-cell:hover::after { opacity:1; transform:translateX(50%) translateY(0); }
+    .profile-heatmap-footer { display:flex; justify-content:flex-end; align-items:center; gap:9px; margin-top:32px; color:#8f98a5; font-size:.78rem; }
+    .profile-heatmap-legend { display:flex; gap:7px; }
+    .profile-heatmap-swatch { width:14px; height:14px; border:1px solid rgba(255,255,255,.1); border-radius:4px; }
+    .profile-heatmap-swatch.zero { background:#4a1720; }
+    .profile-heatmap-swatch.yellow-light { background:#FFFF00; }
+    .profile-heatmap-swatch.yellow-dark { background:#FEBE10; }
+    .profile-heatmap-swatch.green-light { background:#32CD32; }
+    .profile-heatmap-swatch.green-dark { background:#006400; }
+    @media (max-width:700px) { .profile-grid, .profile-stats { grid-template-columns:1fr; } .profile-hero { align-items:flex-start; flex-direction:column; padding:22px; } .profile-hero-actions { justify-content:flex-start; } .profile-heatmap { padding:22px 18px 18px; } .profile-heatmap-header { align-items:flex-start; flex-direction:column; } .profile-heatmap-action { align-self:flex-start; } }
     @media (max-width:500px) { .profile-level { align-items:flex-start; flex-direction:column; } .profile-xp { width:100%; } }
   </style>
 </head>
@@ -83,6 +132,25 @@
         <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:<%= profileProgress %>%"></div></div>
         <div class="profile-xp-meta"><span>Current progress</span><span><%= profileCurrentXp %> / <%= profileXpPerLevel %> XP</span></div>
       </div>
+    </section>
+
+    <section class="profile-heatmap">
+      <div class="profile-heatmap-header">
+        <div class="profile-heatmap-title"><span class="profile-heatmap-pulse" aria-hidden="true">⌁</span><h2>365-Day Focus Heatmap</h2></div>
+        <div class="profile-heatmap-action" aria-hidden="true">▥ <span>Study Graph</span></div>
+      </div>
+      <div class="profile-heatmap-scroll">
+        <div class="profile-heatmap-chart">
+          <div class="profile-heatmap-months"><% heatmapMonthLabels.forEach(label => { %><span><%= label %></span><% }) %></div>
+          <div class="profile-heatmap-body">
+            <div class="profile-heatmap-weekdays"><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span><span></span></div>
+            <div class="profile-heatmap-grid">
+              <% for (let week = 0; week < 53; week++) { for (let day = 0; day < 7; day++) { const cellDate = new Date(heatmapGridStart); cellDate.setUTCDate(cellDate.getUTCDate() + week * 7 + day); const dateKey = cellDate.toISOString().slice(0, 10); const minutes = heatmapValues.get(dateKey) || 0; const dateLabel = cellDate.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', timeZone:'UTC' }); const tooltip = cellDate > heatmapTodayKey ? `${dateLabel}: Future` : `${dateLabel}: ${formatMinutes(minutes, user.timeUnit)}`; %><span class="profile-heatmap-cell" style="background:<%= heatmapColor(minutes, cellDate) %>" data-tooltip="<%= tooltip %>" aria-label="<%= tooltip %>"></span><% } } %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-heatmap-footer"><span>0 focus</span><div class="profile-heatmap-legend" aria-hidden="true"><span class="profile-heatmap-swatch zero"></span><span class="profile-heatmap-swatch yellow-light"></span><span class="profile-heatmap-swatch yellow-dark"></span><span class="profile-heatmap-swatch green-light"></span><span class="profile-heatmap-swatch green-dark"></span></div><span>Deep focus</span></div>
     </section>
 
     <div class="profile-grid">

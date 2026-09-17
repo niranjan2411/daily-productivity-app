@@ -91,9 +91,14 @@ Follow these steps to set up the project locally for development.
     ```env
     PORT=3000
     MONGODB_URI=your_mongodb_connection_string
+    MONGODB_DB=productivity_tracker
     SESSION_SECRET=your_secret_key_here
     NODE_ENV=development
     ```
+
+    Use the same `MONGODB_URI`, `MONGODB_DB`, and `SESSION_SECRET` in your local `.env` and in the Vercel project environment variables. `MONGODB_DB` should be an explicit database name in the shared Atlas cluster. This makes localhost and the hosted app read and write the same users, privacy settings, logs, and sessions. Do not commit `.env` or copy its credentials into source code.
+
+    If the app was previously used without `MONGODB_DB`, set it to the database that already contains your users before restarting either environment. The database name is commonly `test` when the URI has no database path, but verify it in MongoDB Atlas first so existing data is not split across databases.
 
 4.  **Start the server**
     ```bash

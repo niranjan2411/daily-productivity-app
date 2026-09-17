@@ -400,6 +400,7 @@
       const todayKey = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
       const monthValues = new Map((data.logs || []).map(log => [String(log.date).slice(0, 10), Number(log.minutes) || 0]));
       const yearValues = new Map((data.yearLogs || []).map(log => [String(log.date).slice(0, 10), Number(log.minutes) || 0]));
+      const monthValuesInDays = Array.from({ length: new Date(Date.UTC(Number(root.dataset.year), Number(root.dataset.month) + 1, 0)).getUTCDate() }, (_, index) => monthValues.get(`${root.dataset.year}-${String(Number(root.dataset.month) + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`) || 0);
       let monthTotal = 0;
       let monthLoggedDays = 0;
       document.querySelectorAll('.month-cell[data-date]').forEach(cell => {
@@ -418,14 +419,55 @@
       document.querySelectorAll('.year-card').forEach(card => {
         const year = Number(root.dataset.year);
         const month = Number(card.dataset.month);
+        const length = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+        const values = Array.from({ length }, (_, index) => yearValues.get(`${year}-${String(month + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`) || 0);
+        const total = values.reduce((sum, value) => sum + value, 0);
+        const logged = values.filter(value => value > 0).length;
+        card.querySelector('.year-card-summary').textContent = `${formatValue(total)} total · ${logged} logged day${logged === 1 ? '' : 's'}`;
         card.querySelectorAll('.year-day:not(.empty)').forEach(dayCell => {
-          const day = dayCell.querySelector('span')?.textContent;
-          const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const value = yearValues.get(key) || 0;
+          const day = Number(dayCell.querySelector('span')?.textContent);
+          const value = values[day - 1] || 0;
+          const dateKey = Date.UTC(year, month, day);
           dayCell.classList.remove('extra', 'focused', 'missed', 'future');
           dayCell.classList.add(value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : 'future');
+          if (dateKey >= todayKey || !value) dayCell.style.background = '';
+          else if (value >= goalMinutes) dayCell.style.background = `linear-gradient(145deg,rgba(57,211,83,${Math.min(1, .2 + value / goalMinutes * .25).toFixed(2)}),rgba(8,35,18,.94))`;
+          else dayCell.style.background = `linear-gradient(145deg,rgba(255,210,30,${(.1 + Math.min(1, value / goalMinutes) * .42).toFixed(2)}),rgba(39,31,5,.94))`;
         });
       });
+      document.querySelectorAll('.week-card').forEach(card => {
+        const week = Number(card.dataset.weekIndex);
+        const values = Array.from({ length: Math.min(7, monthValuesInDays.length - week * 7) }, (_, index) => monthValuesInDays[week * 7 + index] || 0);
+        const total = values.reduce((sum, value) => sum + value, 0);
+        const logged = values.filter(value => value > 0).length;
+        const maxBar = Math.max(...values, goalMinutes, 1);
+        const bars = card.querySelector('.week-bars');
+        bars.replaceChildren(...values.map((value, index) => {
+          const day = document.createElement('div');
+          day.className = 'week-day';
+          const bar = document.createElement('div');
+          if (value > 0) {
+            bar.className = `week-day-bar${value >= goalMinutes ? ' extra' : ''}`;
+            bar.dataset.value = formatValue(value);
+            bar.title = formatValue(value);
+            bar.style.height = `${Math.max(4, Math.round(value / maxBar * 100))}%`;
+          }
+          const label = document.createElement('span');
+          label.className = 'week-day-label';
+          label.textContent = String(week * 7 + index + 1);
+          if (value > 0) day.append(bar);
+          day.append(label);
+          return day;
+        }));
+        card.dataset.weekTotal = total;
+        card.dataset.weekAverage = logged ? total / logged : 0;
+        card.querySelector('.week-total').textContent = `Total ${formatValue(total)}`;
+        card.querySelector('.week-average').textContent = `Average ${formatValue(logged ? total / logged : 0)} per logged day`;
+      });
+      const yearTotal = [...yearValues.values()].reduce((sum, value) => sum + value, 0);
+      const yearLoggedDays = [...yearValues.values()].filter(value => value > 0).length;
+      root.dataset.yearTotal = yearTotal;
+      root.dataset.yearAverage = yearLoggedDays ? yearTotal / yearLoggedDays : 0;
       root.dataset.monthTotal = monthTotal;
       root.dataset.monthAverage = monthLoggedDays ? monthTotal / monthLoggedDays : 0;
       updateSummary(activeMode);
