@@ -277,24 +277,66 @@ body {
 
 @media (max-width: 700px) {
   .app-header {
-    align-items: flex-start;
-    flex-wrap: wrap;
-    padding: 12px 15px;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-height: 52px;
+    padding: 7px 10px;
+    overflow: hidden;
+  }
+
+  .app-identity {
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .app-identity-copy {
+    min-width: 0;
+  }
+
+  .app-identity-copy strong {
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .app-identity-copy small {
+    display: none;
+  }
+
+  .app-signal,
+  .focus-signal {
+    width: 38px;
+    height: 38px;
+  }
+
+  .focus-signal span {
+    width: 22px;
+    height: 22px;
   }
 
   .app-actions {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .app-action {
-    min-height: 44px;
-    padding: 7px 11px;
-    border-radius: 13px;
+    min-height: 32px;
+    padding: 5px 8px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    white-space: nowrap;
   }
 
-  .app-action span:not(.app-action-icon):not(.app-chevron):not(.app-avatar) {
-    display: none;
+  .app-action-icon {
+    font-size: 0.95rem;
+  }
+
+  .app-profile-action {
+    min-width: 44px;
+    padding: 5px 8px;
   }
 }
 .navbar {

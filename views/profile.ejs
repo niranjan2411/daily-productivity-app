@@ -13,12 +13,12 @@
     if (!minutes) return '#4a1720';
     const goal = user.dailyGoalMinutes || 300;
     const ratio = minutes / goal;
-    if (ratio < .25) return '#FFFF00';
-    if (ratio < .5) return '#FFE44D';
-    if (ratio < 1) return '#FEBE10';
-    if (ratio < 1.5) return '#32CD32';
-    if (ratio < 2) return '#228B22';
-    return '#006400';
+    if (ratio < 0.3) return '#ffe169';
+    if (ratio < 0.6) return '#ffd60a';
+    if (ratio < 1) return '#ffc300';
+    if (ratio <= 1.1) return '#38b000';
+    if (ratio <= 1.3) return '#006400';
+    return '#004b23';
   };
 %>
 <!DOCTYPE html>
@@ -30,49 +30,149 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <style>
-    .profile-page { max-width:1080px; margin:0 auto; padding:34px 20px 80px; }
-    .profile-hero { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:26px 30px; background:linear-gradient(120deg, rgba(0,242,234,.13), rgba(20,20,20,.92) 62%, rgba(118,83,232,.12)); border:1px solid rgba(0,242,234,.2); border-radius:22px; }
-    .profile-identity { display:flex; align-items:center; gap:18px; }
-    .profile-avatar { width:78px; height:78px; display:grid; place-items:center; border:3px solid rgba(255,255,255,.22); border-radius:24px; background:linear-gradient(145deg,#a9b4ff,#6366f1); color:#fff; font-size:2rem; font-weight:800; }
-    .profile-hero h1 { margin:0 0 4px; font-size:1.8rem; }
-    .profile-username { color:#2dd4bf; font-size:.95rem; }
-    .profile-visibility { margin-top:8px; color:#999; font-size:.78rem; }
-    .profile-hero-actions { display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end; }
-    .profile-hero-actions .btn { width:auto; padding:10px 14px; font-size:.82rem; border-radius:10px; }
-    .profile-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px; }
-    .profile-stat { padding:18px 16px; border:1px solid rgba(255,255,255,.08); border-radius:14px; background:#151515; }
-    .profile-stat strong { display:block; color:#ffd700; font-size:1.45rem; margin-bottom:5px; }
-    .profile-stat span { color:#888; font-size:.76rem; }
-    .profile-level { display:flex; align-items:center; gap:24px; margin-bottom:18px; padding:22px 24px; border:1px solid rgba(255,215,0,.18); border-radius:16px; background:linear-gradient(120deg,rgba(255,215,0,.09),#151515 62%,rgba(188,19,254,.08)); }
-    .profile-level-ring { position:relative; width:76px; height:76px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; }
-    .profile-level-ring::after { content:''; position:absolute; inset:5px; border-radius:50%; background:#111; }
-    .profile-level-text { position:relative; z-index:1; text-align:center; line-height:1; }
-    .profile-level-text strong { display:block; color:#fff; font-size:1.55rem; }
-    .profile-level-text span { color:#ffd700; font-size:.62rem; font-weight:800; letter-spacing:.08em; }
-    .profile-xp { min-width:0; flex:1; }
-    .profile-xp-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
-    .profile-xp-pill { border:1px solid rgba(255,215,0,.25); border-radius:9px; padding:7px 10px; background:rgba(255,215,0,.1); color:#ffd700; font-weight:800; cursor:pointer; }
-    .profile-xp-bar { height:8px; overflow:hidden; border-radius:10px; background:rgba(255,255,255,.06); }
-    .profile-xp-fill { height:100%; border-radius:inherit; background:linear-gradient(90deg,#ffd700,#ff9100); }
-    .profile-xp-meta { display:flex; justify-content:space-between; margin-top:7px; color:#777; font-size:.75rem; }
-    .profile-xp-info { color:#888; font-size:.75rem; }
+    :root {
+      --profile-gold: #f4c95d;
+      --profile-sky: #7ec8ff;
+      --profile-green: #59d39a;
+      --profile-green-soft: #c9f5da;
+      --profile-grey: #d5d9de;
+      --profile-muted: #b0b0b0;
+      --profile-panel: #1a1a1a;
+      --profile-panel-soft: rgba(26, 26, 26, 0.92);
+      --profile-bg: #0a0a0a;
+      --profile-border: rgba(255,255,255,0.08);
+      --profile-border-strong: rgba(126, 200, 255, 0.22);
+      --profile-shadow: rgba(0,0,0,0.25);
+    }
+
+    .profile-page { max-width:1180px; margin:0 auto; padding:32px 20px 80px; }
+    .profile-header {
+      display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(300px, 420px); gap:18px;
+      align-items:stretch; margin-bottom:18px; padding:0; background:none; border:none; box-shadow:none;
+    }
+    .profile-identity-block {
+      display:flex; align-items:center; gap:18px; min-width:0; width:100%;
+      padding:26px 28px; border:1px solid var(--profile-border); border-radius:22px;
+      background:linear-gradient(135deg, rgba(126,200,255,0.10), rgba(17,17,17,0.96) 52%, rgba(255,255,255,0.02));
+      box-shadow:0 18px 50px var(--profile-shadow);
+    }
+    .profile-header-main { display:flex; align-items:center; gap:18px; min-width:0; }
+    .profile-xp-wrap {
+      display:flex; justify-content:flex-end; align-items:center; width:100%;
+      padding:0; background:none; border:none;
+    }
+    .profile-level-chip {
+      position:relative; width:88px; height:88px; flex:0 0 auto; display:grid; place-items:center;
+      border-radius:50%; background:conic-gradient(var(--profile-green) 0deg, rgba(255,255,255,0.1) 0deg);
+      box-shadow:inset 0 0 0 1px rgba(89,211,154,0.2);
+    }
+    .profile-level-chip::before {
+      content:''; position:absolute; inset:10px; border-radius:50%; background:var(--profile-bg);
+      border:1px solid rgba(89,211,154,0.25);
+    }
+    .profile-level-chip-content {
+      position:relative; z-index:1; text-align:center; line-height:1; color:#fff;
+    }
+    .profile-level-chip-content strong { display:block; font-size:1.6rem; }
+    .profile-level-chip-content span { display:block; margin-top:4px; font-size:.62rem; font-weight:800; letter-spacing:.08em; color:var(--profile-green-soft); }
+    .profile-user-info { min-width:0; }
+    .profile-user-info h1 { margin:0 0 6px; font-size:clamp(1.8rem, 2vw, 2.5rem); letter-spacing:-.04em; }
+    .profile-user-info .profile-username { color:var(--profile-green-soft); font-size:1rem; margin-bottom:4px; }
+    .profile-user-info .profile-visibility { color:var(--profile-muted); font-size:.78rem; letter-spacing:.04em; text-transform:uppercase; }
+
+    .profile-xp-card {
+      display:flex; align-items:center; gap:16px; min-width:330px; max-width:460px; width:100%;
+      padding:16px 18px; border:1px solid var(--profile-border-strong); border-radius:18px;
+      background:linear-gradient(135deg, rgba(22,22,22,0.96), rgba(12,12,12,0.98));
+      box-shadow:0 16px 28px rgba(0,0,0,0.18);
+      cursor:pointer;
+    }
+    .profile-xp-ring {
+      position:relative; width:72px; height:72px; flex:0 0 auto; display:grid; place-items:center;
+      border-radius:50%; background:conic-gradient(var(--profile-sky) 0deg, rgba(255,255,255,0.09) 0deg);
+    }
+    .profile-xp-ring::before {
+      content:''; position:absolute; inset:9px; border-radius:50%; background:var(--profile-bg); border:1px solid rgba(126,200,255,0.2);
+    }
+    .profile-xp-ring-inner {
+      position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      line-height:1.1; color:#fff;
+    }
+    .profile-xp-ring-inner strong { font-size:.72rem; }
+    .profile-xp-ring-inner span { font-size:.42rem; color:var(--profile-sky); letter-spacing:.12em; text-transform:uppercase; }
+    .profile-xp-copy { flex:1; min-width:0; }
+    .profile-xp-copy .profile-xp-label-row {
+      display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;
+    }
+    .profile-xp-copy small { display:block; color:var(--profile-muted); font-size:.62rem; letter-spacing:.08em; text-transform:uppercase; }
+    .xp-rule-hint {
+      position:relative; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px;
+      border-radius:50%; background:rgba(126,200,255,0.12); color:var(--profile-sky); font-size:.72rem; font-weight:700;
+      border:1px solid rgba(126,200,255,0.3); cursor:help;
+    }
+    .xp-rule-hint::after {
+      content:'Earn XP: +1 per focused minute, +50 for goal completion, +100 for each achievement, +2000 per level.';
+      position:absolute; right:0; top:calc(100% + 10px); width:230px; padding:10px 12px; border:1px solid rgba(126,200,255,0.25);
+      border-radius:10px; background:rgba(8,8,8,0.96); color:#edf8ff; font-size:.7rem; line-height:1.5; letter-spacing:.01em;
+      box-shadow:0 15px 28px rgba(0,0,0,0.35); opacity:0; visibility:hidden; transform:translateY(4px); transition:all .18s ease; z-index:20; pointer-events:none;
+    }
+    .xp-rule-hint:hover::after,
+    .xp-rule-hint:focus-visible::after { opacity:1; visibility:visible; transform:translateY(0); }
+    .profile-xp-track { height:8px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,0.08); margin-top:2px; }
+    .profile-xp-track span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg, var(--profile-sky), var(--profile-green)); }
+    .profile-xp-meta { display:flex; justify-content:space-between; margin-top:7px; color:var(--profile-muted); font-size:.62rem; letter-spacing:.02em; }
+
+    .profile-summary-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:18px; margin-bottom:18px; }
+    .profile-stats {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+      background:var(--profile-panel-soft); border:1px solid var(--profile-border); border-radius:18px; padding:18px; }
+    .profile-stat {
+      padding:18px 14px; border:1px solid rgba(126,200,255,0.16); border-radius:14px; background:rgba(26,26,26,0.9);
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .profile-stat strong { color:var(--profile-green-soft); font-size:1.3rem; }
+    .profile-stat span { color:var(--profile-muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
+
+    .profile-quick-actions {
+      display:flex; flex-direction:column; gap:12px; padding:18px; border:1px solid var(--profile-border); border-radius:18px; background:var(--profile-panel-soft);
+    }
+    .profile-quick-actions h2 { margin:0 0 6px; font-size:1rem; color:#fff; }
+    .profile-action-list { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .profile-action-item {
+      display:flex; align-items:center; justify-content:center; gap:8px; min-height:48px; border-radius:12px; border:1px solid rgba(126,200,255,0.25);
+      background:linear-gradient(135deg, rgba(126,200,255,0.10), rgba(22,22,22,0.96)); color:#edf8ff; font-weight:700; text-decoration:none; transition:all .2s ease; box-shadow:inset 0 0 0 1px rgba(126,200,255,0.08);
+    }
+    .profile-action-item:hover { background:linear-gradient(135deg, rgba(126,200,255,0.18), rgba(30,30,30,0.98)); transform:translateY(-1px); box-shadow:0 8px 18px rgba(89,211,154,0.08); }
+    .profile-action-item.share {
+      border-color:rgba(244,201,93,0.38); background:linear-gradient(135deg, rgba(244,201,93,0.12), rgba(18,18,18,0.98)); color:#fff3c7; box-shadow:0 10px 20px rgba(244,201,93,0.08);
+    }
+    .profile-action-item svg { width:16px; height:16px; }
+
     .profile-grid { display:grid; grid-template-columns:1.05fr .95fr; gap:18px; }
-    .profile-section { min-width:0; background:#151515; border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:24px; }
+    .profile-section {
+      min-width:0; background:var(--profile-panel); border:1px solid var(--profile-border); border-radius:18px; padding:24px; box-shadow:0 16px 32px rgba(0,0,0,0.12);
+    }
     .profile-section h2 { margin:0 0 18px; font-size:1.05rem; }
     .profile-section-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
-    .profile-section-heading span { color:#777; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
-    .profile-detail { display:flex; justify-content:space-between; gap:20px; padding:13px 0; border-bottom:1px solid rgba(255,255,255,.07); }
+    .profile-section-heading span { color:var(--profile-muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; }
+    .profile-detail { display:flex; justify-content:space-between; gap:20px; padding:13px 0; border-bottom:1px solid rgba(255,255,255,.06); }
     .profile-detail:last-child { border-bottom:0; }
-    .profile-detail span:first-child { color:#888; }
+    .profile-detail span:first-child { color:var(--profile-muted); }
     .profile-detail span:last-child { text-align:right; overflow-wrap:anywhere; }
     .profile-actions { display:flex; gap:10px; margin-top:20px; }
-    .profile-actions .btn { width:auto; padding:10px 14px; border-radius:9px; font-size:.82rem; }
-    .profile-heatmap { margin-bottom:18px; padding:28px 30px 24px; border:1px solid rgba(45,212,191,.2); border-radius:20px; background:#0d1114; box-shadow:0 18px 45px rgba(0,0,0,.2); }
+    .profile-actions .btn {
+      width:auto; padding:10px 14px; border-radius:10px; font-size:.82rem;
+      background:linear-gradient(135deg, rgba(126,200,255,0.18), rgba(89,211,154,0.14));
+      color:#edf8ff; border:1px solid rgba(126,200,255,0.4); box-shadow:0 8px 16px rgba(89,211,154,0.08);
+    }
+    .profile-actions .btn:hover { background:linear-gradient(135deg, rgba(126,200,255,0.28), rgba(89,211,154,0.18)); }
+
+    .profile-heatmap { margin-bottom:18px; padding:28px 30px 24px; border:1px solid rgba(126,247,201,0.18); border-radius:20px; background:#0d1110; box-shadow:0 18px 45px rgba(0,0,0,.2); }
     .profile-heatmap-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:24px; border-bottom:1px solid rgba(255,255,255,.07); }
     .profile-heatmap-title { display:flex; align-items:center; gap:14px; }
-    .profile-heatmap-pulse { color:#42dfad; font-size:1.8rem; line-height:1; }
+    .profile-heatmap-pulse { color:var(--green-2); font-size:1.8rem; line-height:1; }
     .profile-heatmap h2 { margin:0; color:#f3f7f6; font-size:1.45rem; letter-spacing:-.03em; }
-    .profile-heatmap-action { display:flex; align-items:center; gap:9px; padding:10px 17px; border:1px solid rgba(45,212,191,.6); border-radius:14px; background:rgba(20,91,71,.16); color:#62e2b4; font:inherit; font-weight:800; }
+    .profile-heatmap-action { display:flex; align-items:center; gap:9px; padding:10px 17px; border:1px solid rgba(126,247,201,0.5); border-radius:14px; background:rgba(20,91,71,.16); color:#62e2b4; font:inherit; font-weight:800; }
     .profile-heatmap-scroll { overflow-x:auto; padding:34px 0 10px; }
     .profile-heatmap-chart { min-width:860px; }
     .profile-heatmap-months { display:grid; grid-template-columns:repeat(53,minmax(10px,1fr)); gap:6px; margin-left:46px; height:22px; color:#8f98a5; font-size:.78rem; }
@@ -89,12 +189,31 @@
     .profile-heatmap-legend { display:flex; gap:7px; }
     .profile-heatmap-swatch { width:14px; height:14px; border:1px solid rgba(255,255,255,.1); border-radius:4px; }
     .profile-heatmap-swatch.zero { background:#4a1720; }
-    .profile-heatmap-swatch.yellow-light { background:#FFFF00; }
-    .profile-heatmap-swatch.yellow-dark { background:#FEBE10; }
-    .profile-heatmap-swatch.green-light { background:#32CD32; }
-    .profile-heatmap-swatch.green-dark { background:#006400; }
-    @media (max-width:700px) { .profile-grid, .profile-stats { grid-template-columns:1fr; } .profile-hero { align-items:flex-start; flex-direction:column; padding:22px; } .profile-hero-actions { justify-content:flex-start; } .profile-heatmap { padding:22px 18px 18px; } .profile-heatmap-header { align-items:flex-start; flex-direction:column; } .profile-heatmap-action { align-self:flex-start; } }
-    @media (max-width:500px) { .profile-level { align-items:flex-start; flex-direction:column; } .profile-xp { width:100%; } }
+    .profile-heatmap-swatch.yellow-light { background:#ffe169; }
+    .profile-heatmap-swatch.yellow-mid { background:#ffd60a; }
+    .profile-heatmap-swatch.yellow-dark { background:#ffc300; }
+    .profile-heatmap-swatch.green-light { background:#38b000; }
+    .profile-heatmap-swatch.green-mid { background:#006400; }
+    .profile-heatmap-swatch.green-dark { background:#004b23; }
+
+    @media (max-width:900px) {
+      .profile-header { flex-direction:column; align-items:flex-start; }
+      .profile-xp-card { width:100%; max-width:none; }
+      .profile-summary-grid,
+      .profile-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width:700px) {
+      .profile-stats { grid-template-columns:1fr; }
+      .profile-action-list { grid-template-columns:1fr; }
+      .profile-heatmap { padding:22px 18px 18px; }
+      .profile-heatmap-header { align-items:flex-start; flex-direction:column; }
+      .profile-heatmap-action { align-self:flex-start; }
+    }
+    @media (max-width:500px) {
+      .profile-header-main { width:100%; }
+      .profile-header { padding:20px 18px; }
+      .profile-xp-card { min-width:0; }
+    }
   </style>
 </head>
 <body>
@@ -102,36 +221,80 @@
   <%- include('partials/app-header') %>
 
   <main class="profile-page">
-    <section class="profile-hero">
-      <div class="profile-identity">
-        <div class="profile-avatar"><%= (user.username || user.name || '?').charAt(0).toUpperCase() %></div>
-        <div>
-          <h1><%= user.name %></h1>
-          <div class="profile-username">@<%= user.username %></div>
-          <div class="profile-visibility"><%= user.publicProfile ? '🔓 Public profile' : '🔒 Private profile' %></div>
+    <% const profileXpPerLevel = 2000; const profileCurrentXp = user.xp % profileXpPerLevel; const profileProgress = (profileCurrentXp / profileXpPerLevel) * 100; const profileProgressAngle = (profileCurrentXp / profileXpPerLevel) * 360; %>
+
+    <section class="profile-header">
+      <div class="profile-identity-block">
+        <div class="profile-header-main">
+          <div class="profile-level-chip" aria-label="Current level">
+            <div class="profile-level-chip-content">
+              <strong><%= user.level %></strong>
+              <span>LEVEL</span>
+            </div>
+          </div>
+          <div class="profile-user-info">
+            <h1><%= user.name %></h1>
+            <div class="profile-username">@<%= user.username %></div>
+            <div class="profile-visibility"><%= user.publicProfile ? 'Public profile' : 'Private profile' %></div>
+          </div>
         </div>
       </div>
-      <div class="profile-hero-actions">
-        <a class="btn" href="/settings">Settings</a>
-        <a class="btn" href="/private-groups">Groups</a>
-        <% if (user.publicProfile) { %><a class="btn" href="/profile/<%= user.username %>">View public profile</a><% } %>
+
+      <div class="profile-xp-wrap">
+        <aside class="profile-xp-card" id="xp-counter" role="button" tabindex="0" aria-label="View XP history">
+          <div class="profile-xp-ring" style="background:conic-gradient(var(--green-2) <%= profileProgressAngle %>deg, rgba(255,255,255,0.09) 0deg);">
+            <div class="profile-xp-ring-inner">
+              <strong><%= user.xp %></strong>
+              <span>XP</span>
+            </div>
+          </div>
+          <div class="profile-xp-copy">
+            <div class="profile-xp-label-row">
+              <small>Next level</small>
+              <span class="xp-rule-hint" tabindex="0" aria-label="How to earn XP">i</span>
+            </div>
+            <div class="profile-xp-track"><span style="width:<%= profileProgress %>%"></span></div>
+            <div class="profile-xp-meta"><span><%= profileCurrentXp %> / <%= profileXpPerLevel %></span><span>Lvl <%= user.level %></span></div>
+          </div>
+        </aside>
       </div>
     </section>
 
-    <div class="profile-stats">
-      <div class="profile-stat"><strong><%= formatMinutes(user.totalFocusMinutes, user.timeUnit) %></strong><span>All-time focus</span></div>
-      <div class="profile-stat"><strong><%= formatMinutes(user.averageWeeklyFocusMinutes, user.timeUnit) %></strong><span>Weekly average</span></div>
-      <div class="profile-stat"><strong><%= formatMinutes(user.averageMonthlyFocusMinutes, user.timeUnit) %></strong><span>Monthly average</span></div>
-    </div>
-
-    <% const profileXpPerLevel = 1000; const profileCurrentXp = user.xp % profileXpPerLevel; const profileProgress = (profileCurrentXp / profileXpPerLevel) * 100; %>
-    <section class="profile-level">
-      <div class="profile-level-ring" style="background:conic-gradient(#ffd700 <%= (profileCurrentXp / profileXpPerLevel) * 360 %>deg, rgba(255,255,255,.06) 0deg);"><div class="profile-level-text"><strong><%= user.level %></strong><span>LEVEL</span></div></div>
-      <div class="profile-xp">
-        <div class="profile-xp-head"><button type="button" class="profile-xp-pill" id="xp-counter"><span><%= user.xp %> XP</span></button><span class="profile-xp-info">+10/hour · +50 daily goal · +100 achievement</span></div>
-        <div class="profile-xp-bar"><div class="profile-xp-fill" style="width:<%= profileProgress %>%"></div></div>
-        <div class="profile-xp-meta"><span>Current progress</span><span><%= profileCurrentXp %> / <%= profileXpPerLevel %> XP</span></div>
+    <section class="profile-summary-grid">
+      <div class="profile-stats">
+        <div class="profile-stat"><strong><%= formatMinutes(user.totalFocusMinutes, user.timeUnit) %></strong><span>All-time focus</span></div>
+        <div class="profile-stat"><strong><%= formatMinutes(user.averageWeeklyFocusMinutes, user.timeUnit) %></strong><span>Weekly avg</span></div>
+        <div class="profile-stat"><strong><%= formatMinutes(user.averageMonthlyFocusMinutes, user.timeUnit) %></strong><span>Monthly avg</span></div>
       </div>
+
+      <aside class="profile-quick-actions">
+        <h2>Quick actions</h2>
+        <div class="profile-action-list">
+          <a class="profile-action-item" href="/private-groups">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Groups
+          </a>
+          <a class="profile-action-item" href="/settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M4.93 4.93l2.12 2.12"/><path d="M16.95 16.95l2.12 2.12"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="M4.93 19.07l2.12-2.12"/><path d="M16.95 7.05l2.12-2.12"/><circle cx="12" cy="12" r="3.5"/></svg>
+            Settings
+          </a>
+          <% if (user.publicProfile) { %>
+            <a class="profile-action-item" href="/profile/<%= user.username %>">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Public profile
+            </a>
+          <% } else { %>
+            <a class="profile-action-item" href="/settings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Make public
+            </a>
+          <% } %>
+          <button type="button" class="profile-action-item share" id="share-profile-btn" aria-label="Share profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v12"/><path d="M5 12l7-7 7 7"/><path d="M5 19h14"/></svg>
+            Share
+          </button>
+        </div>
+      </aside>
     </section>
 
     <section class="profile-heatmap">
@@ -150,22 +313,24 @@
           </div>
         </div>
       </div>
-      <div class="profile-heatmap-footer"><span>0 focus</span><div class="profile-heatmap-legend" aria-hidden="true"><span class="profile-heatmap-swatch zero"></span><span class="profile-heatmap-swatch yellow-light"></span><span class="profile-heatmap-swatch yellow-dark"></span><span class="profile-heatmap-swatch green-light"></span><span class="profile-heatmap-swatch green-dark"></span></div><span>Deep focus</span></div>
+      <div class="profile-heatmap-footer"><span>0 focus</span><div class="profile-heatmap-legend" aria-hidden="true"><span class="profile-heatmap-swatch zero"></span><span class="profile-heatmap-swatch yellow-light"></span><span class="profile-heatmap-swatch yellow-mid"></span><span class="profile-heatmap-swatch yellow-dark"></span><span class="profile-heatmap-swatch green-light"></span><span class="profile-heatmap-swatch green-mid"></span><span class="profile-heatmap-swatch green-dark"></span></div><span>Deep focus</span></div>
     </section>
 
     <div class="profile-grid">
       <section class="profile-section">
         <div class="profile-section-heading"><h2>Account details</h2><span>Identity</span></div>
+        <div class="profile-detail"><span>Name</span><span><%= user.name %></span></div>
         <div class="profile-detail"><span>Username</span><span>@<%= user.username %></span></div>
         <div class="profile-detail"><span>Email</span><span><%= user.email %></span></div>
         <div class="profile-detail"><span>Member since</span><span><%= user.createdAt.toLocaleDateString() %></span></div>
-        <div class="profile-detail"><span>Public profile</span><span><%= user.publicProfile ? 'Enabled' : 'Private' %></span></div>
+        <div class="profile-detail"><span>Profile visibility</span><span><%= user.publicProfile ? 'Public' : 'Private' %></span></div>
       </section>
 
       <section class="profile-section">
         <div class="profile-section-heading"><h2>Focus settings</h2><span>Routine</span></div>
         <div class="profile-detail"><span>Daily goal</span><span><%= formatMinutes(user.dailyGoalMinutes || 300, user.timeUnit) %></span></div>
         <div class="profile-detail"><span>Display unit</span><span><%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %></span></div>
+        <div class="profile-detail"><span>Profile URL</span><span><%= user.publicProfile ? `/${user.username}` : 'Private' %></span></div>
         <div class="profile-actions"><a class="btn" href="/settings">Manage settings</a></div>
       </section>
     </div>
@@ -176,7 +341,7 @@
     const profileXpButton = document.getElementById('xp-counter');
     const profileXpPopup = document.getElementById('xp-history-popup');
     const profileXpClose = document.getElementById('xp-popup-close');
-    profileXpButton?.addEventListener('click', async () => {
+    const openProfileXpPopup = async () => {
       const list = document.getElementById('xp-history-list');
       try {
         const response = await fetch('/api/xp-history');
@@ -184,8 +349,34 @@
         list.innerHTML = `<h3>Achievements</h3><ul>${data.achievements.map(item => `<li>${item}</li>`).join('') || '<li>No achievement XP earned yet.</li>'}</ul><h3>Study Logs</h3><ul>${data.logs.map(item => `<li>${item}</li>`).join('') || '<li>No study XP earned yet.</li>'}</ul>`;
       } catch (error) { list.textContent = 'Could not load XP history.'; }
       profileXpPopup.style.display = 'block';
+    };
+    profileXpButton?.addEventListener('click', openProfileXpPopup);
+    profileXpButton?.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openProfileXpPopup();
+      }
     });
     profileXpClose?.addEventListener('click', () => { profileXpPopup.style.display = 'none'; });
+
+    const shareProfileBtn = document.getElementById('share-profile-btn');
+    shareProfileBtn?.addEventListener('click', async () => {
+      const profileUrl = new URL(`/profile/${encodeURIComponent('<%= user.username %>')}`, window.location.origin).toString();
+      const shareText = 'View my public profile on Focus tracker.';
+      const shareData = { title: 'Focus tracker public profile', text: shareText, url: profileUrl };
+
+      try {
+        if (navigator.share) {
+          await navigator.share(shareData);
+          return;
+        }
+        await navigator.clipboard.writeText(`${shareText}\n${profileUrl}`);
+        shareProfileBtn.textContent = 'Link copied';
+        setTimeout(() => { shareProfileBtn.textContent = 'Share'; }, 1500);
+      } catch (error) {
+        console.warn('Profile share failed:', error);
+      }
+    });
   </script>
 </body>
 </html>

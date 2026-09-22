@@ -257,6 +257,7 @@
     /* Focus Wheel */
     .focus-display { display: flex; flex-direction: column; align-items: center;
       justify-content: center; flex: 1; }
+
     .wheel-outer {
       width: 170px; height: 170px;
       border-radius: 50%;
@@ -374,6 +375,68 @@
     .ts-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px;
     }
     .ts-val { font-size: 2.2rem; font-weight: 800; color: var(--neon-gold); margin-top: 5px;
+    }
+
+    .community-card {
+      margin-top: 8px;
+      padding: 12px 14px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      background: rgba(12, 12, 15, 0.72);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .community-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: #9fa3b4;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .community-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #a7a8ff;
+      font-weight: 700;
+    }
+    .community-live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 10px rgba(74, 222, 128, 0.9);
+    }
+    .community-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .community-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 6px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      min-height: 54px;
+    }
+    .community-value {
+      color: #fff;
+      font-size: 0.96rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .community-label {
+      color: #7d7f88;
+      font-size: 0.62rem;
+      line-height: 1.35;
     }
 
     /* Achievement Hero Button */
@@ -534,16 +597,31 @@
     </div>
 
     <%
+      const getStudyColor = (minutes, goal) => {
+        const value = Number(minutes) || 0;
+        const safeGoal = Number(goal) > 0 ? Number(goal) : 1;
+        if (value <= 0) return '#4a1720';
+
+        const ratio = value / safeGoal;
+        if (ratio < 0.25) return 'rgba(255, 214, 10, 0.92)';
+        if (ratio < 0.5) return 'rgba(255, 214, 10, 0.78)';
+        if (ratio < 0.75) return 'rgba(255, 214, 10, 0.64)';
+        if (ratio < 1) return 'rgba(255, 214, 10, 0.52)';
+        if (ratio === 1) return '#38b000';
+        if (ratio < 1.25) return '#70e000';
+        if (ratio < 1.5) return '#008000';
+        if (ratio < 2) return '#006400';
+        return '#004b23';
+      };
+
       const rawTodayMinutes = typeof todayMinutes !== 'undefined' && Number.isFinite(Number(todayMinutes))
         ? Number(todayMinutes)
         : 0;
       const displayedTodayMinutes = Math.round(rawTodayMinutes);
       const goal = user.dailyGoalMinutes || 300;
-      let focusColor = '#ef4444';
-      if (displayedTodayMinutes >= goal) focusColor = '#4ade80';
-      else if (displayedTodayMinutes > 0) focusColor = '#FFD700';
-      const percentage = Math.round((displayedTodayMinutes / goal) * 100);
-      const focusDeg = Math.min((displayedTodayMinutes / goal) * 360, 360);
+      const focusColor = getStudyColor(displayedTodayMinutes, goal);
+      const percentage = Math.round((displayedTodayMinutes / Math.max(goal, 1)) * 100);
+      const focusDeg = Math.min((displayedTodayMinutes / Math.max(goal, 1)) * 360, 360);
       let percentageText = percentage + "% Complete";
       if(percentage >= 100) percentageText = percentage + "% (Goal Met)";
       if(percentage === 0) percentageText = "0% Started";
@@ -592,6 +670,7 @@
         <div class="card-head"><div class="card-title">Today's Focus</div><span style="font-size:.9rem;color:#888;">Goal: <%= formatMinutes(goal, user.timeUnit) %></span></div>
         <div class="focus-display"><div class="wheel-outer" id="today-focus-wheel" style="background:conic-gradient(<%= focusColor %> <%= focusDeg %>deg, #1c1c1c 0deg);"><div class="wheel-inner"><div class="wheel-val" id="today-focus-minutes" style="color:<%= focusColor %>"><%= formatMinutes(displayedTodayMinutes, user.timeUnit) %></div><div class="wheel-lbl"><%= user.timeUnit === 'hours' ? 'HOURS' : 'MINUTES' %></div></div></div><div class="goal-text-gradient" id="today-focus-progress"><%= percentageText %></div></div>
       </div>
+
       <div class="streak-deck animate-up delay-2">
         <div class="streak-card">
           <!-- legacy fragment
@@ -662,6 +741,27 @@
              <span>→</span>
           </a>
 
+          <section class="community-card" aria-label="Community statistics">
+            <div class="community-header">
+              <span class="community-title">Community</span>
+              <span class="community-live"><span class="community-live-dot"></span>Live</span>
+            </div>
+            <div class="community-metrics">
+              <div class="community-stat">
+                <span class="community-value"><%= communityStats.usersJoinedLabel %></span>
+                <span class="community-label">Users joined</span>
+              </div>
+              <div class="community-stat">
+                <span class="community-value"><%= communityStats.visitorsThisWeekLabel %></span>
+                <span class="community-label">Visitors this week</span>
+              </div>
+              <div class="community-stat">
+                <span class="community-value"><%= communityStats.focusSessionsLabel %></span>
+                <span class="community-label">Focus sessions</span>
+              </div>
+            </div>
+          </section>
+
        </div>
     </div>
     </div>
@@ -677,7 +777,7 @@
             <div class="quick-log-options">
               <div class="form-group"><label>Update mode</label><div class="log-mode-toggle" role="group" aria-label="Focus update mode"><button type="button" class="active" data-log-mode="add">Add</button><button type="button" data-log-mode="reset">Reset</button></div><input type="hidden" id="modal-mode" name="mode" value="add"></div>
               <div class="form-group"><label for="modal-minutes"><%= user.timeUnit === 'hours' ? 'Hours focused' : 'Minutes focused' %></label>
-                <input type="number" id="modal-minutes" name="minutes" step="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" min="0" max="<%= user.timeUnit === 'hours' ? '24' : '1440' %>" required>
+                <input type="number" id="modal-minutes" name="minutes" step="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" min="0" max="<%= user.timeUnit === 'hours' ? '23.98' : '1439' %>" required>
               </div>
             </div>
             <div class="form-group">
@@ -726,6 +826,13 @@
     });
     quickLogForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const value = Number(quickLogForm.elements.minutes?.value || 0);
+        const unit = quickLogForm.elements.timeUnit?.value === 'hours' ? 'hours' : 'minutes';
+        const totalMinutes = unit === 'hours' ? value * 60 : value;
+        if (!Number.isFinite(value) || value < 0 || totalMinutes > 1439) {
+            alert('Daily study time cannot exceed 23 hours 59 minutes.');
+            return;
+        }
         const submitBtn = quickLogForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerText;
       const mode = document.getElementById('modal-mode').value;

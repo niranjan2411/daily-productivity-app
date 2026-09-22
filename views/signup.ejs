@@ -1,3 +1,8 @@
+<% 
+  const fieldErrors = Array.isArray(typeof errors !== 'undefined' ? errors : []) ? (typeof errors !== 'undefined' ? errors : []) : [];
+  const submitted = (typeof formData !== 'undefined' && formData) ? formData : {};
+  const fieldMap = Object.fromEntries(fieldErrors.map(error => [error.path || error.param, error.msg || error.message || 'Invalid value']));
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +11,10 @@
   <title>Sign Up - Focus tracker</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
+  <style>
+    .input-error { border-color: #f87171 !important; box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.35); }
+    .field-error { display:block; margin-top:6px; color: #fca5a5; font-size: 0.8rem; }
+  </style>
 </head>
 <body>
   <%- include('partials/loader') %>
@@ -18,28 +27,29 @@
       <form action="/signup" method="POST">
         <div class="form-group">
           <label for="name">Full Name</label>
-          <input type="text" id="name" name="name" required>
+          <input type="text" id="name" name="name" value="<%= submitted.name || '' %>" class="<%= fieldMap.name ? 'input-error' : '' %>" required>
+          <% if (fieldMap.name) { %><small class="field-error"><%= fieldMap.name %></small><% } %>
         </div>
         <div class="form-group">
           <label for="username">Username</label>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="username" name="username" list="username-suggestions" pattern="[a-z0-9_]{3,30}" maxlength="30" required>
-            <button type="button" class="btn" id="suggest-username" style="white-space:nowrap;">Suggest</button>
-          </div>
-          <datalist id="username-suggestions"></datalist>
-          <small id="username-status" style="display:block; margin-top:6px; color:#888;">3-30 lowercase letters, numbers, or underscores.</small>
+          <input type="text" id="username" name="username" value="<%= submitted.username || '' %>" pattern="[a-z0-9_]{3,30}" maxlength="30" class="<%= fieldMap.username ? 'input-error' : '' %>" required>
+          <small id="username-status" style="display:block; margin-top:6px; color:#888;">Type at least 3 characters to check availability.</small>
+          <% if (fieldMap.username) { %><small class="field-error"><%= fieldMap.username %></small><% } %>
         </div>
         <div class="form-group">
           <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" required>
+          <input type="email" id="email" name="email" value="<%= submitted.email || '' %>" class="<%= fieldMap.email ? 'input-error' : '' %>" required>
+          <% if (fieldMap.email) { %><small class="field-error"><%= fieldMap.email %></small><% } %>
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" minlength="6" required>
+          <input type="password" id="password" name="password" minlength="6" class="<%= fieldMap.password ? 'input-error' : '' %>" required>
+          <% if (fieldMap.password) { %><small class="field-error"><%= fieldMap.password %></small><% } %>
         </div>
         <div class="form-group">
           <label for="confirmPassword">Confirm Password</label>
-          <input type="password" id="confirmPassword" name="confirmPassword" minlength="6" required disabled>
+          <input type="password" id="confirmPassword" name="confirmPassword" minlength="6" class="<%= fieldMap.confirmPassword ? 'input-error' : '' %>" required disabled>
+          <% if (fieldMap.confirmPassword) { %><small class="field-error"><%= fieldMap.confirmPassword %></small><% } %>
           <div id="password-match-message" class="password-match-message" style="display: none;">Passwords do not match</div>
         </div>
         <button type="submit" class="btn">Sign Up</button>
@@ -66,44 +76,41 @@
     const nameInput = document.getElementById('name');
     const emailInput = document.getElementById('email');
     const usernameInput = document.getElementById('username');
-    const suggestUsernameButton = document.getElementById('suggest-username');
-    const usernameSuggestions = document.getElementById('username-suggestions');
     const usernameStatus = document.getElementById('username-status');
 
+    let usernameCheckTimer = null;
+
     async function checkUsername() {
+      const value = usernameInput.value.trim();
+
+      if (value.length < 3) {
+        usernameStatus.textContent = 'Type at least 3 characters to check availability.';
+        usernameStatus.style.color = '#888';
+        return;
+      }
+
       const params = new URLSearchParams({
         name: nameInput.value,
         email: emailInput.value,
-        username: usernameInput.value
+        username: value
       });
+
       try {
         const response = await fetch(`/api/username-suggestions?${params}`);
         if (!response.ok) return;
         const result = await response.json();
-        usernameStatus.textContent = usernameInput.value.length < 3
-          ? 'Choose one of these suggestions or enter your own username.'
-          : result.available ? 'Username is available.' : 'Username is already taken.';
-        usernameStatus.style.color = usernameInput.value.length < 3
-          ? '#888' : result.available ? '#4ade80' : '#fca5a5';
-        usernameSuggestions.replaceChildren(...result.suggestions.map(value => {
-          const option = document.createElement('option');
-          option.value = value;
-          return option;
-        }));
+        usernameStatus.textContent = result.available ? 'Username is available.' : 'Username is already taken.';
+        usernameStatus.style.color = result.available ? '#4ade80' : '#fca5a5';
       } catch (error) {
-        usernameStatus.textContent = 'Username will be checked when you submit.';
+        usernameStatus.textContent = 'Unable to check username right now.';
         usernameStatus.style.color = '#888';
       }
     }
 
-    suggestUsernameButton.addEventListener('click', async () => {
-      usernameInput.value = '';
-      await checkUsername();
-      const firstSuggestion = usernameSuggestions.querySelector('option');
-      if (firstSuggestion) usernameInput.value = firstSuggestion.value;
-      await checkUsername();
+    usernameInput.addEventListener('input', () => {
+      clearTimeout(usernameCheckTimer);
+      usernameCheckTimer = setTimeout(checkUsername, 250);
     });
-    usernameInput.addEventListener('blur', checkUsername);
 
     function validatePasswords() {
       if (confirmPasswordInput.value.length > 0 && passwordInput.value !== confirmPasswordInput.value) {

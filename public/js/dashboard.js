@@ -14,6 +14,7 @@
 
   if (!timer || !toggleButton || !timerValue || !timerStatus) return;
 
+  const MAX_DAILY_MINUTES = 23 * 60 + 59;
   const cacheScope = timer.dataset.userId || 'anonymous';
   const activeStorageKey = `focus-tracker.active-session.v1:${cacheScope}`;
   const queueStorageKey = `focus-tracker.pending-sessions.v1:${cacheScope}`;
@@ -105,19 +106,37 @@
     totalValue.textContent = `${timeUnit === 'hours' ? value.toFixed(1) : value.toFixed(0)}${timeUnit === 'hours' ? 'h' : 'm'}`;
   }
 
+  function getStudyColor(minutes, goalMinutes) {
+    const value = Math.max(0, Number(minutes) || 0);
+    const goal = Math.max(1, Number(goalMinutes) || 1);
+
+    if (value <= 0) return '#4a1720';
+
+    const ratio = value / goal;
+    if (ratio < 0.25) return 'rgba(255, 214, 10, 0.92)';
+    if (ratio < 0.5) return 'rgba(255, 214, 10, 0.78)';
+    if (ratio < 0.75) return 'rgba(255, 214, 10, 0.64)';
+    if (ratio < 1) return 'rgba(255, 214, 10, 0.52)';
+    if (ratio === 1) return '#38b000';
+    if (ratio < 1.25) return '#70e000';
+    if (ratio < 1.5) return '#008000';
+    if (ratio < 2) return '#006400';
+    return '#004b23';
+  }
+
   function renderToday(minutes) {
-    const roundedMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+    const roundedMinutes = Math.min(MAX_DAILY_MINUTES, Math.max(0, Math.round(Number(minutes) || 0)));
     const displayValue = timeUnit === 'hours'
       ? Math.round((roundedMinutes / 60) * 10) / 10
       : roundedMinutes;
-    const percentage = Math.round((roundedMinutes / dailyGoalMinutes) * 100);
-    const progressDegrees = Math.min((roundedMinutes / dailyGoalMinutes) * 360, 360);
-    const color = roundedMinutes >= dailyGoalMinutes
-      ? '#4ade80'
-      : roundedMinutes > 0 ? '#FFD700' : '#ef4444';
-    const progressText = percentage >= 100
-      ? `${percentage}% (Goal Met)`
-      : percentage === 0 ? '0% Started' : `${percentage}% Complete`;
+    const percentage = Math.round((roundedMinutes / Math.max(dailyGoalMinutes, 1)) * 100);
+    const progressDegrees = Math.min((roundedMinutes / Math.max(dailyGoalMinutes, 1)) * 360, 360);
+    const color = getStudyColor(roundedMinutes, dailyGoalMinutes);
+    const progressText = roundedMinutes === 0
+      ? '0% Started'
+      : percentage >= 100
+        ? `${percentage}% (Goal Met)`
+        : `${percentage}% Complete`;
 
     if (todayMinutesValue) {
       todayMinutesValue.textContent = `${timeUnit === 'hours' ? displayValue.toFixed(1) : displayValue.toFixed(0)}${timeUnit === 'hours' ? 'h' : 'm'}`;
@@ -127,6 +146,11 @@
       todayFocusWheel.style.background = `conic-gradient(${color} ${progressDegrees}deg, #1c1c1c 0deg)`;
     }
     if (todayProgress) todayProgress.textContent = progressText;
+  }
+
+  function getCurrentFocusSeconds() {
+    const elapsedSeconds = activeSession ? Math.max(0, Math.floor((Date.now() - activeSession.startTime) / 1000)) : 0;
+    return Math.max(0, dailyFocusSeconds + elapsedSeconds);
   }
 
   function applyServerTotals(result) {
@@ -290,7 +314,7 @@
 
   window.focusTrackerSyncToday = ({ mode, inputMinutes, logDate }) => {
     if (logDate !== todayKey) return;
-    const valueMinutes = Math.max(0, Number(inputMinutes) || 0);
+    const valueMinutes = Math.min(MAX_DAILY_MINUTES, Math.max(0, Number(inputMinutes) || 0));
     if (mode === 'reset') {
       todayManualMinutes = valueMinutes;
       dailyFocusSeconds = 0;
@@ -299,12 +323,14 @@
         writeJson(activeStorageKey, activeSession);
       }
     } else {
-      todayManualMinutes += valueMinutes;
+      todayManualMinutes = Math.min(MAX_DAILY_MINUTES, todayManualMinutes + valueMinutes);
     }
     writeJson(dailyStorageKey, { date: todayKey, seconds: dailyFocusSeconds });
     renderTimer();
     renderToday((dailyFocusSeconds / 60) + todayManualMinutes);
   };
+
+  renderToday((dailyFocusSeconds / 60) + todayManualMinutes);
 
   window.addEventListener('storage', event => {
     if (event.key !== `focus-tracker.today-sync.v1:${cacheScope}` || !event.newValue) return;

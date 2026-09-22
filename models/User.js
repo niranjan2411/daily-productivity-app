@@ -51,12 +51,22 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 300,
     min: 1,
-    max: 1440
+    max: 1439
   },
   dailyGoalHours: {
     type: Number,
     min: 0.5,
     max: 24
+  },
+  xp: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  level: {
+    type: Number,
+    default: 1,
+    min: 1
   },
   totalFocusMinutes: {
     type: Number,

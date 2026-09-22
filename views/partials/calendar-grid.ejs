@@ -17,12 +17,20 @@
                        (nextMonthDate.getUTCFullYear() === todayDate.getUTCFullYear() && nextMonthDate.getUTCMonth() > todayDate.getUTCMonth());
   
   const getHeatmapColor = (minutes, goal) => {
-    if (minutes === 0) return 'rgba(220, 53, 69, 0.9)';
-    if (minutes < goal) {
-      const opacity = 0.8 - (minutes / goal) * 0.6;
-          return `rgba(220, 53, 69, ${opacity.toFixed(2)})`;
-      }
-      return (minutes / goal) < 1.25 ? '#39d353' : '#006d32';
+    const value = Number(minutes) || 0;
+    const safeGoal = Math.max(Number(goal) || 1, 1);
+    if (value <= 0) return '#4a1720';
+
+    const ratio = value / safeGoal;
+    if (ratio < 0.25) return 'rgba(255, 214, 10, 0.92)';
+    if (ratio < 0.5) return 'rgba(255, 214, 10, 0.78)';
+    if (ratio < 0.75) return 'rgba(255, 214, 10, 0.64)';
+    if (ratio < 1) return 'rgba(255, 214, 10, 0.52)';
+    if (ratio === 1) return '#38b000';
+    if (ratio < 1.25) return '#70e000';
+    if (ratio < 1.5) return '#008000';
+    if (ratio < 2) return '#006400';
+    return '#004b23';
   };
 %>
 

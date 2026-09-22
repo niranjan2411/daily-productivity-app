@@ -17,6 +17,7 @@ const FocusSession = require('./models/FocusSession');
 const Achievement = require('./models/Achievement');
 const PrivateGroup = require('./models/PrivateGroup');
 const DailyPlanner = require('./models/DailyPlanner');
+const PlatformVisit = require('./models/PlatformVisit');
 const { authenticateUser } = require('./middleware/auth');
 const { achievementsList, router: achievementRouter } = require('./routes/achievements');
 
@@ -62,6 +63,32 @@ app.use(session({
     sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax'
   }
 }));
+
+const isLikelyBot = (userAgent = '') => /bot|crawler|spider|slurp|preview|bingpreview|duckduckbot|headless|curl|wget/i.test(userAgent);
+
+app.use((req, res, next) => {
+  const userAgent = String(req.get('User-Agent') || '');
+  if (!req.session || !req.session.userId || isLikelyBot(userAgent)) {
+    return next();
+  }
+
+  const visitDate = new Date();
+  visitDate.setUTCHours(0, 0, 0, 0);
+
+  dbConnect()
+    .then(() => PlatformVisit.updateOne(
+      { userId: req.session.userId, visitDate },
+      {
+        $set: { lastSeenAt: new Date() },
+        $setOnInsert: { userId: req.session.userId, visitDate }
+      },
+      { upsert: true }
+    ))
+    .catch((error) => {
+      console.error('Visit tracking error:', error);
+    })
+    .finally(() => next());
+});
 
 const noCache = (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -156,18 +183,25 @@ app.put('/api/planner', authenticateUser, noCache, async (req, res) => {
 });
 
 // XP Logic
-const XP_PER_HOUR = 10;
+const XP_PER_MINUTE = 1;
 const XP_FOR_GOAL = 50;
 const XP_FOR_ACHIEVEMENT = 100;
-const XP_PER_LEVEL = 1000;
+const XP_PER_LEVEL = 2000;
+const MAX_DAILY_MINUTES = 23 * 60 + 59;
+
+const clampDailyMinutes = (minutes) => {
+  const safeMinutes = Number(minutes) || 0;
+  if (!Number.isFinite(safeMinutes)) return 0;
+  return Math.min(Math.max(safeMinutes, 0), MAX_DAILY_MINUTES);
+};
 
 const getLogMinutes = (log) => {
   const minutes = Number(log.minutes);
   const hours = Number(log.hours);
-  if (Number.isFinite(hours) && hours > 0 && (!Number.isFinite(minutes) || minutes <= 0)) {
-    return Math.round(hours * 60 * 100) / 100;
-  }
-  return Number.isFinite(minutes) ? minutes : 0;
+  const normalizedMinutes = Number.isFinite(hours) && hours > 0 && (!Number.isFinite(minutes) || minutes <= 0)
+    ? Math.round(hours * 60 * 100) / 100
+    : (Number.isFinite(minutes) ? minutes : 0);
+  return clampDailyMinutes(normalizedMinutes);
 };
 const getGoalMinutes = (user) => user.dailyGoalHours && user.dailyGoalMinutes === 300 && user.dailyGoalHours !== 5
   ? Math.round(user.dailyGoalHours * 60)
@@ -182,6 +216,43 @@ const formatMinutes = (minutes, unit = 'minutes') => {
     return `${hours.toFixed(1)}h`;
   }
   return `${Math.round(value)}m`;
+};
+
+const formatRoundedMetric = (value, minimumDisplay = 10) => {
+  const rawValue = Number(value) || 0;
+  if (rawValue <= 0) return `${minimumDisplay}+`;
+  if (rawValue >= 1000) return '1K+';
+  if (rawValue >= 500) return '500+';
+  if (rawValue >= 100) return '100+';
+  if (rawValue >= 50) return '50+';
+  if (rawValue >= 10) return '10+';
+  return `${Math.max(1, Math.floor(rawValue))}+`;
+};
+
+const getCommunityStats = async () => {
+  await dbConnect();
+
+  const endDate = new Date();
+  const startDate = new Date(endDate);
+  startDate.setUTCDate(startDate.getUTCDate() - 6);
+  startDate.setUTCHours(0, 0, 0, 0);
+
+  const [totalUsers, weeklyVisitorIds, totalFocusSessions] = await Promise.all([
+    User.countDocuments({}),
+    PlatformVisit.distinct('userId', {
+      visitDate: { $gte: startDate, $lte: endDate }
+    }),
+    FocusSession.countDocuments({ status: 'completed' })
+  ]);
+
+  return {
+    usersJoined: totalUsers,
+    usersJoinedLabel: formatRoundedMetric(totalUsers),
+    visitorsThisWeek: weeklyVisitorIds.length,
+    visitorsThisWeekLabel: formatRoundedMetric(weeklyVisitorIds.length),
+    focusSessions: totalFocusSessions,
+    focusSessionsLabel: formatRoundedMetric(totalFocusSessions)
+  };
 };
 
 const plannerDatePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -238,6 +309,24 @@ const buildUsernameSuggestions = (name, email) => {
 
 const makePrivateGroupCode = () => crypto.randomBytes(4).toString('hex').toUpperCase();
 
+const normalizeObjectIdList = (values = []) => {
+  const seen = new Set();
+  return values.reduce((list, value) => {
+    if (!value) return list;
+    let objectId = value;
+    if (!(value instanceof mongoose.Types.ObjectId)) {
+      if (!mongoose.Types.ObjectId.isValid(String(value))) return list;
+      objectId = new mongoose.Types.ObjectId(String(value));
+    }
+    const key = String(objectId);
+    if (!seen.has(key)) {
+      seen.add(key);
+      list.push(objectId);
+    }
+    return list;
+  }, []);
+};
+
 const getGroupPeriodStart = (range, now = new Date()) => {
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   if (range === 'week') {
@@ -247,6 +336,286 @@ const getGroupPeriodStart = (range, now = new Date()) => {
     start.setUTCDate(1);
   }
   return start;
+};
+
+const buildGroupTaskList = (group, currentUserId) => {
+  const tasks = (group.tasks || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  return tasks.map(task => {
+    const assignedIds = (task.assignedTo || []).map(id => String(id));
+    const completedIds = (task.completedBy || []).map(id => String(id));
+    const assignedCount = assignedIds.length || (group.members || []).length;
+    const completedCount = assignedIds.length
+      ? assignedIds.filter(id => completedIds.includes(id)).length
+      : 0;
+
+    return {
+      _id: task._id,
+      title: task.title,
+      date: task.date,
+      createdBy: task.createdBy ? String(task.createdBy) : null,
+      assignedTo: assignedIds,
+      completedBy: completedIds,
+      assignedCount,
+      completedCount,
+      isDoneByMe: completedIds.includes(String(currentUserId))
+    };
+  });
+};
+
+const formatMinutesLabel = (minutesValue) => {
+  const totalMinutes = Math.max(0, Math.round(Number(minutesValue) || 0));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (!hours) return `${minutes}m`;
+  if (!minutes) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+};
+
+const getPeriodBoundary = (period, now = new Date()) => {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const end = new Date(start);
+  if (period === 'week') {
+    const day = start.getUTCDay();
+    start.setUTCDate(start.getUTCDate() - (day === 0 ? 6 : day - 1));
+  } else if (period === 'month') {
+    start.setUTCDate(1);
+  }
+  end.setUTCDate(start.getUTCDate() + 1);
+  return { start, end };
+};
+
+const buildPrivateGroupAnalysis = async (group) => {
+  const members = await User.find({ _id: { $in: group.members } })
+    .select('name username userId')
+    .lean();
+
+  const memberIds = members.map(member => member._id);
+  const taskTotal = group.tasks?.length || 0;
+  const periods = ['daily', 'weekly', 'monthly'];
+
+  const collectMemberMinutes = (periodKey) => {
+    const { start, end } = getPeriodBoundary(periodKey === 'daily' ? 'today' : periodKey === 'weekly' ? 'week' : 'month');
+    const stats = new Map(memberIds.map(id => [String(id), 0]));
+
+    const sessions = FocusSession.find({
+      userId: { $in: memberIds },
+      status: 'completed',
+      startTime: { $gte: start, $lt: end }
+    }).select('userId durationSeconds startTime').lean();
+
+    const logs = StudyLog.find({
+      userId: { $in: memberIds },
+      date: { $gte: start, $lt: end }
+    }).select('userId date minutes hours').lean();
+
+    return Promise.all([sessions, logs]).then(([sessionRows, logRows]) => {
+      sessionRows.forEach(session => {
+        const key = String(session.userId);
+        if (stats.has(key)) stats.set(key, stats.get(key) + (Number(session.durationSeconds) || 0) / 60);
+      });
+      logRows.forEach(log => {
+        const key = String(log.userId);
+        if (stats.has(key)) stats.set(key, stats.get(key) + (Number(log.minutes) || Number(log.hours) * 60 || 0));
+      });
+      return Array.from(stats.entries()).map(([memberId, minutes]) => ({
+        memberId,
+        minutes: Number(minutes) || 0
+      }));
+    });
+  };
+
+  const buildTrendData = async (periodKey) => {
+    const now = new Date();
+    const chartPoints = [];
+    if (periodKey === 'daily') {
+      for (let offset = 6; offset >= 0; offset -= 1) {
+        const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - offset));
+        const start = new Date(day);
+        const end = new Date(day);
+        end.setUTCDate(end.getUTCDate() + 1);
+        const [sessions, logs] = await Promise.all([
+          FocusSession.find({
+            userId: { $in: memberIds },
+            status: 'completed',
+            startTime: { $gte: start, $lt: end }
+          }).select('durationSeconds userId').lean(),
+          StudyLog.find({
+            userId: { $in: memberIds },
+            date: { $gte: start, $lt: end }
+          }).select('userId minutes hours date').lean()
+        ]);
+        const value = [...sessions, ...logs].reduce((sum, item) => {
+          if ('durationSeconds' in item) return sum + Number(item.durationSeconds || 0) / 60;
+          return sum + (Number(item.minutes) || Number(item.hours) * 60 || 0);
+        }, 0);
+        chartPoints.push({
+          label: day.toLocaleDateString('en-US', { weekday: 'short' }),
+          value: Math.round(value)
+        });
+      }
+      return chartPoints;
+    }
+
+    if (periodKey === 'weekly') {
+      const year = now.getUTCFullYear();
+      const month = now.getUTCMonth();
+      const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+      const weekRanges = [
+        [1, 7],
+        [8, 14],
+        [15, 21],
+        [22, 28],
+        [29, lastDay]
+      ].filter(([start, end]) => start <= lastDay && end >= start && end >= start);
+
+      for (const [startDay, endDay] of weekRanges) {
+        const weekStart = new Date(Date.UTC(year, month, startDay));
+        const weekEnd = new Date(Date.UTC(year, month, endDay + 1));
+        const [sessions, logs] = await Promise.all([
+          FocusSession.find({
+            userId: { $in: memberIds },
+            status: 'completed',
+            startTime: { $gte: weekStart, $lt: weekEnd }
+          }).select('durationSeconds userId startTime').lean(),
+          StudyLog.find({
+            userId: { $in: memberIds },
+            date: { $gte: weekStart, $lt: weekEnd }
+          }).select('userId date minutes hours').lean()
+        ]);
+        const value = [...sessions, ...logs].reduce((sum, item) => {
+          if ('durationSeconds' in item) return sum + Number(item.durationSeconds || 0) / 60;
+          return sum + (Number(item.minutes) || Number(item.hours) * 60 || 0);
+        }, 0);
+        chartPoints.push({
+          label: `${startDay}-${endDay}`,
+          value: Math.round(value)
+        });
+      }
+      return chartPoints;
+    }
+
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+      const start = new Date(monthDate);
+      const end = new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 1));
+      const [sessions, logs] = await Promise.all([
+        FocusSession.find({
+          userId: { $in: memberIds },
+          status: 'completed',
+          startTime: { $gte: start, $lt: end }
+        }).select('durationSeconds').lean(),
+        StudyLog.find({
+          userId: { $in: memberIds },
+          date: { $gte: start, $lt: end }
+        }).select('minutes hours').lean()
+      ]);
+      const value = [...sessions, ...logs].reduce((sum, item) => {
+        if ('durationSeconds' in item) return sum + Number(item.durationSeconds || 0) / 60;
+        return sum + (Number(item.minutes) || Number(item.hours) * 60 || 0);
+      }, 0);
+      chartPoints.push({
+        label: monthDate.toLocaleDateString('en-US', { month: 'short' }),
+        value: Math.round(value)
+      });
+    }
+    return chartPoints;
+  };
+
+  const periodDataMap = {};
+  for (const periodKey of periods) {
+    const focusValues = await collectMemberMinutes(periodKey);
+    const topMinutes = Math.max(...focusValues.map(item => item.minutes), 0);
+    const memberRows = members.map(member => {
+      const memberId = String(member._id);
+      const memberFocus = focusValues.find(item => String(item.memberId) === memberId)?.minutes || 0;
+      const completedTasks = (group.tasks || []).filter(task => (task.completedBy || []).some(id => String(id) === memberId)).length;
+      const completionRate = taskTotal ? Math.round((completedTasks / taskTotal) * 100) : 0;
+      return {
+        userId: memberId,
+        name: member.name || member.username || 'Member',
+        username: member.username || 'focususer',
+        initials: (member.name || member.username || '?').charAt(0).toUpperCase(),
+        focusMinutes: Math.round(memberFocus),
+        focusLabel: formatMinutesLabel(memberFocus),
+        completedTasks,
+        totalTasks: taskTotal || 0,
+        pendingTasks: Math.max(taskTotal - completedTasks, 0),
+        completionRate,
+        progress: topMinutes ? Math.max(10, Math.round((memberFocus / topMinutes) * 100)) : 0
+      };
+    }).sort((first, second) => second.focusMinutes - first.focusMinutes || second.completedTasks - first.completedTasks);
+
+    const totalGroupFocus = memberRows.reduce((sum, member) => sum + member.focusMinutes, 0);
+    const averageFocus = memberRows.length ? totalGroupFocus / memberRows.length : 0;
+    const totalCompletedTasks = memberRows.reduce((sum, member) => sum + member.completedTasks, 0);
+    const completionRate = taskTotal && memberRows.length ? Math.round((totalCompletedTasks / (memberRows.length * taskTotal)) * 100) : 0;
+
+    const taskRows = (group.tasks || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(task => {
+      const completedIds = (task.completedBy || []).map(id => String(id));
+      const completedCount = completedIds.length;
+      const totalGroupMembers = group.members.length || 1;
+      const percent = totalGroupMembers ? Math.round((completedCount / totalGroupMembers) * 100) : 0;
+      return {
+        _id: task._id,
+        title: task.title,
+        completedCount,
+        totalMembers: totalGroupMembers,
+        percent,
+        completedIds,
+        isComplete: completedCount === totalGroupMembers
+      };
+    });
+
+    const taskProgress = members.map(member => {
+      const memberId = String(member._id);
+      const completedCount = (group.tasks || []).filter(task => (task.completedBy || []).some(id => String(id) === memberId)).length;
+      return {
+        userId: memberId,
+        name: member.name || member.username || 'Member',
+        username: member.username || 'focususer',
+        completedCount,
+        totalTasks: taskTotal,
+        rate: taskTotal ? Math.round((completedCount / taskTotal) * 100) : 0,
+        progress: taskTotal ? Math.max(10, Math.round((completedCount / taskTotal) * 100)) : 0
+      };
+    }).sort((first, second) => second.rate - first.rate || second.completedCount - first.completedCount);
+
+    const trend = await buildTrendData(periodKey);
+    const maxTrendValue = Math.max(...trend.map(point => point.value), 1);
+
+    periodDataMap[periodKey] = {
+      overview: {
+        totalFocusMinutes: totalGroupFocus,
+        totalFocusLabel: formatMinutesLabel(totalGroupFocus),
+        averageFocusMinutes: Math.round(averageFocus),
+        averageFocusLabel: formatMinutesLabel(Math.round(averageFocus)),
+        tasksDoneText: `${Math.min(totalCompletedTasks, memberRows.length * Math.max(taskTotal, 0))}/${memberRows.length * Math.max(taskTotal, 0)}`,
+        tasksDoneCount: totalCompletedTasks,
+        tasksTotal: memberRows.length * Math.max(taskTotal, 0),
+        completionRate,
+        completionLabel: `${completionRate}%`
+      },
+      ranking: memberRows,
+      taskProgress,
+      groupTasks: taskRows,
+      memberProgress: memberRows.map(member => ({
+        ...member,
+        focusLabel: member.focusLabel,
+        tasksText: `${member.completedTasks}/${taskTotal || 0}`
+      })),
+      trend: trend.map(point => ({ ...point, height: Math.max(12, Math.round((point.value / maxTrendValue) * 100)) })),
+      memberDetails: memberRows.map(member => ({
+        ...member,
+        completedTasks: member.completedTasks,
+        pendingTasks: member.pendingTasks,
+        completionRate: member.completionRate,
+        focusAverageByDay: member.focusMinutes ? Math.round(member.focusMinutes / (periodKey === 'daily' ? 1 : periodKey === 'weekly' ? 7 : 30)) : 0,
+        focusAverageLabel: formatMinutesLabel(member.focusMinutes ? Math.round(member.focusMinutes / (periodKey === 'daily' ? 1 : periodKey === 'weekly' ? 7 : 30)) : 0)
+      }))
+    };
+  }
+
+  return periodDataMap;
 };
 
 const buildPrivateGroupStats = async (group) => {
@@ -399,6 +768,26 @@ const syncFocusStats = async (userId, logs = null) => {
   return { totalFocusMinutes, averageWeeklyFocusMinutes, averageMonthlyFocusMinutes };
 };
 
+const getDailyFocusTotals = async (userId, logsDoc = null) => {
+  const studyLogs = logsDoc || await StudyLog.find({ userId }).select('date minutes hours').lean();
+  const focusSessions = await FocusSession.find({ userId, status: 'completed' }).select('startTime durationSeconds').lean();
+  const dailyTotals = new Map();
+
+  studyLogs.forEach(log => {
+    const key = getUTCDateKey(log.date);
+    const minutes = getLogMinutes(log);
+    dailyTotals.set(key, (dailyTotals.get(key) || 0) + minutes);
+  });
+
+  focusSessions.forEach(session => {
+    const key = getUTCDateKey(session.startTime);
+    const minutes = session.durationSeconds / 60;
+    dailyTotals.set(key, (dailyTotals.get(key) || 0) + minutes);
+  });
+
+  return dailyTotals;
+};
+
 const calculateXpAndLevel = async (userId, userDoc = null, logsDoc = null, achievementsDoc = null) => {
   if (!userDoc || !logsDoc || !achievementsDoc) await dbConnect();
 
@@ -410,30 +799,48 @@ const calculateXpAndLevel = async (userId, userDoc = null, logsDoc = null, achie
 
   if (!allLogs || !achievements) {
     const results = await Promise.all([
-      !allLogs ? StudyLog.find({ userId }) : null,
-      !achievements ? Achievement.find({ userId, achieved: true }) : null
+      !allLogs ? StudyLog.find({ userId }).lean() : null,
+      !achievements ? Achievement.find({ userId, achieved: true }).lean() : null
     ]);
     if (!allLogs) allLogs = results[0];
     if (!achievements) achievements = results[1];
   } else {
-    achievements = achievements.filter(a => a.achieved);
+    achievements = achievements.filter(a => a.achieved !== false);
   }
 
-  let xpFromLogs = 0;
-  if (allLogs) {
-      allLogs.forEach(log => {
-        const logMinutes = getLogMinutes(log);
-        xpFromLogs += (logMinutes / 60) * XP_PER_HOUR;
-        if (logMinutes >= getGoalMinutes(user)) {
-          xpFromLogs += XP_FOR_GOAL;
-        }
-      });
+  const dailyTotals = await getDailyFocusTotals(userId, allLogs);
+  let xpFromMinutes = 0;
+  let goalBonuses = 0;
+
+  for (const minutes of dailyTotals.values()) {
+    const completedMinutes = Math.max(0, Math.floor(Number(minutes) || 0));
+    xpFromMinutes += completedMinutes;
+    if (minutes >= getGoalMinutes(user)) {
+      goalBonuses += XP_FOR_GOAL;
+    }
   }
 
   const xpFromAchievements = achievements ? achievements.length * XP_FOR_ACHIEVEMENT : 0;
-  const totalXp = Math.round(xpFromLogs + xpFromAchievements);
-  const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
-  return { xp: totalXp, level: Math.min(level, 100) };
+  const totalXp = xpFromMinutes * XP_PER_MINUTE + goalBonuses + xpFromAchievements;
+  const level = Math.max(1, Math.floor(totalXp / XP_PER_LEVEL) + 1);
+  return { xp: totalXp, level };
+};
+
+const persistUserXpAndLevel = async (userId, userDoc = null, logsDoc = null, achievementsDoc = null) => {
+  const user = userDoc || await User.findById(userId);
+  if (!user) return { xp: 0, level: 1 };
+
+  const xpData = await calculateXpAndLevel(userId, user, logsDoc, achievementsDoc);
+  const nextLevel = Math.max(1, Number(xpData.level) || 1);
+  const nextXp = Math.max(0, Number(xpData.xp) || 0);
+
+  if (user.xp !== nextXp || user.level !== nextLevel) {
+    user.xp = nextXp;
+    user.level = nextLevel;
+    await user.save();
+  }
+
+  return { xp: nextXp, level: nextLevel };
 };
 
 const calculateLongestStreak = (logs) => {
@@ -525,11 +932,47 @@ app.get('/login', (req, res) => {
   res.render('login', { error: null });
 });
 
+const buildSignupViewData = (req, override = {}) => ({
+  error: override.error || null,
+  errors: override.errors || [],
+  formData: {
+    name: override.formData?.name ?? req.body?.name ?? '',
+    username: override.formData?.username ?? req.body?.username ?? '',
+    email: override.formData?.email ?? req.body?.email ?? ''
+  }
+});
+
+const formatSignupValidationError = (errorList = []) => {
+  const firstError = errorList[0];
+  if (!firstError) return 'Please check the form and try again.';
+
+  const path = firstError.path || firstError.param || '';
+  const message = firstError.msg || firstError.message || '';
+
+  if (path === 'password' || message.toLowerCase().includes('password')) {
+    return 'Password must be at least 6 characters long.';
+  }
+  if (path === 'confirmPassword' || message.toLowerCase().includes('match')) {
+    return 'Passwords do not match.';
+  }
+  if (path === 'username' || message.toLowerCase().includes('username')) {
+    return 'Username must be 3-30 lowercase letters, numbers, or underscores.';
+  }
+  if (path === 'email' || message.toLowerCase().includes('email')) {
+    return 'Please enter a valid email address.';
+  }
+  if (path === 'name' || message.toLowerCase().includes('name')) {
+    return 'Please enter your full name.';
+  }
+
+  return message || 'Invalid data provided';
+};
+
 app.get('/signup', (req, res) => {
   if (req.session.userId) {
     return res.redirect('/dashboard');
   }
-  res.render('signup', { error: null, errors: [] });
+  res.render('signup', buildSignupViewData(req));
 });
 
 app.post('/login', authLimiter, [
@@ -603,15 +1046,31 @@ app.post('/signup', authLimiter, [
   await dbConnect();
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.render('signup', { error: 'Invalid data provided', errors: errors.array() });
+    return res.status(400).render('signup', buildSignupViewData(req, {
+      error: formatSignupValidationError(errors.array()),
+      errors: errors.array(),
+      formData: {
+        name: req.body.name || '',
+        username: req.body.username || '',
+        email: req.body.email || ''
+      }
+    }));
   }
   try {
     const { name, username, email, password } = req.body;
     if (await User.findOne({ email })) {
-      return res.render('signup', { error: 'Email already registered', errors: [] });
+      return res.status(400).render('signup', buildSignupViewData(req, {
+        error: 'Email already registered',
+        errors: [{ path: 'email', msg: 'Email already registered' }],
+        formData: { name, username, email }
+      }));
     }
     if (await User.findOne({ username: normalizeUsername(username) })) {
-      return res.render('signup', { error: 'Username is already taken', errors: [] });
+      return res.status(400).render('signup', buildSignupViewData(req, {
+        error: 'Username is already taken',
+        errors: [{ path: 'username', msg: 'Username is already taken' }],
+        formData: { name, username, email }
+      }));
     }
     const user = new User({ name, username: normalizeUsername(username), email, password });
     await user.save();
@@ -619,16 +1078,28 @@ app.post('/signup', authLimiter, [
     req.session.save((err) => {
       if (err) {
         console.error(err);
-        return res.render('signup', { error: 'Server error occurred', errors: [] });
+        return res.status(500).render('signup', buildSignupViewData(req, {
+          error: 'Server error occurred',
+          errors: [],
+          formData: { name, username, email }
+        }));
       }
       res.redirect('/dashboard');
     });
   } catch (error) {
     console.error(error);
     if (error.code === 11000) {
-      return res.render('signup', { error: 'Username or email is already registered', errors: [] });
+      return res.status(400).render('signup', buildSignupViewData(req, {
+        error: 'Username or email is already registered',
+        errors: [{ path: 'username', msg: 'Username or email is already registered' }],
+        formData: { name: req.body.name || '', username: req.body.username || '', email: req.body.email || '' }
+      }));
     }
-    res.render('signup', { error: 'Server error occurred', errors: [] });
+    res.status(500).render('signup', buildSignupViewData(req, {
+      error: 'Server error occurred',
+      errors: [],
+      formData: { name: req.body.name || '', username: req.body.username || '', email: req.body.email || '' }
+    }));
   }
 });
 
@@ -637,10 +1108,11 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
     await dbConnect();
     const userId = req.session.userId;
 
-    const [user, allLogs, achievements] = await Promise.all([
+    const [user, allLogs, achievements, communityStats] = await Promise.all([
       User.findById(userId),
       StudyLog.find({ userId }).sort({ date: 'asc' }),
-      Achievement.find({ userId })
+      Achievement.find({ userId }),
+      getCommunityStats()
     ]);
 
     if (!user) {
@@ -657,6 +1129,7 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
     const xpData = await calculateXpAndLevel(userId, user, allLogs, achievements);
     user.xp = xpData.xp;
     user.level = xpData.level;
+    await user.save();
 
     const now = new Date();
     const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -724,7 +1197,8 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
       currentConsistencyStreak,
       currentGoalStreak,
       maxConsistencyStreak,
-      maxGoalStreak
+      maxGoalStreak,
+      communityStats
     });
   } catch (error) {
     console.error(error);
@@ -739,20 +1213,31 @@ app.get('/api/xp-history', authenticateUser, noCache, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const [achievements, studyLogs] = await Promise.all([
+    const [achievements, studyLogs, focusSessions] = await Promise.all([
       Achievement.find({ userId, achieved: true }).sort({ dateAchieved: 'desc' }),
-      StudyLog.find({ userId }).sort({ date: 'desc' })
+      StudyLog.find({ userId }).sort({ date: 'desc' }),
+      FocusSession.find({ userId, status: 'completed' }).sort({ startTime: 'desc' })
     ]);
 
     const achievementHistory = achievements.map(ach => `+${XP_FOR_ACHIEVEMENT} XP: Achievement unlocked - "${ach.name}"`);
-    const logHistory = [];
+    const dailyTotals = new Map();
     studyLogs.forEach(log => {
-      const logMinutes = getLogMinutes(log);
-      logHistory.push(`+${Math.round((logMinutes / 60) * XP_PER_HOUR)} XP: Focused for ${logMinutes} minutes on ${log.date.toLocaleDateString()}`);
-      if (logMinutes >= getGoalMinutes(user)) {
-        logHistory.push(`+${XP_FOR_GOAL} XP: Daily goal met on ${log.date.toLocaleDateString()}`);
-      }
+      const key = getUTCDateKey(log.date);
+      dailyTotals.set(key, (dailyTotals.get(key) || 0) + getLogMinutes(log));
     });
+    focusSessions.forEach(session => {
+      const key = getUTCDateKey(session.startTime);
+      dailyTotals.set(key, (dailyTotals.get(key) || 0) + (session.durationSeconds / 60));
+    });
+
+    const logHistory = [];
+    for (const [dateKey, minutes] of dailyTotals.entries()) {
+      const date = new Date(`${dateKey}T00:00:00.000Z`);
+      logHistory.push(`+${Math.round(minutes)} XP: Focused for ${Math.round(minutes)} minutes on ${date.toLocaleDateString()}`);
+      if (minutes >= getGoalMinutes(user)) {
+        logHistory.push(`+${XP_FOR_GOAL} XP: Daily goal met on ${date.toLocaleDateString()}`);
+      }
+    }
     res.json({ achievements: achievementHistory, logs: logHistory });
   } catch (error) {
     console.error(error);
@@ -802,7 +1287,8 @@ app.post('/api/focus-sessions', authenticateUser, noCache, async (req, res) => {
       syncFocusStats(userId),
       getTodayFocusMinutes(userId)
     ]);
-    res.status(200).json({ success: true, sessionId: savedSession.sessionId, todayMinutes, ...focusStats });
+    const xpData = await persistUserXpAndLevel(userId);
+    res.status(200).json({ success: true, sessionId: savedSession.sessionId, todayMinutes, xp: xpData.xp, level: xpData.level, ...focusStats });
   } catch (error) {
     if (error.code === 11000) {
       const existing = await FocusSession.findOne({ userId: req.session.userId, sessionId: req.body.sessionId });
@@ -811,7 +1297,8 @@ app.post('/api/focus-sessions', authenticateUser, noCache, async (req, res) => {
           syncFocusStats(req.session.userId),
           getTodayFocusMinutes(req.session.userId)
         ]);
-        return res.status(200).json({ success: true, sessionId: existing.sessionId, todayMinutes, ...focusStats });
+        const xpData = await persistUserXpAndLevel(req.session.userId);
+        return res.status(200).json({ success: true, sessionId: existing.sessionId, todayMinutes, xp: xpData.xp, level: xpData.level, ...focusStats });
       }
     }
     console.error('Focus session save error:', error);
@@ -960,7 +1447,7 @@ app.get('/calendar', authenticateUser, noCache, async (req, res) => {
 
 app.post('/add-study-log', authenticateUser, noCache, [
   body('date').isISO8601(),
-  body('minutes').isFloat({ min: 0, max: 1440 }),
+  body('minutes').isFloat({ min: 0 }),
   body('mode').optional().default('add').isIn(['add', 'reset'])
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -986,8 +1473,12 @@ app.post('/add-study-log', authenticateUser, noCache, [
     const manualMinutes = getLogMinutes(existingLog || { minutes: 0 });
     const inputUnit = req.body.timeUnit === 'hours' ? 'hours' : 'minutes';
     const inputValue = Number(minutes);
-    if (inputUnit === 'hours' && inputValue > 24) return res.status(400).send('Invalid time value');
     const inputMinutes = inputUnit === 'hours' ? inputValue * 60 : inputValue;
+
+    if (inputMinutes > MAX_DAILY_MINUTES) {
+      return res.status(400).send('Daily study time cannot exceed 23 hours 59 minutes.');
+    }
+
     if (mode === 'reset') {
       await FocusSession.deleteMany({
         userId,
@@ -996,6 +1487,9 @@ app.post('/add-study-log', authenticateUser, noCache, [
       });
     }
     const nextManualMinutes = mode === 'add' ? manualMinutes + inputMinutes : inputMinutes;
+    if (nextManualMinutes > MAX_DAILY_MINUTES) {
+      return res.status(400).send('Daily study time cannot exceed 23 hours 59 minutes.');
+    }
 
     await StudyLog.findOneAndUpdate(
       { userId, date: logDate },
@@ -1032,7 +1526,7 @@ app.post('/add-study-log', authenticateUser, noCache, [
 });
 
 app.post('/update-goal', authenticateUser, noCache, [
-  body('dailyGoalMinutes').isFloat({ min: 0.1, max: 1440 }),
+  body('dailyGoalMinutes').isFloat({ min: 0.1, max: MAX_DAILY_MINUTES }),
   body('timeUnit').optional().isIn(['minutes', 'hours'])
 ], async (req, res) => {
   await dbConnect();
@@ -1051,6 +1545,7 @@ app.post('/update-goal', authenticateUser, noCache, [
   const xpData = await calculateXpAndLevel(userId, user, allLogs, achievements);
   user.xp = xpData.xp;
   user.level = xpData.level;
+  await user.save();
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -1109,6 +1604,7 @@ app.get('/achievements', authenticateUser, noCache, async (req, res) => {
     const xpData = await calculateXpAndLevel(userId, user, allLogs, fullAchievedList);
     user.xp = xpData.xp;
     user.level = xpData.level;
+    await user.save();
 
     const consistencyLogs = allLogs.filter(log => getLogMinutes(log) > 0);
     const goalLogs = allLogs.filter(log => getLogMinutes(log) >= getGoalMinutes(user));
@@ -1164,6 +1660,7 @@ app.get('/analytics', authenticateUser, noCache, async (req, res) => {
     const xpData = await calculateXpAndLevel(userId, user, allLogs, achievements);
     user.xp = xpData.xp;
     user.level = xpData.level;
+    await user.save();
 
     const now = new Date();
     const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -1291,18 +1788,51 @@ app.get('/api/analytics', authenticateUser, noCache, async (req, res) => {
         data = [{ label: label, value: parseFloat(finalVal.toFixed(2)) }];
         break;
 
-      case 'monthly_history':
-        data = await StudyLog.aggregate([
-          { $match: { userId: userObjectId } },
+      case 'monthly_history': {
+        const now = new Date();
+        const months = [];
+        const monthMap = new Map();
+
+        const monthlyRows = await StudyLog.aggregate([
+          {
+            $match: {
+              userId: userObjectId,
+              date: {
+                $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1)),
+                $lt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+              }
+            }
+          },
           {
             $group: {
               _id: { year: { $year: "$date" }, month: { $month: "$date" } },
               total: { $sum: "$minutes" }
             }
-          },
-          { $sort: { "_id.year": 1, "_id.month": 1 } }
+          }
         ]);
+
+        for (const row of monthlyRows) {
+          monthMap.set(`${row._id.year}-${String(row._id.month).padStart(2, '0')}`, row.total);
+        }
+
+        for (let i = 11; i >= 0; i--) {
+          const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+          const year = monthDate.getUTCFullYear();
+          const month = monthDate.getUTCMonth() + 1;
+          const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+          const total = monthMap.get(monthKey) || 0;
+          const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+          months.push({
+            _id: { year, month },
+            total,
+            average: daysInMonth > 0 ? total / daysInMonth : 0
+          });
+        }
+
+        data = { months };
         break;
+      }
 
       default:
         return res.status(400).json({ error: 'Invalid chart type' });
@@ -1374,7 +1904,11 @@ app.get('/api/leaderboards', authenticateUser, noCache, async (req, res) => {
     const rows = currentRow && !topRows.some(row => row.rank === currentRow.rank)
       ? [...topRows, { ...currentRow, isCurrentUser: true }]
       : topRows.map(row => ({ ...row, isCurrentUser: currentUser?.publicProfile && row.rank === currentRow?.rank }));
-    res.json(rows);
+    res.json({
+      totalParticipants: rankedRows.length,
+      currentUserRank: currentRow ? { rank: currentRow.rank, total: rankedRows.length } : null,
+      rows
+    });
   } catch (error) {
     console.error('Leaderboard API error:', error);
     res.status(500).json({ error: 'Unable to load leaderboard' });
@@ -1475,22 +2009,173 @@ app.get('/private-groups/:groupId', authenticateUser, noCache, async (req, res) 
     if (!group || !group.members.some(memberId => String(memberId) === String(req.session.userId))) {
       return res.status(404).send('Private group not found');
     }
-    const [user, stats] = await Promise.all([
+    const [user, stats, analysis] = await Promise.all([
       User.findById(req.session.userId),
-      buildPrivateGroupStats(group)
+      buildPrivateGroupStats(group),
+      buildPrivateGroupAnalysis(group)
     ]);
     if (!user) return req.session.destroy(() => res.redirect('/login'));
     await ensureUserIdentity(user);
+
+    const groupTasks = buildGroupTaskList(group, req.session.userId);
+
     res.render('private-group', {
       user,
       group,
       stats,
+      analysis,
+      groupTasks,
       isOwner: String(group.ownerId) === String(req.session.userId),
       queryError: req.query.error || null
     });
   } catch (error) {
     console.error('Private group detail error:', error);
     res.status(500).send('Server error');
+  }
+});
+
+app.post('/private-groups/:groupId/tasks', authenticateUser, noCache, async (req, res) => {
+  try {
+    await dbConnect();
+    const group = await PrivateGroup.findById(req.params.groupId);
+    if (!group || !group.members.some(memberId => String(memberId) === String(req.session.userId))) {
+      return res.status(404).json({ success: false, error: 'Private group not found' });
+    }
+
+    const title = String(req.body.title || '').trim();
+    if (!title) {
+      if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+        return res.status(400).json({ success: false, error: 'Task title cannot be empty' });
+      }
+      return res.redirect(`/private-groups/${group._id}?error=Task%20title%20cannot%20be%20empty`);
+    }
+
+    group.tasks = group.tasks || [];
+    const createdTask = {
+      title,
+      date: new Date(),
+      createdBy: new mongoose.Types.ObjectId(String(req.session.userId)),
+      assignedTo: normalizeObjectIdList(group.members),
+      completedBy: []
+    };
+    group.tasks.push(createdTask);
+    await group.save();
+
+    const refreshedTasks = buildGroupTaskList(group, req.session.userId);
+    const taskPayload = refreshedTasks[refreshedTasks.length - 1] || {
+      _id: createdTask._id,
+      title,
+      assignedCount: group.members.length,
+      completedCount: 0,
+      isDoneByMe: false
+    };
+
+    if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+      const analysis = await buildPrivateGroupAnalysis(group);
+      return res.json({
+        success: true,
+        task: taskPayload,
+        groupTasks: refreshedTasks,
+        analysis
+      });
+    }
+
+    res.redirect(`/private-groups/${group._id}`);
+  } catch (error) {
+    console.error('Private group task create error:', error);
+    if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+      return res.status(500).json({ success: false, error: 'Unable to schedule task' });
+    }
+    res.redirect(`/private-groups/${req.params.groupId}?error=Unable%20to%20schedule%20task`);
+  }
+});
+
+app.post('/private-groups/:groupId/tasks/:taskId/toggle', authenticateUser, noCache, async (req, res) => {
+  try {
+    await dbConnect();
+    const group = await PrivateGroup.findById(req.params.groupId);
+    if (!group || !group.members.some(memberId => String(memberId) === String(req.session.userId))) {
+      return res.status(404).json({ success: false, error: 'Private group not found' });
+    }
+
+    const task = group.tasks.id(req.params.taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+
+    const userId = String(req.session.userId);
+    const assignedIds = normalizeObjectIdList(task.assignedTo || []).map(id => String(id));
+    const hasAccess = assignedIds.length === 0 || assignedIds.includes(userId);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Your are not assigned to this task' });
+    }
+
+    const normalizedCompleted = normalizeObjectIdList(task.completedBy || []);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const completedIds = normalizedCompleted.map(id => String(id));
+    if (completedIds.includes(userId)) {
+      task.completedBy = normalizedCompleted.filter(id => String(id) !== userId);
+    } else {
+      task.completedBy = normalizeObjectIdList([...normalizedCompleted, userObjectId]);
+    }
+
+    await group.save();
+
+    const nextCompletedIds = normalizeObjectIdList(task.completedBy || []).map(id => String(id));
+    const nextAssignedIds = normalizeObjectIdList(task.assignedTo || []).map(id => String(id));
+    const assignedCount = nextAssignedIds.length || group.members.length;
+    const completedCount = nextAssignedIds.length
+      ? nextAssignedIds.filter(id => nextCompletedIds.includes(id)).length
+      : 0;
+
+    const analysis = await buildPrivateGroupAnalysis(group);
+    return res.json({
+      success: true,
+      isDone: nextCompletedIds.includes(userId),
+      taskId: String(task._id),
+      taskTitle: task.title,
+      assignedCount,
+      completedCount,
+      groupTasks: buildGroupTaskList(group, userId),
+      analysis
+    });
+  } catch (error) {
+    console.error('Private group task toggle error:', error);
+    res.status(500).json({ success: false, error: 'Unable to update task' });
+  }
+});
+
+app.post('/private-groups/:groupId/tasks/:taskId/delete', authenticateUser, noCache, async (req, res) => {
+  try {
+    await dbConnect();
+    const group = await PrivateGroup.findById(req.params.groupId);
+    if (!group || !group.members.some(memberId => String(memberId) === String(req.session.userId))) {
+      return res.status(404).json({ success: false, error: 'Private group not found' });
+    }
+
+    const task = group.tasks.id(req.params.taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+
+    const canDelete = String(task.createdBy) === String(req.session.userId) || String(group.ownerId) === String(req.session.userId);
+    if (!canDelete) {
+      return res.status(403).json({ success: false, error: 'Only the creator or group owner can delete tasks' });
+    }
+
+    group.tasks = (group.tasks || []).filter(item => String(item._id) !== String(req.params.taskId));
+    await group.save();
+
+    const analysis = await buildPrivateGroupAnalysis(group);
+    return res.json({
+      success: true,
+      deleted: true,
+      groupTasks: buildGroupTaskList(group, req.session.userId),
+      analysis
+    });
+  } catch (error) {
+    console.error('Private group task delete error:', error);
+    res.status(500).json({ success: false, error: 'Unable to delete task' });
   }
 });
 
@@ -1554,11 +2239,96 @@ app.get('/profile/:username', noCache, async (req, res) => {
     await dbConnect();
     const username = normalizeUsername(req.params.username);
     const profile = await User.findOne({ username })
-      .select('name username publicProfile timeUnit totalFocusMinutes averageWeeklyFocusMinutes averageMonthlyFocusMinutes createdAt')
+      .select('name username publicProfile timeUnit totalFocusMinutes averageWeeklyFocusMinutes averageMonthlyFocusMinutes createdAt xp level')
       .lean();
-    if (!profile) return res.status(404).render('public-profile', { profile: null, isPrivate: false });
-    if (!profile.publicProfile) return res.render('public-profile', { profile: null, isPrivate: true });
-    res.render('public-profile', { profile, isPrivate: false });
+    if (!profile) return res.status(404).render('public-profile', { profile: null, isPrivate: false, heatmapLogs: [], heatmapStart: null, todayFocusMinutes: 0, yesterdayFocusMinutes: 0, lastWeekFocusMinutes: 0, currentMonthFocusMinutes: 0 });
+    if (!profile.publicProfile) return res.render('public-profile', { profile: null, isPrivate: true, heatmapLogs: [], heatmapStart: null, todayFocusMinutes: 0, yesterdayFocusMinutes: 0, lastWeekFocusMinutes: 0, currentMonthFocusMinutes: 0 });
+
+    const userId = profile._id;
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const yesterdayUTC = new Date(todayUTC); yesterdayUTC.setUTCDate(yesterdayUTC.getUTCDate() - 1);
+    const lastWeekStart = new Date(todayUTC); lastWeekStart.setUTCDate(lastWeekStart.getUTCDate() - 6);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const heatmapStart = new Date(todayUTC); heatmapStart.setUTCDate(heatmapStart.getUTCDate() - 364); heatmapStart.setUTCDate(heatmapStart.getUTCDate() - ((heatmapStart.getUTCDay() + 6) % 7));
+    const heatmapEnd = new Date(heatmapStart); heatmapEnd.setUTCDate(heatmapEnd.getUTCDate() + 53 * 7);
+
+    const [studyLogs, focusSessions] = await Promise.all([
+      StudyLog.find({ userId }).sort({ date: 'asc' }).lean(),
+      FocusSession.find({ userId, status: 'completed' }).select('startTime durationSeconds').lean()
+    ]);
+
+    const getMinutesFromEntry = (entry) => {
+      const minutes = Number(entry.minutes);
+      const hours = Number(entry.hours);
+      if (Number.isFinite(hours) && hours > 0 && (!Number.isFinite(minutes) || minutes <= 0)) return Math.round(hours * 60 * 100) / 100;
+      return Number.isFinite(minutes) ? minutes : 0;
+    };
+
+    const sumMinutesInRange = (entries, start, end) => {
+      let total = 0;
+      for (const entry of entries) {
+        const date = entry.date || entry.startTime;
+        if (!date) continue;
+        if (date >= start && date < end) {
+          total += entry.durationSeconds ? entry.durationSeconds / 60 : getMinutesFromEntry(entry);
+        }
+      }
+      return total;
+    };
+
+    const todayFocusMinutes = sumMinutesInRange(
+      [...studyLogs.filter(log => log.date >= todayUTC && log.date < new Date(todayUTC.getTime() + 86400000)), ...focusSessions.filter(session => session.startTime >= todayUTC && session.startTime < new Date(todayUTC.getTime() + 86400000))],
+      todayUTC,
+      new Date(todayUTC.getTime() + 86400000)
+    );
+    const yesterdayFocusMinutes = sumMinutesInRange(
+      [...studyLogs.filter(log => log.date >= yesterdayUTC && log.date < todayUTC), ...focusSessions.filter(session => session.startTime >= yesterdayUTC && session.startTime < todayUTC)],
+      yesterdayUTC,
+      todayUTC
+    );
+    const lastWeekFocusMinutes = sumMinutesInRange(
+      [...studyLogs.filter(log => log.date >= lastWeekStart && log.date <= todayUTC), ...focusSessions.filter(session => session.startTime >= lastWeekStart && session.startTime <= todayUTC)],
+      lastWeekStart,
+      new Date(todayUTC.getTime() + 86400000)
+    );
+    const currentMonthFocusMinutes = sumMinutesInRange(
+      [...studyLogs.filter(log => log.date >= monthStart && log.date <= todayUTC), ...focusSessions.filter(session => session.startTime >= monthStart && session.startTime <= todayUTC)],
+      monthStart,
+      new Date(todayUTC.getTime() + 86400000)
+    );
+
+    const heatmapValues = new Map((studyLogs.filter(log => log.date >= heatmapStart && log.date < heatmapEnd).map(log => [new Date(log.date).toISOString().slice(0, 10), getMinutesFromEntry(log)]) || []));
+    for (const session of focusSessions) {
+      if (!session.startTime || session.startTime < heatmapStart || session.startTime >= heatmapEnd) continue;
+      const key = new Date(session.startTime).toISOString().slice(0, 10);
+      heatmapValues.set(key, (heatmapValues.get(key) || 0) + Number(session.durationSeconds || 0) / 60);
+    }
+
+    const heatmapLogs = Array.from(heatmapValues.entries()).map(([dateKey, minutes]) => ({
+      date: new Date(`${dateKey}T00:00:00.000Z`),
+      minutes: Math.round(minutes * 100) / 100
+    }));
+
+    const publicProfile = {
+      ...profile,
+      todayFocusMinutes: Number(todayFocusMinutes) || 0,
+      yesterdayFocusMinutes: Number(yesterdayFocusMinutes) || 0,
+      lastWeekFocusMinutes: Number(lastWeekFocusMinutes) || 0,
+      currentMonthFocusMinutes: Number(currentMonthFocusMinutes) || 0,
+      totalFocusMinutes: Number(profile.totalFocusMinutes) || 0
+    };
+
+    res.render('public-profile', {
+      profile: publicProfile,
+      isPrivate: false,
+      heatmapLogs,
+      heatmapStart,
+      todayFocusMinutes: publicProfile.todayFocusMinutes,
+      yesterdayFocusMinutes: publicProfile.yesterdayFocusMinutes,
+      lastWeekFocusMinutes: publicProfile.lastWeekFocusMinutes,
+      currentMonthFocusMinutes: publicProfile.currentMonthFocusMinutes
+    });
   } catch (error) {
     console.error('Public profile page error:', error);
     res.status(500).send('Server error');
@@ -1588,6 +2358,7 @@ app.get('/profile', authenticateUser, noCache, async (req, res) => {
     const xpData = await calculateXpAndLevel(user._id, user, logs, achievements);
     user.xp = xpData.xp;
     user.level = xpData.level;
+    await user.save();
     const heatmapLogs = buildCalendarLogs(logs.filter(log => log.date >= heatmapStart && log.date < heatmapEnd), focusSessions);
     res.render('profile', {
       user,
@@ -1715,6 +2486,7 @@ app.post('/update-password', authenticateUser, noCache, [
   const xpData = await calculateXpAndLevel(req.session.userId, user, allLogs, achievements);
   user.xp = xpData.xp;
   user.level = xpData.level;
+  await user.save();
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

@@ -8,72 +8,281 @@
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* RESET & CORE FIXES */
-    html, body {
-        max-width: 100%;
-        overflow-x: hidden;
+    :root {
+      --analytics-bg: #07090b;
+      --analytics-surface: #111519;
+      --analytics-panel: #171d22;
+      --analytics-panel-strong: #1c252c;
+      --analytics-line: rgba(255,255,255,0.08);
+      --analytics-text: #edf3f8;
+      --analytics-muted: #8ea0ad;
+      --analytics-accent: #2dd4bf;
+      --analytics-accent-soft: #8ee7c9;
+      --analytics-yellow: #ffd60a;
+      --analytics-yellow-soft: #ffe169;
+      --analytics-green: #38b000;
+      --analytics-green-deep: #006400;
+      --analytics-red: #ff5e5b;
     }
+
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+      background: var(--analytics-bg);
+      color: var(--analytics-text);
+    }
+
     * { box-sizing: border-box; }
 
-    /* Responsive Grid (Used for Top and Bottom Rows) */
-    .top-charts-row {
+    .analytics-page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 20px 80px;
+    }
+
+    .analytics-header {
       display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--analytics-line);
+    }
+
+    .analytics-header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3vw, 2.8rem);
+      letter-spacing: -0.04em;
+    }
+
+    .analytics-header p {
+      margin: 6px 0 0;
+      color: var(--analytics-muted);
+      font-size: 0.9rem;
+    }
+
+    .analytics-summary-chip {
+      padding: 10px 14px;
+      border: 1px solid rgba(45, 212, 191, 0.35);
+      border-radius: 999px;
+      background: rgba(45, 212, 191, 0.08);
+      color: var(--analytics-accent-soft);
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .analytics-overview {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
       margin-bottom: 20px;
     }
-    
-    .chart-half-width {
-      flex: 1;
-      min-width: 300px;
-      background: #1e1e1e;
-      border-radius: 12px;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
+
+    .analytics-stat-card {
+      padding: 18px 18px 16px;
+      border: 1px solid var(--analytics-line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)), var(--analytics-panel);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
     }
 
-    /* Container adjustments inside blocks */
-    .chart-half-width .chart-container {
+    .analytics-stat-card small {
+      display: block;
+      color: var(--analytics-muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .analytics-stat-card strong {
+      display: block;
+      margin-top: 12px;
+      font-size: clamp(1.45rem, 2vw, 2.05rem);
+      letter-spacing: -0.04em;
+      color: var(--analytics-accent-soft);
+    }
+
+    .analytics-stat-card .trend {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 10px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: rgba(56, 176, 0, 0.1);
+      color: var(--analytics-green);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .analytics-panel {
+      margin-top: 18px;
+      border: 1px solid var(--analytics-line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0.01)), var(--analytics-surface);
+      overflow: hidden;
+    }
+
+    .analytics-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--analytics-line);
+    }
+
+    .analytics-panel-header h2 {
       margin: 0;
-      height: 100%;
-      box-shadow: none;
-      background: transparent;
+      font-size: 1.08rem;
+      letter-spacing: -0.02em;
+    }
+
+    .analytics-panel-content {
+      padding: 18px 20px 20px;
+    }
+
+    .analytics-panel.full-width .analytics-panel-content {
+      padding-top: 22px;
+    }
+
+    .analytics-highlight {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 20px;
+      border: 1px solid rgba(45, 212, 191, 0.24);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.09), rgba(255,255,255,0.015));
+    }
+
+    .analytics-highlight-copy {
       display: flex;
       flex-direction: column;
-      padding: 0;
-      border: none;
+      gap: 8px;
     }
 
-    /* TEXT STAT DISPLAY STYLE */
-    .text-stat-wrapper {
-        display: flex;
+    .analytics-highlight-copy span {
+      color: var(--analytics-muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .analytics-highlight-copy strong {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      letter-spacing: -0.05em;
+      color: var(--analytics-accent-soft);
+    }
+
+    .analytics-period-select {
+      min-width: 220px;
+      padding: 10px 12px;
+      border: 1px solid var(--analytics-line);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.22);
+      color: var(--analytics-text);
+      font: inherit;
+    }
+
+    .analytics-chart-wrap {
+      position: relative;
+      height: 320px;
+      width: 100%;
+    }
+
+    .analytics-chart-wrap.compact {
+      height: 260px;
+    }
+
+    .analytics-history-scroll {
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .analytics-history-scroll-inner {
+      min-width: 100%;
+      height: 320px;
+    }
+
+    .analytics-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .analytics-empty {
+      display: grid;
+      place-items: center;
+      min-height: 200px;
+      color: var(--analytics-muted);
+      font-size: 0.95rem;
+    }
+
+    .analytics-control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-start;
+      margin-bottom: 12px;
+      color: var(--analytics-muted);
+      font-size: 0.85rem;
+    }
+
+    .analytics-control-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .analytics-control-row input,
+    .analytics-control-row button {
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--analytics-line);
+      background: rgba(0,0,0,0.16);
+      color: var(--analytics-text);
+      font: inherit;
+    }
+
+    .analytics-control-row button {
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.2), rgba(45, 212, 191, 0.08));
+      border-color: rgba(45, 212, 191, 0.35);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    @media (max-width: 980px) {
+      .analytics-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .analytics-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .analytics-page { padding: 18px 12px 60px; }
+      .analytics-header {
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        flex-grow: 1;
-        min-height: 180px;
-        text-align: center;
-    }
-    .big-stat-number {
-        font-size: 3.5rem;
-        font-weight: bold;
-        color: #4CAF50;
-        margin: 10px 0;
-        line-height: 1;
-    }
-    .big-stat-label {
-        font-size: 1.1rem;
-        color: #bbb;
-        font-weight: 500;
-    }
-
-    /* Mobile Responsiveness */
-    @media (max-width: 768px) {
-      .top-charts-row { flex-direction: column; gap: 15px; }
-      .chart-half-width { width: 100%; min-width: 0; }
-      .big-stat-number { font-size: 3rem; }
-      .container { padding: 0 15px; }
+        align-items: flex-start;
+      }
+      .analytics-overview {
+        grid-template-columns: 1fr;
+      }
+      .analytics-highlight {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .analytics-period-select {
+        min-width: 0;
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -81,115 +290,98 @@
   <%- include('partials/loader') %>
   <%- include('partials/app-header') %>
 
-  <div class="container">
-    <h1>Your Analytics</h1>
-    <br>
+  <div class="analytics-page">
+    <header class="analytics-header">
+      <div>
+        <h1>Your Analytics</h1>
+        <p>Track momentum, focus consistency, and progression across your study history.</p>
+      </div>
+      <div class="analytics-summary-chip">Focus Overview</div>
+    </header>
 
-    <div class="top-charts-row">
-        <div class="chart-half-width">
-            <div class="chart-container">
-                <div class="chart-header-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
-                    <h2 style="font-size: 1.2rem; margin: 0;">Total Analysis</h2>
-                    <select id="distributionRange" class="period-selector" style="font-size: 0.85rem; padding: 6px; max-width: 100%;">
-                        <option value="past_7_days">Total (Past 7 Days)</option>
-                        <option value="recent_30_days">Total (Recent 30 Days)</option>
-                        <option value="past_6_months">Total (Past 6 Months)</option>
-                        <option value="all_time_hours" selected>Total (All Time <%= user.timeUnit === 'hours' ? 'Hours' : 'Minutes' %>)</option>
-                        <option disabled>──────────</option>
-                        <option value="average_7_days">Avg (Past 7 Days)</option>
-                        <option value="average_30_days">Avg (Past 30 Days)</option>
-                        <option value="average_all_time">Avg (All Time)</option>
-                    </select>
-                </div>
-                
-                <div class="text-stat-wrapper">
-                    <div class="big-stat-number" id="distValue">--</div>
-                    <div class="big-stat-label" id="distLabel">Loading...</div>
-                </div>
-            </div>
+    <section class="analytics-overview">
+      <div class="analytics-stat-card">
+        <small>Current month total</small>
+        <strong><%= formatMinutes(currentMonthTotal, user.timeUnit) %></strong>
+        <span class="trend">+ monthly trend</span>
+      </div>
+      <div class="analytics-stat-card">
+        <small>Monthly avg / day</small>
+        <strong><%= formatMinutes(currentMonthAvg, user.timeUnit) %></strong>
+        <span class="trend">steady pace</span>
+      </div>
+      <div class="analytics-stat-card">
+        <small>Daily goal</small>
+        <strong><%= formatMinutes(user.dailyGoalMinutes, user.timeUnit) %></strong>
+        <span class="trend">target set</span>
+      </div>
+      <div class="analytics-stat-card">
+        <small>Total analysis</small>
+        <strong id="distValue">--</strong>
+        <span class="trend" id="distLabel">Loading...</span>
+      </div>
+    </section>
+
+    <section class="analytics-panel full-width">
+      <div class="analytics-panel-header">
+        <h2>Last 12 Months Focus Time</h2>
+      </div>
+      <div class="analytics-panel-content">
+        <div class="analytics-chart-wrap"><canvas id="monthlyHistoryTotalChart"></canvas></div>
+      </div>
+    </section>
+
+    <section class="analytics-panel full-width">
+      <div class="analytics-panel-header">
+        <h2>Last 12 Months Avg / Day</h2>
+      </div>
+      <div class="analytics-panel-content">
+        <div class="analytics-chart-wrap"><canvas id="monthlyHistoryAverageChart"></canvas></div>
+      </div>
+    </section>
+
+    <div class="analytics-grid-2">
+      <section class="analytics-panel">
+        <div class="analytics-panel-header">
+          <h2>Last 30 Days Progress</h2>
         </div>
-
-        <div class="chart-half-width">
-            <div class="chart-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap;">
-                    <h2 style="font-size: 1.2rem; margin: 0;">Monthly History</h2>
-                    <span id="historyDateRange" style="font-size: 0.8em; color: #888;"></span>
-                </div>
-                <p style="color: #666; font-size: 0.8em; margin-bottom: 10px;">Swipe to view past months</p>
-                
-                <div class="scrollable-chart-outer" style="overflow-x: auto; width: 100%; flex-grow: 1;">
-                    <div class="scrollable-chart-inner" style="position: relative; min-width: 100%; height: 250px;">
-                        <canvas id="monthlyHistoryChart"></canvas>
-                        <div id="historyNoData" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#888;">No Data</div>
-                    </div>
-                </div>
-            </div>
+        <div class="analytics-panel-content">
+          <div class="analytics-chart-wrap compact"><canvas id="progressChart"></canvas></div>
         </div>
+      </section>
+
+      <section class="analytics-panel">
+        <div class="analytics-panel-header">
+          <h2 id="dayOfWeekTitle">Productivity by Day</h2>
+        </div>
+        <div class="analytics-panel-content">
+          <div class="analytics-chart-wrap compact"><canvas id="dayOfWeekChart"></canvas></div>
+        </div>
+      </section>
     </div>
 
-    <div class="stats-grid">
-     <div class="stat-card">
-        <h3>Current Month Total</h3>
-        <p class="stat-number"><%= formatMinutes(currentMonthTotal, user.timeUnit) %></p>
-     </div>
-      <div class="stat-card">
-        <h3>Current Month Avg/Day</h3>
-        <p class="stat-number"><%= formatMinutes(currentMonthAvg, user.timeUnit) %></p>
+    <section class="analytics-panel">
+      <div class="analytics-panel-header">
+        <h2>Custom Date Range Analysis</h2>
       </div>
-      <div class="stat-card">
-        <h3>Daily Goal</h3>
-                        <p class="stat-number"><%= formatMinutes(user.dailyGoalMinutes, user.timeUnit) %></p>
-     </div>
-    </div>
-
-    <div class="chart-container">
-      <h2>Last 30 Days Progress</h2>
-      <div class="chart-wrapper"><canvas id="progressChart"></canvas></div>
-    </div>
-
-    <div class="chart-container">
-      <h2>Custom Date Range Analysis</h2>
-      <br>
-      <div class="chart-controls">
-        <label for="start-date">Start Date:</label>
-        <input type="date" id="start-date">
-        <label for="end-date">End Date:</label>
-        <input type="date" id="end-date">
-        <button id="generate-range-chart" class="btn" style="width: auto; padding: 8px 16px;">Generate Chart</button>
+      <div class="analytics-panel-content">
+        <div class="analytics-control-row">
+          <label for="start-date">Start <input type="date" id="start-date"></label>
+          <label for="end-date">End <input type="date" id="end-date"></label>
+          <button id="generate-range-chart" type="button">Generate Chart</button>
+        </div>
+        <div class="analytics-chart-wrap"><canvas id="dateRangeChart"></canvas></div>
       </div>
-      <br>
-      <div class="chart-wrapper"><canvas id="dateRangeChart"></canvas></div>
-    </div>
+    </section>
 
-    <div class="chart-container">
-      <h2>Monthly Deep Dive</h2>
-      <br>
-      <div class="chart-controls">
-        <label for="month-picker">Select Month:</label>
-        <input type="month" id="month-picker">
+    <section class="analytics-panel">
+      <div class="analytics-panel-header">
+        <h2 id="goalAchievementTitle">Goal Achievement Rate</h2>
       </div>
-      <div class="chart-wrapper"><canvas id="monthlyChart"></canvas></div>
-    </div>
-
-    <div class="top-charts-row">
-       <div class="chart-half-width">
-          <div class="chart-container">
-            <h2 id="dayOfWeekTitle">Productivity by Day</h2>
-            <div class="chart-wrapper" style="flex-grow: 1; min-height: 250px; position: relative; margin-top: 10px;">
-                <canvas id="dayOfWeekChart"></canvas>
-            </div>
-          </div>
+      <div class="analytics-panel-content">
+        <div class="analytics-chart-wrap compact"><canvas id="goalAchievementChart"></canvas></div>
       </div>
-      <div class="chart-half-width">
-          <div class="chart-container">
-            <h2 id="goalAchievementTitle">Goal Achievement Rate</h2>
-            <div class="chart-wrapper" style="flex-grow: 1; min-height: 250px; position: relative; margin-top: 10px;">
-                <canvas id="goalAchievementChart"></canvas>
-            </div>
-          </div>
-      </div>
-    </div>
-
+    </section>
   </div>
 
   <script>
@@ -200,7 +392,7 @@
       ? Math.round((value / 60) * 10) / 10
       : Math.round(value);
     const displayLabel = timeUnit === 'hours' ? 'Hours' : 'Minutes';
-    let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart, monthlyHistoryChart;
+    let progressChart, monthlyChart, dateRangeChart, dayOfWeekChart, goalAchievementChart, monthlyHistoryTotalChart, monthlyHistoryAverageChart;
 
     // --- 1. Update Distribution TEXT ---
     async function updateDistributionStats(range) {
@@ -231,69 +423,92 @@
         }
     }
 
-    // --- 2. History Chart (Scrollable) ---
-    async function renderMonthlyHistoryChart() {
+    // --- 2. Monthly History Graphs ---
+    async function renderMonthlyHistoryCharts() {
         try {
             const response = await fetch(`/api/analytics?chart=monthly_history`);
-            const data = await response.json();
+            const payload = await response.json();
+            const monthlyData = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.months) ? payload.months : []);
 
-            if (!data || !Array.isArray(data) || data.length === 0) {
-                 if(monthlyHistoryChart) monthlyHistoryChart.destroy();
-                 document.getElementById('historyNoData').style.display = 'block';
-                 return;
-            } else {
-                document.getElementById('historyNoData').style.display = 'none';
+            if (!monthlyData || monthlyData.length === 0) {
+                if (monthlyHistoryTotalChart) monthlyHistoryTotalChart.destroy();
+                if (monthlyHistoryAverageChart) monthlyHistoryAverageChart.destroy();
+                return;
             }
 
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            const labels = data.map(d => `${monthNames[d._id.month - 1]} '${String(d._id.year).slice(2)}`);
-            const values = data.map(d => displayMinutes(d.total));
-            
-            if (data.length > 0) {
-                const first = data[0]._id;
-                const last = data[data.length - 1]._id;
-                document.getElementById('historyDateRange').innerText = 
-                    `${monthNames[first.month-1]} ${first.year} - ${monthNames[last.month-1]} ${last.year}`;
-            }
+            const normalizedData = monthlyData.map((item) => {
+                const month = Number(item?._id?.month || 1);
+                const year = Number(item?._id?.year || new Date().getFullYear());
+                const total = Number(item?.total || 0);
+                const average = Number(item?.average || 0);
+                return {
+                    month,
+                    year,
+                    total,
+                    average,
+                    label: `${monthNames[month - 1]} '${String(year).slice(2)}`
+                };
+            });
 
-            const outer = document.querySelector('.scrollable-chart-outer');
-            const inner = document.querySelector('.scrollable-chart-inner');
-            const visibleMonths = 6;
-            let chartWidth = '100%';
-            if (data.length > visibleMonths) {
-                chartWidth = `${(data.length / visibleMonths) * 100}%`;
-            }
-            inner.style.width = chartWidth;
-            inner.style.height = '100%';
-            
-            const ctx = document.getElementById('monthlyHistoryChart').getContext('2d');
-            if (monthlyHistoryChart) monthlyHistoryChart.destroy();
+            const labels = normalizedData.map(item => item.label);
+            const totals = normalizedData.map(item => Number.isFinite(displayMinutes(item.total)) ? displayMinutes(item.total) : 0);
+            const averages = normalizedData.map(item => Number.isFinite(displayMinutes(item.average)) ? displayMinutes(item.average) : 0);
 
-            monthlyHistoryChart = new Chart(ctx, {
+            const totalCtx = document.getElementById('monthlyHistoryTotalChart').getContext('2d');
+            if (monthlyHistoryTotalChart) monthlyHistoryTotalChart.destroy();
+            monthlyHistoryTotalChart = new Chart(totalCtx, {
                 type: 'bar',
                 data: {
-                    labels: labels,
+                    labels,
                     datasets: [{
-                        label: 'Total',
-                        data: values,
-                        backgroundColor: 'rgba(76, 175, 80, 0.7)',
-                        borderColor: '#4CAF50',
-                        borderWidth: 1
+                        label: 'Focus Time',
+                        data: totals,
+                        backgroundColor: 'rgba(56, 176, 0, 0.82)',
+                        borderColor: '#38b000',
+                        borderWidth: 1,
+                        borderRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, ticks: { color: '#ccc' } },
-                        x: { grid: { display: false }, ticks: { color: '#ccc' } }
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+                        x: { grid: { display: false }, ticks: { color: '#9aa8b5' } }
                     },
                     plugins: { legend: { display: false } }
                 }
             });
-            setTimeout(() => { outer.scrollLeft = outer.scrollWidth; }, 100);
 
-        } catch (error) { console.error(error); }
+            const avgCtx = document.getElementById('monthlyHistoryAverageChart').getContext('2d');
+            if (monthlyHistoryAverageChart) monthlyHistoryAverageChart.destroy();
+            monthlyHistoryAverageChart = new Chart(avgCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Avg / Day',
+                        data: averages,
+                        backgroundColor: 'rgba(255, 214, 10, 0.82)',
+                        borderColor: '#ffc300',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+                        x: { grid: { display: false }, ticks: { color: '#9aa8b5' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        } catch (error) {
+            console.error('Monthly graph render error:', error);
+        }
     }
 
     // --- Standard Charts ---
@@ -301,30 +516,40 @@
         const ctx = document.getElementById('progressChart').getContext('2d');
         const logs = <%- JSON.stringify(logs) %>;
         const labels = logs.map(log => new Date(log.date).toLocaleDateString());
-        const data = logs.map(log => log.minutes || 0);
-        
+        const data = logs.map(log => displayMinutes(log.minutes || 0));
+
         if (progressChart) progressChart.destroy();
         progressChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
                     label: displayLabel,
-                    data: data.map(log => displayMinutes(log.minutes || 0)),
-                    borderColor: '#4CAF50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                    tension: 0.4,
-                    fill: true,
-                    borderDash: [5, 5]
-                 }, {
+                    data: data,
+                    backgroundColor: data.map(value => value < displayMinutes(dailyGoal) ? 'rgba(255, 214, 10, 0.8)' : 'rgba(56, 176, 0, 0.82)'),
+                    borderColor: data.map(value => value < displayMinutes(dailyGoal) ? '#ffc300' : '#38b000'),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }, {
+                    type: 'line',
                     label: 'Goal',
                     data: Array(labels.length).fill(displayMinutes(dailyGoal)),
-                    borderColor: '#FF5722',
-                    borderDash: [5, 5],
-                    pointRadius: 0
+                    borderColor: '#2dd4bf',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+                    x: { grid: { display: false }, ticks: { color: '#9aa8b5' } }
+                },
+                plugins: { legend: { labels: { color: '#dfeaf6' } } }
+            }
         });
     }
 
@@ -332,65 +557,81 @@
         if (!startDate || !endDate) return;
         const response = await fetch(`/api/analytics?chart=dateRange&startDate=${startDate}&endDate=${endDate}`);
         const data = await response.json();
-        
+
         if (dateRangeChart) dateRangeChart.destroy();
         const ctx = document.getElementById('dateRangeChart').getContext('2d');
-        
+
         dateRangeChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: data.map(log => new Date(log.date).toLocaleDateString('en-CA', {timeZone: 'UTC'})),
-            datasets: [{
+            type: 'bar',
+            data: {
+                labels: data.map(log => new Date(log.date).toLocaleDateString('en-CA', { timeZone: 'UTC' })),
+                datasets: [{
                     label: displayLabel,
                     data: data.map(log => displayMinutes(log.minutes || 0)),
-                backgroundColor: c => c.raw < dailyGoal ? 'rgba(255, 87, 34, 0.6)' : 'rgba(76, 175, 80, 0.6)',
-                borderColor: c => c.raw < dailyGoal ? '#FF5722' : '#4CAF50',
-                borderWidth: 1
-              }, {
-                type: 'line',
-                label: 'Goal',
-                data: Array(data.length).fill(displayMinutes(dailyGoal)),
-                borderColor: '#fdc500', 
-                borderDash: [5,5], 
-                pointRadius: 0,
-                fill: false
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-    });
+                    backgroundColor: data.map(value => value < displayMinutes(dailyGoal) ? 'rgba(255, 214, 10, 0.8)' : 'rgba(56, 176, 0, 0.82)'),
+                    borderColor: data.map(value => value < displayMinutes(dailyGoal) ? '#ffc300' : '#38b000'),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }, {
+                    type: 'line',
+                    label: 'Goal',
+                    data: Array(data.length).fill(displayMinutes(dailyGoal)),
+                    borderColor: '#2dd4bf',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+                    x: { grid: { display: false }, ticks: { color: '#9aa8b5', maxRotation: 45, minRotation: 45 } }
+                },
+                plugins: { legend: { labels: { color: '#dfeaf6' } } }
+            }
+        });
     }
 
     async function renderMonthlyChart(month) {
       const response = await fetch(`/api/analytics?chart=monthly&month=${month}`);
       const data = await response.json();
-      
+
       if (monthlyChart) monthlyChart.destroy();
       const ctx = document.getElementById('monthlyChart').getContext('2d');
-      
+
       monthlyChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
           labels: data.map(log => new Date(log.date).toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' })),
           datasets: [{
             label: displayLabel,
             data: data.map(log => displayMinutes(log.minutes || 0)),
-            borderColor: '#4CAF50',
-            backgroundColor: 'rgba(76, 175, 80, 0.2)',
-            fill: true,
-            pointStyle: data.map(log => (log.minutes || 0) < dailyGoal ? 'crossRot' : 'circle'),
-            pointRadius: data.map(log => (log.minutes || 0) < dailyGoal ? 7 : 4),
-            pointBorderColor: data.map(log => (log.minutes || 0) < dailyGoal ? '#FF5722' : '#4CAF50'),
-            pointBackgroundColor: data.map(log => (log.minutes || 0) < dailyGoal ? '#FF5722' : '#4CAF50'),
-            borderDash: [5, 5]
+            backgroundColor: data.map(value => value < displayMinutes(dailyGoal) ? 'rgba(255, 214, 10, 0.82)' : 'rgba(56, 176, 0, 0.9)'),
+            borderColor: data.map(value => value < displayMinutes(dailyGoal) ? '#ffc300' : '#38b000'),
+            borderWidth: 1,
+            borderRadius: 5,
+            borderSkipped: false
           }, {
+            type: 'line',
             label: 'Goal',
             data: Array(data.length).fill(displayMinutes(dailyGoal)),
-            borderColor: '#FF5722',
-            borderDash: [5, 5],
+            borderColor: '#2dd4bf',
+            borderWidth: 2,
             pointRadius: 0,
+            fill: false
           }]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+            x: { grid: { display: false }, ticks: { color: '#9aa8b5' } }
+          },
+          plugins: { legend: { labels: { color: '#dfeaf6' } } }
+        }
       });
     }
 
@@ -398,19 +639,34 @@
       if (dayOfWeekChart) dayOfWeekChart.destroy();
       const response = await fetch(`/api/analytics?chart=dayOfWeek&month=${month}`);
       const data = await response.json();
-      
+
       const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const chartData = Array(7).fill(0);
-      data.forEach(item => { chartData[item._id - 1] = item.avgMinutes.toFixed(0); });
-      
+      data.forEach(item => { chartData[item._id - 1] = Number(item.avgMinutes || 0); });
+
       const ctx = document.getElementById('dayOfWeekChart').getContext('2d');
       dayOfWeekChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: dayLabels,
-          datasets: [{ label: 'Avg Minutes', data: chartData, backgroundColor: 'rgba(253, 197, 0, 0.6)', borderColor: '#fdc500' }]
+          datasets: [{
+            label: 'Avg Minutes',
+            data: chartData,
+            backgroundColor: chartData.map(value => value < dailyGoal ? 'rgba(255, 214, 10, 0.85)' : 'rgba(56, 176, 0, 0.9)'),
+            borderColor: chartData.map(value => value < dailyGoal ? '#ffc300' : '#38b000'),
+            borderWidth: 1,
+            borderRadius: 6
+          }]
         },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+            x: { grid: { display: false }, ticks: { color: '#9aa8b5' } }
+          },
+          plugins: { legend: { display: false } }
+        }
       });
       const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
       document.getElementById('dayOfWeekTitle').innerText = `Productivity by Day (${monthName})`;
@@ -420,15 +676,31 @@
         if (goalAchievementChart) goalAchievementChart.destroy();
         const response = await fetch(`/api/analytics?chart=goalAchievement&month=${month}`);
         const data = await response.json();
-        
+
         const ctx = document.getElementById('goalAchievementChart').getContext('2d');
         goalAchievementChart = new Chart(ctx, {
-            type: 'doughnut',
+            type: 'bar',
             data: {
-                labels: ['Met', 'Below'],
-                datasets: [{ data: [data.met, data.notMet], backgroundColor: ['#4CAF50', '#FF5722'], borderColor: '#1e1e1e', borderWidth: 4 }]
+                labels: ['Met goal', 'Below goal'],
+                datasets: [{
+                    label: 'Days',
+                    data: [data.met, data.notMet],
+                    backgroundColor: ['rgba(56, 176, 0, 0.9)', 'rgba(255, 214, 10, 0.85)'],
+                    borderColor: ['#38b000', '#ffc300'],
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9aa8b5' } },
+                    y: { grid: { display: false }, ticks: { color: '#9aa8b5' } }
+                },
+                plugins: { legend: { display: false } }
+            }
         });
         const monthName = new Date(`${month}-02T12:00:00Z`).toLocaleString('default', { month: 'long', timeZone: 'UTC' });
         document.getElementById('goalAchievementTitle').innerText = `Goal Achievement (${monthName})`;
@@ -437,7 +709,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       // Init Top Widgets - Changed to all_time_hours default
       updateDistributionStats('all_time_hours');
-      renderMonthlyHistoryChart();
+      renderMonthlyHistoryCharts();
       
       const today = new Date();
       const currentYear = today.getFullYear();
@@ -454,9 +726,15 @@
       const startDateInput = document.getElementById('start-date');
       const endDateInput = document.getElementById('end-date');
       if(startDateInput && endDateInput) {
+          const defaultStart = new Date();
+          defaultStart.setDate(defaultStart.getDate() - 29);
+          const defaultStartStr = defaultStart.toISOString().split("T")[0];
+
+          startDateInput.value = defaultStartStr;
           endDateInput.value = todayStr;
           endDateInput.max = todayStr;
           startDateInput.max = todayStr;
+          renderDateRangeChart(defaultStartStr, todayStr);
       }
 
       render30DayChart();

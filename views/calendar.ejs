@@ -1,27 +1,51 @@
 <% 
   const yearValue = currentMonth.getUTCFullYear();
   const monthValue = currentMonth.getUTCMonth();
-  const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const daysInMonth = new Date(Date.UTC(yearValue, monthValue + 1, 0)).getUTCDate();
   const firstDay = (new Date(Date.UTC(yearValue, monthValue, 1)).getUTCDay() + 6) % 7;
   const today = new Date();
-  const todayKey = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const accountStartDate = new Date(user.createdAt || today);
-  const accountStartKey = Date.UTC(accountStartDate.getUTCFullYear(), accountStartDate.getUTCMonth(), accountStartDate.getUTCDate());
+  const accountStartKey = new Date(accountStartDate.getFullYear(), accountStartDate.getMonth(), accountStartDate.getDate()).getTime();
   const goalMinutes = user.dailyGoalMinutes || 300;
   const timeUnit = user.timeUnit || 'minutes';
-  const getEntry = (year, month, day) => logs.find(log => { const date = new Date(log.date); return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day; });
-  const getYearEntry = (year, month, day) => yearLogs.find(log => { const date = new Date(log.date); return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day; });
-  const getState = (minutes, dateKey) => minutes >= goalMinutes ? 'extra' : minutes > 0 ? 'focused' : dateKey >= accountStartKey && dateKey < todayKey ? 'missed' : 'future';
+  const getEntry = (year, month, day) => logs.find(log => { const date = new Date(log.date); return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day; });
+  const getYearEntry = (year, month, day) => yearLogs.find(log => { const date = new Date(log.date); return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day; });
+  const getStudyColor = (minutes, goal) => {
+    const value = Number(minutes) || 0;
+    const safeGoal = Math.max(Number(goal) || 1, 1);
+    if (value <= 0) return 'rgba(255,255,255,0.04)';
+    const ratio = value / safeGoal;
+    if (ratio < 0.3) return '#ffe169';
+    if (ratio < 0.6) return '#ffd60a';
+    if (ratio < 1) return '#ffc300';
+    if (ratio <= 1.1) return '#38b000';
+    if (ratio <= 1.3) return '#006400';
+    return '#004b23';
+  };
+  const getState = (minutes, dateKey) => {
+    if (dateKey > todayKey) return 'future';
+    if (minutes >= goalMinutes) return 'extra';
+    if (minutes > 0) return 'focused';
+    return dateKey >= accountStartKey && dateKey <= todayKey ? 'missed' : 'future';
+  };
   const getCellStyle = (minutes, dateKey) => {
-    if (dateKey >= todayKey) return '';
-    if (minutes <= 0) return 'background:linear-gradient(145deg,rgba(220,53,69,.34),rgba(55,12,16,.92));';
-    if (minutes >= goalMinutes) {
-      const intensity = Math.min(1, minutes / goalMinutes);
-      return `background:linear-gradient(145deg,rgba(57,211,83,${(0.2 + intensity * 0.25).toFixed(2)}),rgba(8,35,18,.94));`;
+    if (dateKey > todayKey) return '';
+
+    if (minutes <= 0) {
+      return 'background:linear-gradient(145deg,rgba(255,255,255,0.04),rgba(14,14,16,0.96)); border:1px solid rgba(255,120,130,0.18);';
     }
-    const progress = Math.min(1, minutes / goalMinutes);
-    return `background:linear-gradient(145deg,rgba(255,210,30,${(0.1 + progress * 0.42).toFixed(2)}),rgba(39,31,5,.94));`;
+
+    const safeGoal = Math.max(Number(goalMinutes) || 1, 1);
+    const ratio = (Number(minutes) || 0) / safeGoal;
+
+    if (ratio < 0.3) return 'background:linear-gradient(145deg,#ffe169,#f0d24a);';
+    if (ratio < 0.6) return 'background:linear-gradient(145deg,#ffd60a,#dba900);';
+    if (ratio < 1) return 'background:linear-gradient(145deg,#ffc300,#e0a400);';
+    if (ratio <= 1.1) return 'background:linear-gradient(145deg,#38b000,#1f7a00);';
+    if (ratio <= 1.3) return 'background:linear-gradient(145deg,#006400,#004d00);';
+    return 'background:linear-gradient(145deg,#004b23,#00371a);';
   };
   const monthValues = Array.from({ length: daysInMonth }, (_, index) => Number(getEntry(yearValue, monthValue, index + 1)?.minutes || 0));
   const monthTotal = monthValues.reduce((sum, value) => sum + value, 0);
@@ -86,17 +110,27 @@
     .calendar-view[hidden] { display:none; }
     .month-grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); overflow:hidden; border:1px solid var(--calendar-line); border-radius:16px; background:#090909; }
     .weekday { padding:16px 8px; border-right:1px solid var(--calendar-line); color:var(--calendar-muted); font-size:.75rem; font-weight:800; text-align:center; letter-spacing:.08em; }
-    .month-cell { position:relative; aspect-ratio:1 / 1; min-height:0; padding:10px; border-top:1px solid var(--calendar-line); border-right:1px solid var(--calendar-line); background:#111; overflow:hidden; }
-    .month-cell:nth-child(7n) { border-right:0; }
+    .month-cell { position:relative; aspect-ratio:1 / 1; min-height:0; padding:10px; border:1pt solid rgba(0,0,0,0.85); border-top:1pt solid rgba(0,0,0,0.85); border-right:1pt solid rgba(0,0,0,0.85); background:#111; overflow:hidden; }
+    .month-cell:nth-child(7n) { border-right:1pt solid rgba(0,0,0,0.85); }
     .month-cell.empty { background:#0a0a0a; }
     .month-cell .date-number { position:relative; z-index:2; color:#aeb3c0; font-size:.82rem; font-weight:800; }
-    .month-cell .focus-value { position:absolute; inset:38px 8px 8px; display:grid; place-items:center; color:#fff; font-size:1.2rem; font-weight:800; }
-    .month-cell.today::before { content:'•'; position:absolute; top:5px; right:7px; z-index:3; color:var(--calendar-accent); font-size:1.1rem; line-height:1; }
-    .month-cell.focused { background:linear-gradient(145deg,rgba(255,210,30,.16),#171507); }
-    .month-cell.extra { background:linear-gradient(145deg,rgba(57,211,83,.24),#0b1b10); }
-    .month-cell.missed { background:linear-gradient(145deg,rgba(220,53,69,.24),#170b0e); }
-    .month-cell.missed .focus-value { color:#ff7076; font-size:4rem; font-weight:300; line-height:1; text-shadow:0 0 22px rgba(255,80,90,.45); }
-    .month-cell.missed::after { content:''; position:absolute; inset:42px 18px 16px; border-radius:50%; background:rgba(255,55,65,.08); filter:blur(15px); }
+    .month-cell .focus-value {
+      position:absolute;
+      inset:38px 8px 8px;
+      display:grid;
+      place-items:center;
+      color:#fff;
+      font-size:1.2rem;
+      font-weight:800;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.6), 0 0 10px rgba(0,0,0,0.45);
+    }
+    .month-cell.today::before { content:'•'; position:absolute; top:5px; right:7px; z-index:3; color:#ff3b30; font-size:1.1rem; line-height:1; text-shadow:0 0 8px rgba(255,59,48,0.9); }
+    .month-cell.today { background:transparent; }
+    .month-cell.focused { background:transparent; }
+    .month-cell.extra { background:transparent; }
+    .month-cell.missed { background:linear-gradient(145deg,rgba(255,255,255,0.03),rgba(16,16,18,0.96)); box-shadow:inset 0 0 0 1px rgba(255,120,130,.18); }
+    .month-cell.missed .focus-value { color:rgba(255,124,134,.9); font-size:4rem; font-weight:300; line-height:1; text-shadow:none; }
+    .month-cell.missed::after { content:''; position:absolute; inset:42px 18px 16px; border-radius:12px; background:rgba(255,120,130,.04); filter:none; }
     .week-grid { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:18px; }
     .week-card { min-height:290px; padding:18px; border:1px solid var(--calendar-line); border-radius:14px; background:#111; }
     .week-card h3 { margin:0 0 5px; color:#fff; font-size:1.35rem; }
@@ -105,10 +139,10 @@
     .week-card .week-average { margin-top:4px; color:var(--calendar-muted); font-size:.8rem; }
     .week-bars { display:flex; align-items:flex-end; gap:7px; height:145px; margin-top:16px; padding-top:10px; border-bottom:1px solid var(--calendar-line); }
     .week-day { height:100%; flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:7px; }
-    .week-day-bar { position:relative; width:100%; min-height:0; border-radius:5px 5px 0 0; background:#ffd21e; box-shadow:0 0 15px rgba(255,210,30,.2); cursor:help; }
+    .week-day-bar { position:relative; width:100%; min-height:0; border-radius:5px 5px 0 0; background:linear-gradient(180deg,#fff75e 0%, #ffda3d 50%, #ffc300 100%); box-shadow:0 0 15px rgba(255,195,0,.2); cursor:help; }
     .week-day-bar::after { content:attr(data-value); position:absolute; left:50%; bottom:calc(100% + 8px); z-index:5; padding:5px 7px; border:1px solid rgba(255,255,255,.15); border-radius:6px; background:#050505; color:#fff; font-size:.72rem; font-weight:700; white-space:nowrap; opacity:0; pointer-events:none; transform:translate(-50%, 4px); transition:opacity .16s ease,transform .16s ease; }
     .week-day-bar:hover::after { opacity:1; transform:translate(-50%, 0); }
-    .week-day-bar.extra { background:#39d353; box-shadow:0 0 15px rgba(57,211,83,.2); }
+    .week-day-bar.extra { background:linear-gradient(180deg,#007200 0%, #006400 45%, #004b23 100%); box-shadow:0 0 15px rgba(0,75,35,.2); }
     .week-day-label { color:var(--calendar-muted); font-size:.7rem; }
     .year-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:18px; }
     .year-card { padding:14px; border:1px solid var(--calendar-line); border-radius:13px; background:#111; cursor:pointer; transition:border-color .2s ease,transform .2s ease; }
@@ -118,11 +152,11 @@
     .year-card-summary { margin-bottom:15px; color:var(--calendar-muted); font-size:.75rem; }
     .year-weekdays, .year-days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
     .year-weekdays span { color:var(--calendar-muted); font-size:.6rem; text-align:center; }
-    .year-day { position:relative; aspect-ratio:1; display:grid; place-items:center; border-radius:5px; background:#202020; color:rgba(174,179,192,.42); font-size:.65rem; }
+    .year-day { position:relative; aspect-ratio:1; display:grid; place-items:center; border:1pt solid rgba(0,0,0,0.85); border-radius:5px; background:#202020; color:rgba(174,179,192,.42); font-size:.65rem; }
     .year-day.empty { background:transparent; }
-    .year-day.focused { background:#806d13; color:rgba(255,255,255,.24); }
-    .year-day.extra { background:#207b36; color:rgba(255,255,255,.24); }
-    .year-day.missed { background:rgba(255,62,72,.14); color:rgba(255,112,118,.58); }
+    .year-day.focused { background:transparent; color:rgba(255,255,255,.24); }
+    .year-day.extra { background:transparent; color:rgba(255,255,255,.24); }
+    .year-day.missed { background:linear-gradient(135deg,rgba(255,255,255,0.03),rgba(16,16,18,0.96)); border:1px solid rgba(255,120,130,.18); color:rgba(255,174,180,.8); }
     .year-day.missed::after { content:'×'; position:absolute; font-size:1.1rem; }
     .year-day.missed span { opacity:.45; }
     .calendar-legend { display:flex; justify-content:flex-end; gap:18px; margin-top:14px; color:var(--calendar-muted); font-size:.75rem; }
@@ -188,7 +222,7 @@
     <form class="calendar-form" id="calendar-log-form" action="/add-study-log" method="POST" hidden>
       <div class="calendar-form-grid">
         <div><label for="calendar-date">Date</label><input id="calendar-date" type="date" name="date" required></div>
-        <div><label for="calendar-value"><%= timeUnit === 'hours' ? 'Hours' : 'Minutes' %></label><input id="calendar-value" type="number" name="minutes" min="0" max="<%= timeUnit === 'hours' ? '24' : '1440' %>" step="<%= timeUnit === 'hours' ? '0.1' : '1' %>" required><input type="hidden" name="timeUnit" value="<%= timeUnit %>"></div>
+        <div><label for="calendar-value"><%= timeUnit === 'hours' ? 'Hours' : 'Minutes' %></label><input id="calendar-value" type="number" name="minutes" min="0" max="<%= timeUnit === 'hours' ? '23.98' : '1439' %>" step="<%= timeUnit === 'hours' ? '0.1' : '1' %>" required><input type="hidden" name="timeUnit" value="<%= timeUnit %>"></div>
         <div><label>Update mode</label><div class="calendar-mode-toggle" role="group" aria-label="Focus update mode"><button type="button" class="active" data-calendar-log-mode="add">Add</button><button type="button" data-calendar-log-mode="reset">Reset</button></div><input type="hidden" id="calendar-mode" name="mode" value="add"></div>
         <button type="submit">Save</button>
       </div>
@@ -203,7 +237,7 @@
       <div class="month-grid">
         <% ['MON','TUE','WED','THU','FRI','SAT','SUN'].forEach(day => { %><div class="weekday"><%= day %></div><% }) %>
         <% for (let blank = 0; blank < firstDay; blank++) { %><div class="month-cell empty"></div><% } %>
-        <% for (let day = 1; day <= daysInMonth; day++) { const value = monthValues[day - 1]; const dateKey = Date.UTC(yearValue, monthValue, day); const state = getState(value, dateKey); const isToday = dateKey === todayKey; const dayString = `${yearValue}-${String(monthValue + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; %><div class="month-cell <%= state %> <%= isToday ? 'today' : '' %>" style="<%= getCellStyle(value, dateKey) %>" data-date="<%= dayString %>" tabindex="0" role="button" aria-label="Open details for <%= dayString %>"><span class="date-number"><%= day %></span><span class="focus-value"><%= state === 'missed' ? '×' : value ? formatMinutes(value, timeUnit) : '' %></span></div><% } %>
+        <% for (let day = 1; day <= daysInMonth; day++) { const value = monthValues[day - 1]; const dateKey = new Date(yearValue, monthValue, day).getTime(); const state = getState(value, dateKey); const isToday = dateKey === todayKey; const dayString = `${yearValue}-${String(monthValue + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`; %><div class="month-cell <%= state %> <%= isToday ? 'today' : '' %>" style="<%= getCellStyle(value, dateKey) %>" data-date="<%= dayString %>" tabindex="0" role="button" aria-label="Open details for <%= dayString %>"><span class="date-number"><%= day %></span><span class="focus-value"><%= state === 'missed' ? '×' : value ? formatMinutes(value, timeUnit) : '' %></span></div><% } %>
       </div>
       <div class="calendar-legend"><span><i class="legend-dot red"></i>No input</span><span><i class="legend-dot"></i>Goal progress</span><span><i class="legend-dot green"></i>Above goal</span></div>
     </section>
@@ -219,7 +253,7 @@
     <section class="calendar-view" data-view="year" hidden>
       <div class="year-grid">
         <% for (let month = 0; month < 12; month++) { const monthDate = new Date(Date.UTC(yearValue, month, 1)); const length = new Date(Date.UTC(yearValue, month + 1, 0)).getUTCDate(); const offset = (monthDate.getUTCDay() + 6) % 7; const values = Array.from({ length }, (_, index) => Number(getYearEntry(yearValue, month, index + 1)?.minutes || 0)); const total = values.reduce((sum, value) => sum + value, 0); const logged = values.filter(value => value > 0).length; %>
-          <article class="year-card <%= yearValue === today.getUTCFullYear() && month === today.getUTCMonth() ? 'current-month' : '' %>" data-month="<%= month %>"><h3><%= monthDate.toLocaleDateString('en-US', { month:'long', timeZone:'UTC' }) %></h3><div class="year-card-summary">Click to open month view</div><div class="year-weekdays"><% ['M','T','W','T','F','S','S'].forEach(day => { %><span><%= day %></span><% }) %></div><div class="year-days"><% for (let blank = 0; blank < offset; blank++) { %><span class="year-day empty"></span><% } %><% values.forEach((value, index) => { const day = index + 1; const dateKey = Date.UTC(yearValue, month, day); const state = getState(value, dateKey); %><span class="year-day <%= state %>" style="<%= getCellStyle(value, dateKey) %>"><span><%= day %></span></span><% }) %></div></article>
+          <article class="year-card <%= yearValue === today.getFullYear() && month === today.getMonth() ? 'current-month' : '' %>" data-month="<%= month %>"><h3><%= monthDate.toLocaleDateString('en-US', { month:'long' }) %></h3><div class="year-card-summary">Click to open month view</div><div class="year-weekdays"><% ['M','T','W','T','F','S','S'].forEach(day => { %><span><%= day %></span><% }) %></div><div class="year-days"><% for (let blank = 0; blank < offset; blank++) { %><span class="year-day empty"></span><% } %><% values.forEach((value, index) => { const day = index + 1; const dateKey = new Date(yearValue, month, day).getTime(); const state = getState(value, dateKey); %><span class="year-day <%= state %>" style="<%= getCellStyle(value, dateKey) %>"><span><%= day %></span></span><% }) %></div></article>
         <% } %>
       </div>
     </section>
@@ -406,15 +440,23 @@
       document.querySelectorAll('.month-cell[data-date]').forEach(cell => {
         const value = monthValues.get(cell.dataset.date) || 0;
         const dateKey = Date.parse(`${cell.dataset.date}T00:00:00Z`);
-        const state = value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : dateKey >= accountStartKey && dateKey < todayKey ? 'missed' : 'future';
+        const state = dateKey > todayKey ? 'future' : value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : dateKey >= accountStartKey && dateKey <= todayKey ? 'missed' : 'future';
         monthTotal += value;
         if (value > 0) monthLoggedDays += 1;
         cell.classList.remove('extra', 'focused', 'missed', 'future');
         cell.classList.add(state);
         cell.querySelector('.focus-value').textContent = state === 'missed' ? '×' : value ? formatValue(value) : '';
-        if (dateKey >= todayKey || !value) cell.style.background = '';
-        else if (value >= goalMinutes) cell.style.background = `linear-gradient(145deg,rgba(57,211,83,${Math.min(1, .2 + value / goalMinutes * .25).toFixed(2)}),rgba(8,35,18,.94))`;
-        else cell.style.background = `linear-gradient(145deg,rgba(255,210,30,${(.1 + Math.min(1, value / goalMinutes) * .42).toFixed(2)}),rgba(39,31,5,.94))`;
+        if (dateKey > todayKey) cell.style.background = '';
+        else if (value <= 0) cell.style.background = 'linear-gradient(145deg,rgba(255,255,255,0.03),rgba(14,14,16,0.96))';
+        else {
+          const ratio = value / goalMinutes;
+          if (ratio < 0.3) cell.style.background = 'linear-gradient(145deg,#ffe169,#f0d24a)';
+          else if (ratio < 0.6) cell.style.background = 'linear-gradient(145deg,#ffd60a,#dba900)';
+          else if (ratio < 1) cell.style.background = 'linear-gradient(145deg,#ffc300,#e0a400)';
+          else if (ratio <= 1.1) cell.style.background = 'linear-gradient(145deg,#38b000,#1f7a00)';
+          else if (ratio <= 1.3) cell.style.background = 'linear-gradient(145deg,#006400,#004d00)';
+          else cell.style.background = 'linear-gradient(145deg,#004b23,#00371a)';
+        }
       });
       document.querySelectorAll('.year-card').forEach(card => {
         const year = Number(root.dataset.year);
@@ -428,11 +470,20 @@
           const day = Number(dayCell.querySelector('span')?.textContent);
           const value = values[day - 1] || 0;
           const dateKey = Date.UTC(year, month, day);
+          const state = dateKey > todayKey ? 'future' : value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : dateKey >= accountStartKey && dateKey <= todayKey ? 'missed' : 'future';
           dayCell.classList.remove('extra', 'focused', 'missed', 'future');
-          dayCell.classList.add(value >= goalMinutes ? 'extra' : value > 0 ? 'focused' : 'future');
-          if (dateKey >= todayKey || !value) dayCell.style.background = '';
-          else if (value >= goalMinutes) dayCell.style.background = `linear-gradient(145deg,rgba(57,211,83,${Math.min(1, .2 + value / goalMinutes * .25).toFixed(2)}),rgba(8,35,18,.94))`;
-          else dayCell.style.background = `linear-gradient(145deg,rgba(255,210,30,${(.1 + Math.min(1, value / goalMinutes) * .42).toFixed(2)}),rgba(39,31,5,.94))`;
+          dayCell.classList.add(state);
+          if (dateKey > todayKey) dayCell.style.background = '';
+          else if (value <= 0) dayCell.style.background = 'linear-gradient(135deg,rgba(255,255,255,0.03),rgba(16,16,18,0.96))';
+          else {
+            const ratio = value / goalMinutes;
+            if (ratio < 0.3) dayCell.style.background = 'linear-gradient(145deg,#ffe169,#f0d24a)';
+            else if (ratio < 0.6) dayCell.style.background = 'linear-gradient(145deg,#ffd60a,#dba900)';
+            else if (ratio < 1) dayCell.style.background = 'linear-gradient(145deg,#ffc300,#e0a400)';
+            else if (ratio <= 1.1) dayCell.style.background = 'linear-gradient(145deg,#38b000,#1f7a00)';
+            else if (ratio <= 1.3) dayCell.style.background = 'linear-gradient(145deg,#006400,#004d00)';
+            else dayCell.style.background = 'linear-gradient(145deg,#004b23,#00371a)';
+          }
         });
       });
       document.querySelectorAll('.week-card').forEach(card => {
@@ -506,6 +557,13 @@
       document.getElementById('calendar-log-form')?.addEventListener('submit', async event => {
         event.preventDefault();
         const form = event.currentTarget;
+        const value = Number(form.elements.minutes?.value || 0);
+        const unit = form.elements.timeUnit?.value === 'hours' ? 'hours' : 'minutes';
+        const totalMinutes = unit === 'hours' ? value * 60 : value;
+        if (!Number.isFinite(value) || value < 0 || totalMinutes > 1439) {
+          alert('Daily study time cannot exceed 23 hours 59 minutes.');
+          return;
+        }
         const button = form.querySelector('button[type="submit"]');
         button.disabled = true;
         button.textContent = 'Saving...';

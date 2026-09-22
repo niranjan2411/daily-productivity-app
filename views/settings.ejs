@@ -102,7 +102,7 @@
     <section class="settings-section">
       <div class="settings-section-header"><div><h2>Daily focus goal</h2><p>Set the number of minutes you want to complete each day.</p></div><span class="settings-section-badge">Productivity</span></div>
       <form class="settings-form" action="/update-goal" method="POST">
-        <div class="settings-form-group"><label for="dailyGoalMinutes">Daily goal in <%= user.timeUnit === 'hours' ? 'hours' : 'minutes' %></label><input type="number" id="dailyGoalMinutes" name="dailyGoalMinutes" value="<%= user.timeUnit === 'hours' ? Math.round((user.dailyGoalMinutes / 60) * 10) / 10 : user.dailyGoalMinutes %>" step="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" min="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" max="<%= user.timeUnit === 'hours' ? '24' : '1440' %>" required><input type="hidden" name="timeUnit" value="<%= user.timeUnit === 'hours' ? 'hours' : 'minutes' %>"></div>
+        <div class="settings-form-group"><label for="dailyGoalMinutes">Daily goal in <%= user.timeUnit === 'hours' ? 'hours' : 'minutes' %></label><input type="number" id="dailyGoalMinutes" name="dailyGoalMinutes" value="<%= user.timeUnit === 'hours' ? Math.round((user.dailyGoalMinutes / 60) * 10) / 10 : user.dailyGoalMinutes %>" step="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" min="<%= user.timeUnit === 'hours' ? '0.1' : '1' %>" max="<%= user.timeUnit === 'hours' ? '23.98' : '1439' %>" required><input type="hidden" name="timeUnit" value="<%= user.timeUnit === 'hours' ? 'hours' : 'minutes' %>"></div>
         <button type="submit" class="btn">Update goal</button>
       </form>
     </section>

@@ -1,3 +1,26 @@
+<%
+  const heatmapValues = new Map((heatmapLogs || []).map(log => [new Date(log.date).toISOString().slice(0, 10), Number(log.minutes) || 0]));
+  const heatmapGridStart = new Date(heatmapStart || new Date());
+  const heatmapTodayKey = new Date();
+  heatmapTodayKey.setHours(0, 0, 0, 0);
+  const heatmapMonthLabels = Array.from({ length: 53 }, (_, week) => {
+    const date = new Date(heatmapGridStart);
+    date.setUTCDate(date.getUTCDate() + week * 7);
+    return date.getUTCDate() <= 7 ? date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }) : '';
+  });
+  const heatmapColor = (minutes, date) => {
+    if (date > heatmapTodayKey) return '#10171a';
+    if (!minutes) return '#4a1720';
+    const goal = profile?.dailyGoalMinutes || 300;
+    const ratio = minutes / goal;
+    if (ratio < 0.3) return '#ffe169';
+    if (ratio < 0.6) return '#ffd60a';
+    if (ratio < 1) return '#ffc300';
+    if (ratio <= 1.1) return '#38b000';
+    if (ratio <= 1.3) return '#006400';
+    return '#004b23';
+  };
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,50 +30,296 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <style>
-    .public-profile-page { max-width:760px; margin:0 auto; padding-top:70px; }
-    .public-profile-card { padding:34px; border:1px solid rgba(0,242,234,.18); border-radius:20px; background:linear-gradient(135deg, rgba(0,242,234,.1), rgba(20,20,20,.88)); }
-    .public-profile-identity { display:flex; align-items:center; gap:18px; margin-bottom:28px; }
-    .public-profile-avatar { width:72px; height:72px; display:grid; place-items:center; border-radius:50%; background:#00f2ea; color:#041414; font-size:1.8rem; font-weight:800; }
-    .public-profile-card h1 { margin:0 0 4px; }
-    .public-profile-username { color:#00f2ea; }
-    .public-profile-label { color:#999; font-size:.82rem; }
-    .public-profile-stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
-    .public-profile-stat { padding:18px 12px; border-radius:10px; background:rgba(255,255,255,.06); text-align:center; }
-    .public-profile-stat strong { display:block; color:#ffd700; font-size:1.4rem; margin-bottom:5px; }
-    .public-profile-stat span { color:#888; font-size:.75rem; }
-    .public-profile-note { margin-top:20px; color:#888; font-size:.85rem; }
-    .public-profile-unavailable { text-align:center; }
-    @media (max-width:600px) { .public-profile-page { padding:30px 15px; } .public-profile-card { padding:24px; } .public-profile-stats { grid-template-columns:1fr; } }
+    :root {
+      --green-1: #aef3cd;
+      --green-2: #77d9a0;
+      --green-3: #3fbe7e;
+      --green-4: #1e8a5d;
+      --grey-1: #f3f5f4;
+      --grey-2: #d9ddd9;
+      --grey-3: #949a96;
+      --grey-4: #2a2f2b;
+      --grey-5: #171b19;
+      --black-1: #0b0d0c;
+      --black-2: #111613;
+      --panel: rgba(23, 27, 25, 0.9);
+      --panel-soft: rgba(18, 22, 20, 0.82);
+      --border: rgba(255,255,255,0.08);
+      --cta: #dfe7e3;
+      --cta-strong: #8be2b1;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin:0; color:#edf3ef; background:#000;
+    }
+
+    .public-profile-page {
+      min-height:100vh; padding:28px 20px 80px; background:transparent;
+    }
+    .public-profile-shell {
+      width:100%; max-width:1220px; margin:0 auto; display:flex; flex-direction:column; gap:20px;
+    }
+    .public-profile-topbar {
+      display:flex; align-items:center; justify-content:space-between; padding:8px 0 0;
+    }
+    .public-profile-back {
+      display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:12px; border:1px solid rgba(160, 200, 180, 0.25);
+      background:rgba(17, 21, 19, 0.75); color:#edf5f0; text-decoration:none; font-weight:700; box-shadow:0 8px 18px rgba(0,0,0,0.18);
+    }
+
+    .public-profile-header {
+      display:grid; grid-template-columns:1.25fr 0.75fr; gap:18px; align-items:stretch; min-height:200px;
+    }
+    .public-profile-identity {
+      display:flex; align-items:center; justify-content:space-between; gap:18px; padding:28px 30px; border-radius:24px;
+      background:linear-gradient(145deg, rgba(221, 233, 225, 0.04), rgba(12,14,13,0.92));
+      border:1px solid rgba(160, 200, 180, 0.18);
+      box-shadow:0 20px 48px rgba(0,0,0,0.2);
+    }
+    .public-profile-main {
+      display:flex; align-items:center; gap:18px; min-width:0;
+    }
+    .public-profile-level-badge {
+      width:110px; height:110px; border-radius:18px; display:grid; place-items:center;
+      background:linear-gradient(135deg, rgba(160, 228, 189, 0.35), rgba(52, 70, 62, 0.9));
+      border:1px solid rgba(160, 228, 189, 0.3); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05), 0 20px 28px rgba(0,0,0,0.2);
+      text-align:center;
+    }
+    .public-profile-level-badge strong {
+      display:block; font-size:2.2rem; line-height:1; color:#f1f7f4; letter-spacing:-.06em;
+    }
+    .public-profile-level-badge span {
+      display:block; margin-top:8px; font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--green-1);
+    }
+    .public-profile-user { min-width:0; }
+    .public-profile-user h1 {
+      margin:0 0 8px; font-size:clamp(2.2rem, 4vw, 3.2rem); letter-spacing:-.05em; color:#f6faf7;
+    }
+    .public-profile-username { color:var(--green-2); font-size:1rem; margin-bottom:8px; }
+    .public-profile-status {
+      display:inline-flex; align-items:center; gap:8px; font-size:.74rem; letter-spacing:.12em; text-transform:uppercase; color:var(--grey-2);
+    }
+    .public-profile-status .dot {
+      width:8px; height:8px; border-radius:50%; background:var(--green-2); box-shadow:0 0 16px rgba(119,217,160,0.7);
+    }
+
+    .public-profile-rect-box {
+      width:100%; max-width:280px; min-height:120px; padding:18px 18px 16px; border-radius:18px;
+      background:linear-gradient(145deg, rgba(255,255,255,0.04), rgba(17,21,19,0.96));
+      border:1px solid rgba(160, 200, 180, 0.2); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+    .public-profile-rect-box .label {
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; color:var(--grey-2); font-size:.7rem; letter-spacing:.12em; text-transform:uppercase;
+    }
+    .public-profile-rect-box .value {
+      display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px;
+    }
+    .public-profile-rect-box strong {
+      font-size:2rem; color:#f0f7f2; letter-spacing:-.05em;
+    }
+    .public-profile-rect-box span {
+      font-size:.72rem; color:var(--green-1); text-transform:uppercase; letter-spacing:.1em;
+    }
+    .public-profile-mini-bar {
+      height:8px; border-radius:999px; background:rgba(255,255,255,0.08); overflow:hidden; border:1px solid rgba(255,255,255,0.03);
+    }
+    .public-profile-mini-bar > i {
+      display:block; height:100%; width:72%; border-radius:inherit; background:linear-gradient(90deg, var(--green-2), var(--green-1));
+    }
+
+    .public-profile-stats {
+      display:grid; grid-template-columns:repeat(5, minmax(120px, 1fr)); gap:14px;
+    }
+    .public-profile-stat {
+      padding:18px 14px; border-radius:18px; background:linear-gradient(180deg, rgba(24, 28, 27, 0.9), rgba(12,15,14,0.9));
+      border:1px solid rgba(160, 200, 180, 0.15); box-shadow:0 14px 28px rgba(0,0,0,0.12);
+      display:flex; flex-direction:column; gap:10px; min-height:120px;
+    }
+    .public-profile-stat .label {
+      font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--grey-2);
+    }
+    .public-profile-stat strong {
+      font-size:1.5rem; letter-spacing:-.04em; color:var(--green-1);
+    }
+    .public-profile-stat .meta {
+      font-size:.72rem; color:var(--grey-3);
+    }
+
+    .public-profile-heatmap {
+      padding:26px 22px 18px; border-radius:24px; background:rgba(12,15,14,0.9);
+      border:1px solid rgba(160, 200, 180, 0.16); box-shadow:0 18px 40px rgba(0,0,0,0.18);
+    }
+    .public-profile-heatmap-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+    .public-profile-heatmap-header h2 { margin:0; font-size:1.28rem; }
+    .public-profile-heatmap-label { color:var(--green-2); font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; }
+    .public-profile-heatmap-scroll { overflow-x:auto; }
+    .public-profile-heatmap-chart { min-width:860px; }
+    .public-profile-heatmap-months { display:grid; grid-template-columns:repeat(53,minmax(10px,1fr)); gap:6px; margin-left:46px; height:22px; color:#8f98a5; font-size:.78rem; }
+    .public-profile-heatmap-months span { white-space:nowrap; }
+    .public-profile-heatmap-body { display:grid; grid-template-columns:38px 1fr; gap:8px; }
+    .public-profile-heatmap-weekdays { display:grid; grid-template-rows:repeat(7,13px); gap:6px; color:#8f98a5; font-size:.75rem; }
+    .public-profile-heatmap-weekdays span { align-self:center; }
+    .public-profile-heatmap-grid { display:grid; grid-template-columns:repeat(53,minmax(10px,1fr)); grid-template-rows:repeat(7,13px); grid-auto-flow:column; gap:6px; }
+    .public-profile-heatmap-cell { position:relative; border:1px solid rgba(255,255,255,.08); border-radius:3px; cursor:default; }
+    .public-profile-heatmap-cell::after { content:''; position:absolute; inset:0; opacity:0; pointer-events:none; }
+    .public-profile-heatmap-cell:hover { filter:none; }
+    .public-profile-heatmap-footer { display:flex; justify-content:flex-end; align-items:center; gap:9px; margin-top:22px; color:#8f98a5; font-size:.78rem; }
+    .public-profile-heatmap-legend { display:flex; gap:7px; }
+    .public-profile-heatmap-swatch { width:14px; height:14px; border:1px solid rgba(255,255,255,.1); border-radius:4px; }
+    .public-profile-heatmap-swatch.zero { background:#4a1720; }
+    .public-profile-heatmap-swatch.yellow-light { background:#ffe169; }
+    .public-profile-heatmap-swatch.yellow-mid { background:#ffd60a; }
+    .public-profile-heatmap-swatch.yellow-dark { background:#ffc300; }
+    .public-profile-heatmap-swatch.green-light { background:#38b000; }
+    .public-profile-heatmap-swatch.green-mid { background:#006400; }
+    .public-profile-heatmap-swatch.green-dark { background:#004b23; }
+
+    .public-profile-cta {
+      display:flex; justify-content:center; margin-top:20px;
+    }
+    .public-profile-cta a {
+      display:inline-flex; align-items:center; justify-content:center; min-width:260px; padding:16px 22px; border-radius:14px;
+      border:1px solid rgba(188, 215, 204, 0.22); background:linear-gradient(135deg, #dfe7e3 0%, #b8d5c4 30%, #75b98f 100%);
+      color:#0d120f; font-weight:900; letter-spacing:.04em; text-transform:uppercase; text-decoration:none; box-shadow:0 16px 28px rgba(142, 204, 170, 0.18);
+    }
+    .public-profile-cta a:hover { transform:translateY(-1px); }
+
+    .public-profile-unavailable {
+      text-align:center; padding:52px 20px; border-radius:24px; background:linear-gradient(145deg, rgba(221, 233, 225, 0.04), rgba(12,14,13,0.92));
+      border:1px solid rgba(160, 200, 180, 0.18); box-shadow:0 20px 48px rgba(0,0,0,0.2);
+    }
+    .public-profile-unavailable .public-profile-level-badge {
+      margin:0 auto 18px; background:linear-gradient(135deg, rgba(160, 228, 189, 0.15), rgba(52, 70, 62, 0.9));
+    }
+    .public-profile-unavailable h1 { margin:0 0 12px; }
+    .public-profile-note { margin-top:16px; color:var(--grey-2); font-size:.92rem; }
+
+    @media (max-width:980px) {
+      .public-profile-header { grid-template-columns:1fr; }
+    }
+    @media (max-width:760px) {
+      .public-profile-stats { grid-template-columns:repeat(2, minmax(120px, 1fr)); }
+    }
+    @media (max-width:520px) {
+      .public-profile-page { padding:16px 12px 50px; }
+      .public-profile-identity { flex-direction:column; align-items:flex-start; }
+      .public-profile-main { width:100%; }
+      .public-profile-stats { grid-template-columns:1fr; }
+      .public-profile-level-badge { width:86px; height:86px; }
+    }
   </style>
 </head>
 <body>
   <main class="public-profile-page">
-    <section class="public-profile-card">
+    <section class="public-profile-shell">
       <% if (profile) { %>
-        <div class="public-profile-identity">
-          <div class="public-profile-avatar"><%= (profile.username || '?').charAt(0).toUpperCase() %></div>
-          <div>
-            <h1><%= profile.name %></h1>
-            <div class="public-profile-username">@<%= profile.username %></div>
+        <div class="public-profile-topbar">
+          <a class="public-profile-back" href="javascript:history.back()">← Back</a>
+        </div>
+
+        <div class="public-profile-header">
+          <div class="public-profile-identity">
+            <div class="public-profile-main">
+              <div class="public-profile-level-badge" aria-label="Current level">
+                <div>
+                  <strong><%= profile.level %></strong>
+                  <span>Level</span>
+                </div>
+              </div>
+              <div class="public-profile-user">
+                <div class="public-profile-status"><span class="dot"></span> Public profile</div>
+                <h1><%= profile.name %></h1>
+                <div class="public-profile-username">@<%= profile.username %></div>
+                <div class="public-profile-status"><span class="dot"></span> Focus journey</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="public-profile-rect-box">
+            <div class="label">
+              <span>XP</span>
+              <span><%= profile.xp %></span>
+            </div>
+            <div class="value">
+              <strong><%= profile.xp %></strong>
+              <span>Score</span>
+            </div>
+            <div class="public-profile-mini-bar"><i></i></div>
           </div>
         </div>
-        <div class="public-profile-label">Public profile</div>
+
         <div class="public-profile-stats">
-          <div class="public-profile-stat"><strong><%= formatMinutes(profile.totalFocusMinutes, profile.timeUnit) %></strong><span>All-time focus</span></div>
-          <div class="public-profile-stat"><strong><%= formatMinutes(profile.averageWeeklyFocusMinutes, profile.timeUnit) %></strong><span>Weekly average</span></div>
-          <div class="public-profile-stat"><strong><%= formatMinutes(profile.averageMonthlyFocusMinutes, profile.timeUnit) %></strong><span>Monthly average</span></div>
+          <div class="public-profile-stat">
+            <span class="label">Today</span>
+            <strong><%= formatMinutes(todayFocusMinutes, profile.timeUnit) %></strong>
+            <span class="meta">Focus time</span>
+          </div>
+          <div class="public-profile-stat">
+            <span class="label">Yesterday</span>
+            <strong><%= formatMinutes(yesterdayFocusMinutes, profile.timeUnit) %></strong>
+            <span class="meta">Focus time</span>
+          </div>
+          <div class="public-profile-stat">
+            <span class="label">Total</span>
+            <strong><%= formatMinutes(profile.totalFocusMinutes, profile.timeUnit) %></strong>
+            <span class="meta">All time</span>
+          </div>
+          <div class="public-profile-stat">
+            <span class="label">Last week</span>
+            <strong><%= formatMinutes(lastWeekFocusMinutes, profile.timeUnit) %></strong>
+            <span class="meta">7-day total</span>
+          </div>
+          <div class="public-profile-stat">
+            <span class="label">This month</span>
+            <strong><%= formatMinutes(currentMonthFocusMinutes, profile.timeUnit) %></strong>
+            <span class="meta">Current month</span>
+          </div>
         </div>
-        <p class="public-profile-note">Only public focus summaries are shared. Private account details and settings are hidden.</p>
+
+        <div class="public-profile-heatmap">
+          <div class="public-profile-heatmap-header">
+            <h2>365-Day Focus Heatmap</h2>
+            <span class="public-profile-heatmap-label">Study graph</span>
+          </div>
+          <div class="public-profile-heatmap-scroll">
+            <div class="public-profile-heatmap-chart">
+              <div class="public-profile-heatmap-months"><% heatmapMonthLabels.forEach(label => { %><span><%= label %></span><% }) %></div>
+              <div class="public-profile-heatmap-body">
+                <div class="public-profile-heatmap-weekdays"><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span><span></span></div>
+                <div class="public-profile-heatmap-grid">
+                  <% for (let week = 0; week < 53; week++) { for (let day = 0; day < 7; day++) { const cellDate = new Date(heatmapGridStart); cellDate.setUTCDate(cellDate.getUTCDate() + week * 7 + day); const dateKey = cellDate.toISOString().slice(0, 10); const minutes = heatmapValues.get(dateKey) || 0; %><span class="public-profile-heatmap-cell" style="background:<%= heatmapColor(minutes, cellDate) %>" aria-hidden="true"></span><% } } %>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="public-profile-heatmap-footer"><span>0 focus</span><div class="public-profile-heatmap-legend" aria-hidden="true"><span class="public-profile-heatmap-swatch zero"></span><span class="public-profile-heatmap-swatch yellow-light"></span><span class="public-profile-heatmap-swatch yellow-mid"></span><span class="public-profile-heatmap-swatch yellow-dark"></span><span class="public-profile-heatmap-swatch green-light"></span><span class="public-profile-heatmap-swatch green-mid"></span><span class="public-profile-heatmap-swatch green-dark"></span></div><span>Deep focus</span></div>
+        </div>
+
+        <div class="public-profile-cta">
+          <a href="/signup">Start your focus journey</a>
+        </div>
       <% } else if (isPrivate) { %>
         <div class="public-profile-unavailable">
-          <div class="public-profile-avatar" style="margin:0 auto 18px; background:#2a2a2a; color:#bbb;">🔒</div>
+          <div class="public-profile-level-badge" aria-hidden="true">
+            <div>
+              <strong>🔒</strong>
+              <span>Private</span>
+            </div>
+          </div>
           <h1>This account is private</h1>
           <p class="public-profile-note">Only approved public profile information can be viewed.</p>
+          <div class="public-profile-cta" style="margin-top:18px;">
+            <a href="/signup">Start your focus journey</a>
+          </div>
         </div>
       <% } else { %>
         <div class="public-profile-unavailable">
           <h1>Profile unavailable</h1>
           <p class="public-profile-note">This username does not exist or the profile is private.</p>
+          <div class="public-profile-cta" style="margin-top:18px;">
+            <a href="/signup">Start your focus journey</a>
+          </div>
         </div>
       <% } %>
     </section>

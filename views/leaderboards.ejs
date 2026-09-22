@@ -10,11 +10,16 @@
     .leaderboard-tabs button { border:1px solid rgba(255,255,255,.15); background:#1d1d1d; color:#fff; border-radius:8px; padding:10px 16px; cursor:pointer; }
     .leaderboard-tabs button.active { background:#00f2ea; color:#041414; }
     .leaderboard-list { background:#151515; border:1px solid rgba(255,255,255,.08); border-radius:14px; overflow:hidden; }
-    .leaderboard-row { display:grid; grid-template-columns:70px 1fr 150px; gap:12px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.07); align-items:center; }
+    .leaderboard-summary { margin:0 0 14px; color:#b7beca; font-size:.9rem; }
+    .leaderboard-summary strong { color:#00f2ea; }
+    .leaderboard-row { display:grid; grid-template-columns:70px 1fr 150px; gap:12px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.07); align-items:center; text-decoration:none; color:inherit; }
     .leaderboard-row:last-child { border-bottom:0; }
     .leaderboard-head { color:#888; font-size:.78rem; text-transform:uppercase; }
     .leaderboard-rank { color:#ffd700; font-weight:800; }
     .leaderboard-row.current-user { background:rgba(0,242,234,.08); }
+    .leaderboard-row:hover { background:rgba(255,255,255,.02); }
+    .leaderboard-user { display:flex; align-items:center; gap:8px; color:#f5f5f5; }
+    .leaderboard-user small { color:#98a1b2; }
     .leaderboard-time { text-align:right; color:#00f2ea; font-variant-numeric:tabular-nums; }
     .leaderboard-message { padding:32px 20px; text-align:center; color:#999; }
     @media (max-width:600px) { .leaderboard-row { grid-template-columns:42px 1fr 100px; padding:14px 12px; } }
@@ -32,6 +37,7 @@
       <button type="button" data-range="monthly">Monthly Top</button>
       <button type="button" data-range="yearly">Yearly Top</button>
     </div>
+    <div id="leaderboard-summary" class="leaderboard-summary" aria-live="polite"></div>
     <section class="leaderboard-list" aria-live="polite" data-time-unit="<%= user.timeUnit || 'minutes' %>">
       <div class="leaderboard-row leaderboard-head"><span>Rank</span><span>Username</span><span style="text-align:right;">Focused time</span></div>
       <div id="leaderboard-content" class="leaderboard-message">Loading leaderboard...</div>
@@ -39,6 +45,7 @@
   </main>
   <script>
     const content = document.getElementById('leaderboard-content');
+    const summary = document.getElementById('leaderboard-summary');
     const buttons = document.querySelectorAll('[data-range]');
     const timeUnit = document.querySelector('.leaderboard-list').dataset.timeUnit;
     const formatTime = seconds => {
@@ -49,19 +56,41 @@
       }
       return `${minutes}m`;
     };
+    function renderSummary(data) {
+      if (!data || !data.totalParticipants) {
+        summary.textContent = 'No public participants ranked yet.';
+        return;
+      }
+      if (data.currentUserRank) {
+        summary.innerHTML = `Your rank: <strong>#${data.currentUserRank.rank}</strong> out of <strong>${data.currentUserRank.total}</strong> public participants.`;
+        return;
+      }
+      summary.textContent = `Public participants: ${data.totalParticipants}.`;
+    }
     async function loadLeaderboard(range) {
       content.className = 'leaderboard-message';
       content.textContent = 'Loading leaderboard...';
+      summary.textContent = '';
       try {
         const response = await fetch(`/api/leaderboards?range=${range}`, { credentials: 'same-origin' });
         if (!response.ok) throw new Error('Unable to load leaderboard');
-        const rows = await response.json();
+        const payload = await response.json();
+        const rows = Array.isArray(payload) ? payload : payload.rows || [];
+        const totalParticipants = Array.isArray(payload) ? rows.length : payload.totalParticipants || 0;
+        const currentUserRank = Array.isArray(payload) ? null : payload.currentUserRank || null;
+        renderSummary({ totalParticipants, currentUserRank });
         if (!rows.length) {
           content.textContent = 'No public focus sessions for this period yet.';
           return;
         }
         content.className = '';
-        content.innerHTML = rows.map(row => `<div class="leaderboard-row${row.isCurrentUser ? ' current-user' : ''}"><span class="leaderboard-rank">#${row.rank}</span><strong>@${row.username}${row.isCurrentUser ? ' (You)' : ''}</strong><span class="leaderboard-time">${formatTime(row.totalSeconds)}</span></div>`).join('');
+        content.innerHTML = rows.map(row => `
+          <a href="/profile/${encodeURIComponent(row.username)}" class="leaderboard-row${row.isCurrentUser ? ' current-user' : ''}" aria-label="View @${row.username}'s profile">
+            <span class="leaderboard-rank">#${row.rank}</span>
+            <span class="leaderboard-user"><strong>@${row.username}${row.isCurrentUser ? ' (You)' : ''}</strong></span>
+            <span class="leaderboard-time">${formatTime(row.totalSeconds)}</span>
+          </a>
+        `).join('');
       } catch (error) {
         content.className = 'leaderboard-message';
         content.textContent = 'Unable to load leaderboard. Please try again.';
