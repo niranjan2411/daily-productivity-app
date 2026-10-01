@@ -75,6 +75,8 @@ app.use((req, res, next) => {
   const visitDate = new Date();
   visitDate.setUTCHours(0, 0, 0, 0);
 
+  next();
+
   dbConnect()
     .then(() => PlatformVisit.updateOne(
       { userId: req.session.userId, visitDate },
@@ -86,12 +88,16 @@ app.use((req, res, next) => {
     ))
     .catch((error) => {
       console.error('Visit tracking error:', error);
-    })
-    .finally(() => next());
+    });
 });
 
 const noCache = (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+};
+
+const dashboardCache = (req, res, next) => {
+  res.setHeader('Cache-Control', 'private, max-age=15, stale-while-revalidate=30');
   next();
 };
 
@@ -1103,16 +1109,25 @@ app.post('/signup', authLimiter, [
   }
 });
 
-app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
+app.get('/dashboard', authenticateUser, dashboardCache, async (req, res) => {
   try {
     await dbConnect();
     const userId = req.session.userId;
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrowUTC = new Date(todayUTC);
+    tomorrowUTC.setUTCDate(tomorrowUTC.getUTCDate() + 1);
 
-    const [user, allLogs, achievements, communityStats] = await Promise.all([
+    const [user, allLogs, achievements, communityStats, todayFocusSessions] = await Promise.all([
       User.findById(userId),
       StudyLog.find({ userId }).sort({ date: 'asc' }),
       Achievement.find({ userId }),
-      getCommunityStats()
+      getCommunityStats(),
+      FocusSession.find({
+        userId,
+        status: 'completed',
+        startTime: { $gte: todayUTC, $lt: tomorrowUTC }
+      }).select('durationSeconds').lean()
     ]);
 
     if (!user) {
@@ -1123,25 +1138,16 @@ app.get('/dashboard', authenticateUser, noCache, async (req, res) => {
 
     await ensureUserIdentity(user);
 
-    const focusStats = await syncFocusStats(userId, allLogs);
+    const [focusStats, xpData] = await Promise.all([
+      syncFocusStats(userId, allLogs),
+      calculateXpAndLevel(userId, user, allLogs, achievements)
+    ]);
     Object.assign(user, focusStats);
-
-    const xpData = await calculateXpAndLevel(userId, user, allLogs, achievements);
     user.xp = xpData.xp;
     user.level = xpData.level;
     await user.save();
 
-    const now = new Date();
-    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
     const todayLog = allLogs.find(log => log.date.getTime() === todayUTC.getTime());
-    const tomorrowUTC = new Date(todayUTC);
-    tomorrowUTC.setUTCDate(tomorrowUTC.getUTCDate() + 1);
-    const todayFocusSessions = await FocusSession.find({
-      userId,
-      status: 'completed',
-      startTime: { $gte: todayUTC, $lt: tomorrowUTC }
-    }).select('durationSeconds');
     const todayFocusSeconds = todayFocusSessions.reduce((sum, session) => sum + session.durationSeconds, 0);
     const todayMinutes = (todayLog ? getLogMinutes(todayLog) : 0) + todayFocusSeconds / 60;
 

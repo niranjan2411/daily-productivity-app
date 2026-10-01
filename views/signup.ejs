@@ -12,19 +12,63 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="icon" href="/images/icon.svg" type="image/svg+xml">
   <style>
-    .input-error { border-color: #f87171 !important; box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.35); }
-    .field-error { display:block; margin-top:6px; color: #fca5a5; font-size: 0.8rem; }
+    .auth-page { min-height:100vh; display:grid; place-items:center; padding:28px; background:#070909; }
+    .auth-shell { width:min(1080px,100%); display:grid; grid-template-columns:minmax(0,.82fr) minmax(0,1fr); overflow:hidden; border:1px solid rgba(255,255,255,.12); border-radius:24px; background:#111515; box-shadow:0 30px 90px rgba(0,0,0,.42); }
+    .auth-story { position:relative; display:flex; flex-direction:column; justify-content:space-between; padding:clamp(32px,6vw,72px); background:linear-gradient(145deg,#19221f,#0d1211 72%); }
+    .auth-story::after { content:''; position:absolute; width:260px; height:260px; right:-100px; bottom:-110px; border:1px solid rgba(212,243,74,.24); border-radius:50%; box-shadow:0 0 0 28px rgba(212,243,74,.04),0 0 0 56px rgba(212,243,74,.025); }
+    .auth-brand { display:inline-flex; align-items:center; gap:10px; color:#f5f4ef; font-size:1.2rem; font-weight:800; letter-spacing:-.04em; }
+    .auth-brand-mark { width:13px; height:13px; border-radius:50%; background:#d4f34a; box-shadow:0 0 20px rgba(212,243,74,.7); }
+    .auth-story-copy { position:relative; z-index:1; max-width:400px; margin:auto 0; }
+    .auth-kicker { color:#4f5e0c; font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    .auth-story h1 { margin:18px 0; color:#f5f4ef; font-size:clamp(2.8rem,5vw,5rem); line-height:.94; letter-spacing:-.08em; }
+    .auth-story h1 em { color:#d4f34a; font-style:normal; }
+    .auth-story-copy p { color:#a9ada6; font-size:1rem; }
+    .auth-points { display:grid; gap:12px; margin-top:28px; list-style:none; }
+    .auth-points li { display:flex; align-items:center; gap:10px; color:#d8ddd5; font-size:.88rem; }
+    .auth-points i { color:#6de4d0; }
+    .auth-story-foot { position:relative; z-index:1; color:#777d75; font-size:.78rem; }
+    .auth-form-panel { display:flex; align-items:center; padding:clamp(28px,5vw,58px); background:#f2f3ed; color:#171b19; }
+    .auth-form-wrap { width:100%; max-width:460px; margin:auto; }
+    .auth-form-wrap h2 { margin:10px 0 8px; color:#151a18; font-size:2rem; letter-spacing:-.06em; }
+    .auth-form-intro { margin-bottom:24px; color:#68706a; font-size:.9rem; }
+    .auth-form .form-group { margin-bottom:14px; }
+    .auth-form label { display:block; margin-bottom:6px; color:#3e4741; font-size:.78rem; font-weight:800; }
+    .auth-form input { width:100%; min-height:45px; padding:0 13px; border:1px solid #d2d8d0; border-radius:10px; background:#fff; color:#171b19; font:inherit; outline:none; transition:border-color .2s,box-shadow .2s; }
+    .auth-form input:focus { border-color:#8fac27; box-shadow:0 0 0 3px rgba(212,243,74,.25); }
+    .auth-form .btn { width:100%; min-height:49px; margin-top:7px; border:0; border-radius:10px; background:#172019; color:#e9f7a8; font:inherit; font-weight:800; cursor:pointer; }
+    .auth-form .btn:hover { background:#26382a; }
+    .auth-error { margin-bottom:16px; padding:11px 12px; border:1px solid #f2b9b9; border-radius:9px; background:#fff0f0; color:#a12f2f; font-size:.82rem; }
+    .auth-switch { margin-top:22px; color:#68706a; font-size:.84rem; text-align:center; }
+    .auth-switch a { color:#425b15; font-weight:800; }
+    .input-error { border-color:#dc6868 !important; box-shadow:0 0 0 2px rgba(220,104,104,.14); }
+    .field-error { display:block; margin-top:5px; color:#a12f2f; font-size:.76rem; }
+    #username-status { display:block; margin-top:5px !important; color:#788078 !important; font-size:.76rem; }
+    .password-match-message { margin-top:5px; color:#a12f2f; font-size:.76rem; }
+    @media (max-width:760px) { .auth-page { padding:14px; } .auth-shell { grid-template-columns:1fr; } .auth-story { min-height:290px; padding:30px; } .auth-story-copy { margin:60px 0 0; } .auth-story h1 { font-size:3.2rem; } .auth-points { display:none; } .auth-story-foot { margin-top:28px; } .auth-form-panel { padding:32px 25px 38px; } }
   </style>
 </head>
-<body>
+<body class="auth-page">
   <%- include('partials/loader') %>
-  <div class="container">
-    <div class="form-box">
-      <h1>Create Account</h1>
+  <main class="auth-shell">
+    <section class="auth-story">
+      <a href="/" class="auth-brand"><span class="auth-brand-mark"></span>TrackU</a>
+      <div class="auth-story-copy">
+        <span class="auth-kicker">Start with today</span>
+        <h1>Give your effort somewhere <em>useful</em> to go.</h1>
+        <p>Set up your workspace, choose your next task, and make progress easier to return to.</p>
+        <ul class="auth-points"><li><i class="bi bi-check2-circle"></i> Plan days that feel doable</li><li><i class="bi bi-check2-circle"></i> Turn focus into momentum</li></ul>
+      </div>
+      <p class="auth-story-foot">Free to start. Built for consistency.</p>
+    </section>
+    <section class="auth-form-panel">
+      <div class="auth-form-wrap">
+        <span class="auth-kicker">Create your workspace</span>
+        <h2>Join TrackU</h2>
+        <p class="auth-form-intro">A few details, then you are ready to focus.</p>
       <% if (error) { %>
-        <div class="error"><%= error %></div>
+        <div class="auth-error"><%= error %></div>
       <% } %>
-      <form action="/signup" method="POST">
+      <form class="auth-form" action="/signup" method="POST">
         <div class="form-group">
           <label for="name">Full Name</label>
           <input type="text" id="name" name="name" value="<%= submitted.name || '' %>" class="<%= fieldMap.name ? 'input-error' : '' %>" required>
@@ -33,7 +77,7 @@
         <div class="form-group">
           <label for="username">Username</label>
           <input type="text" id="username" name="username" value="<%= submitted.username || '' %>" pattern="[a-z0-9_]{3,30}" maxlength="30" class="<%= fieldMap.username ? 'input-error' : '' %>" required>
-          <small id="username-status" style="display:block; margin-top:6px; color:#888;">Type at least 3 characters to check availability.</small>
+          <small id="username-status">Type at least 3 characters to check availability.</small>
           <% if (fieldMap.username) { %><small class="field-error"><%= fieldMap.username %></small><% } %>
         </div>
         <div class="form-group">
@@ -54,9 +98,10 @@
         </div>
         <button type="submit" class="btn">Sign Up</button>
       </form>
-      <p class="link-text">Already have an account? <a href="/login">Login here</a></p>
-    </div>
-  </div>
+      <p class="auth-switch">Already have an account? <a href="/login">Log in here</a></p>
+      </div>
+    </section>
+  </main>
 
   <script>
     const passwordInput = document.getElementById('password');

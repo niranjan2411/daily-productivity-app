@@ -21,6 +21,10 @@
   const dailyStorageKey = `focus-tracker.daily-focus.v1:${cacheScope}`;
 
   let activeSession = readJson(activeStorageKey);
+  if (!activeSession || !activeSession.sessionId || !Number.isFinite(Number(activeSession.startTime))) {
+    activeSession = null;
+    localStorage.removeItem(activeStorageKey);
+  }
   let pendingSessions = readJson(queueStorageKey);
   if (!Array.isArray(pendingSessions)) pendingSessions = [];
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -34,7 +38,6 @@
   const timeUnit = timer.dataset.timeUnit === 'hours' ? 'hours' : 'minutes';
   let tickHandle = null;
   let toggleInProgress = false;
-  let shutdownHandled = false;
 
   function readJson(key) {
     try {
@@ -99,9 +102,9 @@
     toggleButton.dataset.running = running ? 'true' : 'false';
   }
 
-  function renderTotal() {
+  function renderTotal(extraSeconds = 0) {
     if (!totalValue) return;
-    const minutes = displayTotalSeconds / 60;
+    const minutes = (displayTotalSeconds + extraSeconds) / 60;
     const value = timeUnit === 'hours' ? Math.round((minutes / 60) * 10) / 10 : Math.round(minutes);
     totalValue.textContent = `${timeUnit === 'hours' ? value.toFixed(1) : value.toFixed(0)}${timeUnit === 'hours' ? 'h' : 'm'}`;
   }
@@ -148,9 +151,12 @@
     if (todayProgress) todayProgress.textContent = progressText;
   }
 
+  function getActiveElapsedSeconds() {
+    return activeSession ? Math.max(0, Math.floor((Date.now() - activeSession.startTime) / 1000)) : 0;
+  }
+
   function getCurrentFocusSeconds() {
-    const elapsedSeconds = activeSession ? Math.max(0, Math.floor((Date.now() - activeSession.startTime) / 1000)) : 0;
-    return Math.max(0, dailyFocusSeconds + elapsedSeconds);
+    return Math.max(0, dailyFocusSeconds + getActiveElapsedSeconds());
   }
 
   function applyServerTotals(result) {
@@ -162,14 +168,18 @@
   }
 
   function renderTimer() {
+    const activeElapsedSeconds = getActiveElapsedSeconds();
+    const currentFocusSeconds = getCurrentFocusSeconds();
+    renderToday((currentFocusSeconds / 60) + todayManualMinutes);
+    renderTotal(activeElapsedSeconds);
+
     if (!activeSession) {
       timerValue.textContent = formatDuration(dailyFocusSeconds + todayManualMinutes * 60);
       renderToggle();
       return;
     }
 
-    const elapsedSeconds = Math.floor((Date.now() - activeSession.startTime) / 1000);
-    timerValue.textContent = formatDuration((dailyFocusSeconds + todayManualMinutes * 60) + elapsedSeconds);
+    timerValue.textContent = formatDuration(currentFocusSeconds + todayManualMinutes * 60);
     renderToggle();
     setStatus('Focus session running', 'running');
   }
@@ -198,20 +208,6 @@
       durationSeconds: Math.max(0, Math.round((endTime - activeSession.startTime) / 1000)),
       status: 'completed'
     };
-  }
-
-  function stopTimerOnPageHide() {
-    if (!activeSession || shutdownHandled) return;
-    shutdownHandled = true;
-    const completedSession = buildCompletedSession();
-    const payload = JSON.stringify(completedSession);
-    const sent = typeof navigator.sendBeacon === 'function'
-      ? navigator.sendBeacon('/api/focus-sessions', new Blob([payload], { type: 'application/json' }))
-      : false;
-    if (!sent) enqueue(completedSession);
-    activeSession = null;
-    localStorage.removeItem(activeStorageKey);
-    if (tickHandle) clearInterval(tickHandle);
   }
 
   async function flushPendingSessions() {
@@ -299,8 +295,6 @@
     else await timer.requestFullscreen();
   });
 
-  window.addEventListener('pagehide', stopTimerOnPageHide);
-
   document.addEventListener('fullscreenchange', () => {
     const isFullscreen = document.fullscreenElement === timer;
     if (fullscreenButton) {
@@ -333,6 +327,14 @@
   renderToday((dailyFocusSeconds / 60) + todayManualMinutes);
 
   window.addEventListener('storage', event => {
+    if (event.key === activeStorageKey) {
+      activeSession = event.newValue ? readJson(activeStorageKey) : null;
+      if (activeSession && (!activeSession.sessionId || !Number.isFinite(Number(activeSession.startTime)))) {
+        activeSession = null;
+      }
+      renderTimer();
+      return;
+    }
     if (event.key !== `focus-tracker.today-sync.v1:${cacheScope}` || !event.newValue) return;
     try {
       window.focusTrackerSyncToday(JSON.parse(event.newValue));

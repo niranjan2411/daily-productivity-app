@@ -1,134 +1,147 @@
-# Daily Productivity Tracker
+# TrackU
 
-A full-stack, gamified web application designed to help you build consistent habits, track daily study hours, and visualize long-term progress. Built with Node.js, Express, and MongoDB, it leverages gamification elements like XP, levels, and achievements to keep you motivated.
+TrackU is a full-stack productivity tracker for planning focused work, recording study or work sessions, and understanding progress over time.
 
-**Live Demo:** [**https://tracku.me/**](https://tracku.me/)
+Live demo: [https://tracku.me/](https://tracku.me/)
 
----
+## Features
 
-## 🚀 Key Features
+### Daily productivity
 
-### 🎮 Gamification & Motivation
-* **Leveling System:** Earn **10 XP** per hour studied and **50 XP** bonuses for hitting your daily goal. Level up every 1000 XP.
-* **XP History:** View a detailed log of every XP point earned (study sessions, streaks, and achievements) via the interactive XP counter.
-* **Achievement System:** Unlock badges for consistency (e.g., "7-Day Streak") and total hours. Notifications alert you immediately upon unlocking.
-* **Streak Tracking:** Monitor distinct streaks for **Consistency** (logging any hours) and **Discipline** (meeting daily goals).
+- Daily todo planner with task creation, completion, deletion, reordering, and moving tasks to the next day.
+- Date-based planner navigation with daily notes.
+- Quick focus-log modal for adding or resetting manual study time.
+- Daily goal tracking with a visual Today’s Focus progress ring.
+- Responsive dashboard for desktop, tablet, and mobile screens.
 
-### 📊 Advanced Analytics
-* **Interactive Dashboard:** Features a "Today's Focus" circular progress ring, a 3-day quick history view, and real-time level progress.
+### Persistent focus timer
 
-    <img width="800" height="500" alt="dashboard" src="https://github.com/user-attachments/assets/afd627fc-157c-479e-8985-f61159be3d71" />
+- Start and pause focus sessions directly from the dashboard.
+- Running sessions continue correctly through page refreshes.
+- Timer state and elapsed time are persisted per user and synchronized across open tabs.
+- Active elapsed time is reflected immediately in the timer, Today’s Focus display, and total focus display.
+- Completed sessions are saved to MongoDB with idempotent session IDs to prevent duplicate records.
 
+### Progress and insights
 
-  
-* **Deep-Dive Charts:**
-    * **Distribution Analysis:** View total/average hours for the past 7 days, 30 days, 6 months, or all-time.
-    * **Productivity by Day:** Bar chart breaking down which days of the week you are most productive.
-    * **Goal Achievement Rate:** Doughnut chart visualizing how often you meet your daily targets.
-    * **Scrollable History:** A swipeable monthly bar chart covering your entire usage history.
-    * **Custom Ranges:** Generate reports for specific date ranges to analyze exam weeks or project sprints.
- 
-      <img width="800" height="500" alt="analytics" src="https://github.com/user-attachments/assets/20ef3918-f4df-4dc2-8a7b-23d8e6b23b49" />
+- XP, levels, daily-goal bonuses, and achievement milestones.
+- Separate consistency and goal streak tracking.
+- XP history for achievements, manual logs, and completed focus sessions.
+- Calendar heatmaps and date-specific focus history.
+- Analytics for focus distribution, productivity by weekday, goal completion, history, and custom date ranges.
+- Leaderboards for public profiles across daily, weekly, monthly, and yearly ranges.
 
+### Profiles and collaboration
 
-### ⚡ User Experience & Utility
-* **Quick Log Modal:** Log hours instantly from the dashboard without navigating away.
-* **Heatmap Calendar:** A GitHub-style contribution graph providing a granular, color-coded view of your monthly effort.
-* **Responsive Design:** Fully optimized interface for desktop, tablet, and mobile devices.
+- Private and public user profiles.
+- Public profile totals and progress summaries.
+- Private groups with member management and group activity views.
+- Settings for daily goals, time display preferences, password updates, profile visibility, and account data management.
 
-  <img width="800" height="500" alt="calendar" src="https://github.com/user-attachments/assets/8026c595-1c75-416f-b36d-e35954f84a54" />
+### Performance and security
 
-  <img width="800" height="500" alt="achievement" src="https://github.com/user-attachments/assets/c368efe1-c3c8-4d30-8ad3-d0e7f0b386d9" />
+- Short private caching for dashboard HTML to make repeat loads faster.
+- Non-blocking visit tracking so analytics writes do not delay page rendering.
+- Local task snapshots for instant daily planner rendering, followed by server reconciliation.
+- MongoDB indexes for user/date planner queries and focus-session reporting.
+- Password hashing with `bcryptjs`.
+- Persistent sessions with `express-session` and `connect-mongo`.
+- Request limiting with `express-rate-limit`.
+- Input validation with `express-validator`.
 
-
-### 🛡️ Security & Performance
-* **Secure Auth:** `bcryptjs` for password hashing and `express-session` with MongoDB storage for persistent, secure sessions.
-* **Protection:** Implemented `express-rate-limit` to prevent brute-force attacks and `express-validator` for robust input sanitization.
-* **Optimization:** Database connection "keep-warm" strategies and optimized queries for fast page loads.
-
----
-
-## 🛠️ Tech Stack
+## Tech stack
 
 ### Backend
-* **Runtime:** Node.js
-* **Framework:** Express.js
-* **Database:** MongoDB (via Mongoose ODM)
-* **Authentication:** Express-Session, Connect-Mongo, Bcryptjs
-* **Validation:** Express-Validator
+
+- Node.js
+- Express 5
+- MongoDB with Mongoose
+- EJS server-side templates
+- Express Session and Connect Mongo
+- Bcryptjs
+- Express Validator
 
 ### Frontend
-* **Templating:** EJS (Embedded JavaScript)
-* **Styling:** Custom CSS (Responsive Grid & Flexbox)
-* **Visualization:** Chart.js (Interactive canvas-based charts)
 
----
+- Server-rendered EJS views
+- Custom responsive CSS
+- Vanilla JavaScript for the dashboard, planner, timer, and interactions
+- Bootstrap Icons via CDN
 
-## ⚙️ Local Installation
-
-Follow these steps to set up the project locally for development.
+## Local setup
 
 ### Prerequisites
-* Node.js (v16+)
-* npm
-* MongoDB URI (Local or Atlas)
 
-### Steps
+- Node.js 16 or newer
+- npm
+- MongoDB locally or through MongoDB Atlas
 
-1.  **Clone the repository**
-    ```bash
-    git clone [https://github.com/niranjan2411/daily-productivity-app.git](https://github.com/niranjan2411/daily-productivity-app.git)
-    cd daily-productivity-app
-    ```
+### Installation
 
-2.  **Install dependencies**
-    ```bash
-    npm install
-    ```
+```bash
+git clone https://github.com/niranjan2411/daily-productivity-app.git
+cd daily-productivity-app
+npm install
+```
 
-3.  **Configure Environment Variables**
-    Create a `.env` file in the root directory and add the following:
-    ```env
-    PORT=3000
-    MONGODB_URI=your_mongodb_connection_string
-    MONGODB_DB=productivity_tracker
-    SESSION_SECRET=your_secret_key_here
-    NODE_ENV=development
-    ```
+Create a `.env` file in the project root:
 
-    Use the same `MONGODB_URI`, `MONGODB_DB`, and `SESSION_SECRET` in your local `.env` and in the Vercel project environment variables. `MONGODB_DB` should be an explicit database name in the shared Atlas cluster. This makes localhost and the hosted app read and write the same users, privacy settings, logs, and sessions. Do not commit `.env` or copy its credentials into source code.
+```env
+PORT=3000
+MONGODB_URI=your_mongodb_connection_string
+MONGODB_DB=productivity_tracker
+SESSION_SECRET=your_secret_key_here
+NODE_ENV=development
+```
 
-    If the app was previously used without `MONGODB_DB`, set it to the database that already contains your users before restarting either environment. The database name is commonly `test` when the URI has no database path, but verify it in MongoDB Atlas first so existing data is not split across databases.
+Use the same `MONGODB_URI`, `MONGODB_DB`, and `SESSION_SECRET` for local and hosted environments when they should share users, logs, settings, and sessions. Never commit `.env` or expose its values in source code.
 
-4.  **Start the server**
-    ```bash
-    # For development (with nodemon)
-    npm run dev
+Start the application:
 
-    # For production
-    npm start
-    ```
+```bash
+# Development with automatic restart
+npm run dev
 
-5.  **Access the App**
-    Open your browser and navigate to `http://localhost:3000`.
+# Standard start
+npm start
+```
 
----
+Open [http://localhost:3000](http://localhost:3000).
 
-## 📖 Usage Guide
+## Typical workflow
 
-1.  **Set Your Baseline:** Upon registering, head to **Settings** to define your "Daily Goal" (e.g., 4 hours). This value drives your streak calculations and XP bonuses.
-2.  **Log Activity:** Use the **"Add Study Hours"** button on the dashboard for quick entry, or use the **Calendar** for back-dating entries.
-3.  **Monitor Growth:** Check the **Analytics** tab weekly to identify trends. Use the "Day of Week" chart to optimize your schedule around your most productive days.
-4.  **Data Management:** You can clear your study logs or update your password securely from the Settings page.
+1. Create an account and set a daily focus goal in Settings.
+2. Add the day’s priorities in the planner.
+3. Start the focus timer when work begins and pause it when the session ends.
+4. Use the quick-log modal or Calendar for manual or backdated time.
+5. Review Today’s Focus, streaks, achievements, Analytics, and calendar history.
+6. Enable a public profile when you want to participate in leaderboards or share progress.
 
----
+## Project structure
 
-## 🤝 Contributing
+```text
+server.js                 Express application and route handlers
+api/                      Deployment entry point
+lib/                      Database connection helpers
+middleware/               Authentication middleware
+models/                   Mongoose schemas
+routes/                   Feature-specific route modules
+public/css/               Shared stylesheets
+public/js/                Dashboard, planner, and achievement scripts
+views/                    EJS pages and partials
+```
 
-Contributions are welcome! If you have suggestions for new charts, gamification features, or UI improvements:
+## Scripts
 
-1.  Fork the project.
-2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4.  Push to the branch (`git push origin feature/AmazingFeature`).
-5.  Open a Pull Request.
+| Command | Description |
+| --- | --- |
+| `npm start` | Start the production-style server |
+| `npm run dev` | Start the server with Nodemon |
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/your-feature`.
+3. Make and validate your changes.
+4. Commit and push the branch.
+5. Open a pull request.

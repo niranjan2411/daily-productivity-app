@@ -37,6 +37,7 @@ const focusSessionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 focusSessionSchema.index({ userId: 1, sessionId: 1 }, { unique: true });
+focusSessionSchema.index({ userId: 1, status: 1, startTime: 1 });
 focusSessionSchema.index({ userId: 1, status: 1, endTime: 1 });
 focusSessionSchema.index({ status: 1, endTime: 1, userId: 1 });
 

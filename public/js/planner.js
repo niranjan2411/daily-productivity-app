@@ -23,8 +23,26 @@
   const userKey = document.getElementById('focus-timer')?.dataset.userId || 'anonymous';
   const state = { date: todayKey, tasks: [], savedNote: '', note: '', noteEditing: false, taskSaveTimer: null, dropIndex: null };
   const draftKey = suffix => `focus-tracker.planner-draft.v1:${userKey}:${state.date}:${suffix}`;
+  const taskCacheKey = date => `focus-tracker.planner-tasks.v1:${userKey}:${date || state.date}`;
   let draggedTaskId = null;
   let loadRequestId = 0;
+
+  const readCachedTasks = () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(taskCacheKey()) || 'null');
+      return Array.isArray(cached) ? cached : null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const cacheTasks = (tasks, date) => {
+    try {
+      localStorage.setItem(taskCacheKey(date), JSON.stringify(tasks));
+    } catch (error) {
+      console.warn('Unable to cache planner tasks', error);
+    }
+  };
 
   const setSaveState = value => { if (saveState) saveState.textContent = value; };
   const updateEditMode = () => {
@@ -159,6 +177,7 @@
         body: JSON.stringify({ date: nextKey, lists: [{ listId: 'main', title: 'Todo', tasks: nextTasks }], note: nextData.note || '' })
       });
       if (!moveResponse.ok) throw new Error('Unable to save next day');
+      cacheTasks(nextTasks, nextKey);
       state.tasks = state.tasks.filter(item => item.taskId !== task.taskId);
       markTasksChanged();
     } catch (error) {
@@ -168,6 +187,7 @@
   }
 
   function markTasksChanged() {
+    cacheTasks(state.tasks);
     localStorage.setItem(draftKey('tasks'), JSON.stringify(state.tasks));
     setSaveState('Saving...');
     renderTasks();
@@ -183,6 +203,9 @@
         body: JSON.stringify({ date: state.date, lists: [{ listId: 'main', title: 'Todo', tasks: state.tasks }], note: saveNote ? state.note : state.savedNote })
       });
       if (!response.ok) throw new Error('Unable to save planner');
+      const savedData = await response.json();
+      const savedTasks = (savedData.lists || []).flatMap(list => list.tasks || []);
+      cacheTasks(savedTasks);
       localStorage.removeItem(draftKey('tasks'));
       if (saveNote) {
         state.savedNote = state.note;
@@ -207,8 +230,9 @@
 
     let localTasks = null;
     try { localTasks = JSON.parse(localStorage.getItem(draftKey('tasks')) || 'null'); } catch (error) { localTasks = null; }
+    const cachedTasks = readCachedTasks();
     const localNote = localStorage.getItem(draftKey('note'));
-    state.tasks = Array.isArray(localTasks) ? localTasks : [];
+    state.tasks = Array.isArray(localTasks) ? localTasks : (cachedTasks || []);
     state.savedNote = '';
     state.note = '';
     noteInput.value = '';
@@ -221,7 +245,10 @@
       const taskData = await taskResponse.json();
       if (requestId !== loadRequestId) return;
       const serverTasks = (taskData.lists || []).flatMap(list => list.tasks || []);
-      if (!Array.isArray(localTasks)) state.tasks = serverTasks;
+      if (!Array.isArray(localTasks)) {
+        state.tasks = serverTasks;
+        cacheTasks(serverTasks);
+      }
       renderTasks();
       setSaveState(localTasks || localNote ? 'Unsaved local changes' : 'Tasks loaded');
 
@@ -272,5 +299,12 @@
   document.getElementById('planner-next')?.addEventListener('click', () => { const date = dateFromKey(state.date); date.setDate(date.getDate() + 1); loadDate(keyForDate(date)); });
   dateInput.addEventListener('change', () => { if (dateInput.value) loadDate(dateInput.value); });
   datePickerButton?.addEventListener('click', () => { if (typeof dateInput.showPicker === 'function') dateInput.showPicker(); else dateInput.click(); });
+  window.addEventListener('storage', event => {
+    if (event.key !== taskCacheKey() || localStorage.getItem(draftKey('tasks'))) return;
+    const cachedTasks = readCachedTasks();
+    if (!cachedTasks) return;
+    state.tasks = cachedTasks;
+    renderTasks();
+  });
   loadDate(todayKey);
 })();

@@ -424,219 +424,182 @@
       .metrics-grid { grid-template-columns: 1fr; }
       .floating-pill { position: static; margin-top: 16px; }
     }
+
+    .landing-v2 { --ink: #f5f4ef; --soft: #aaa9a4; --line: rgba(255,255,255,.12); --lime: #d4f34a; --aqua: #6de4d0; }
+    .landing-v2 .container { width: min(1240px, calc(100% - 48px)); }
+    .landing-v2 .landing-nav { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line); background: rgba(5,7,8,.84); backdrop-filter: blur(18px); }
+    .landing-v2 .landing-nav-inner { display:flex; align-items:center; justify-content:space-between; gap:20px; min-height:76px; }
+    .landing-v2 .landing-brand { display:inline-flex; align-items:center; gap:11px; color:var(--ink); font-size:1.15rem; font-weight:800; letter-spacing:-.04em; }
+    .landing-v2 .landing-brand-mark { width:13px; height:13px; border-radius:50%; background:var(--lime); box-shadow:0 0 20px rgba(212,243,74,.7); }
+    .landing-v2 .landing-nav-links { display:flex; align-items:center; gap:22px; color:var(--soft); font-size:.88rem; }
+    .landing-v2 .landing-nav-links a:hover { color:var(--ink); }
+    .landing-v2 .landing-nav-actions { display:flex; align-items:center; gap:10px; }
+    .landing-v2 .landing-button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:46px; padding:0 18px; border:1px solid var(--line); border-radius:12px; font-weight:800; transition:transform .2s ease, background .2s ease; }
+    .landing-v2 .landing-button:hover { transform:translateY(-2px); }
+    .landing-v2 .landing-button-quiet { color:var(--ink); background:rgba(255,255,255,.04); }
+    .landing-v2 .landing-button-primary { color:#101407; background:var(--lime); border-color:var(--lime); box-shadow:0 12px 30px rgba(212,243,74,.16); }
+    .landing-v2 .landing-hero { padding:clamp(64px,10vw,126px) 0 76px; border-bottom:1px solid var(--line); }
+    .landing-v2 .landing-hero-grid { display:grid; grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr); align-items:center; gap:clamp(38px,6vw,92px); }
+    .landing-v2 .kicker { display:inline-flex; align-items:center; gap:9px; color:var(--lime); font-size:.74rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    .landing-v2 .kicker::before { content:''; width:28px; height:1px; background:var(--lime); }
+    .landing-v2 .landing-hero h1 { max-width:650px; margin:20px 0 22px; color:var(--ink); font-size:clamp(3.4rem,7vw,7.6rem); font-weight:800; line-height:.94; letter-spacing:-.085em; }
+    .landing-v2 .landing-hero h1 em { color:var(--lime); font-style:normal; }
+    .landing-v2 .landing-hero-copy { max-width:560px; color:var(--soft); font-size:1.08rem; }
+    .landing-v2 .landing-hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:30px; }
+    .landing-v2 .landing-hero-note { display:flex; align-items:center; gap:9px; margin-top:18px; color:#777873; font-size:.78rem; }
+    .landing-v2 .landing-hero-note i { color:var(--aqua); }
+    .landing-v2 .hero-shot { position:relative; padding:12px; border:1px solid var(--line); border-radius:18px; background:#101314; box-shadow:0 34px 80px rgba(0,0,0,.42); transform:rotate(1.3deg); }
+    .landing-v2 .hero-shot::after { content:'Your day, in one view'; position:absolute; right:-18px; bottom:24px; padding:11px 14px; border:1px solid rgba(212,243,74,.35); border-radius:10px; background:#161b17; color:var(--lime); font-size:.76rem; font-weight:800; transform:rotate(-1.3deg); }
+    .landing-v2 .hero-shot img { width:100%; border-radius:10px; }
+    .landing-v2 .landing-section { padding:clamp(76px,10vw,132px) 0; }
+    .landing-v2 .section-intro { max-width:720px; margin-bottom:42px; }
+    .landing-v2 .section-intro h2 { margin-top:16px; color:var(--ink); font-size:clamp(2.5rem,5vw,5.2rem); line-height:.96; }
+    .landing-v2 .section-intro p { margin-top:16px; color:var(--soft); font-size:1.05rem; }
+    .landing-v2 .workflow-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .landing-v2 .workflow-card { min-height:230px; padding:26px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(145deg,#141819,#0c0f10); }
+    .landing-v2 .workflow-number { color:var(--lime); font-size:.78rem; font-weight:800; letter-spacing:.12em; }
+    .landing-v2 .workflow-card h3 { margin:62px 0 9px; color:var(--ink); font-size:1.55rem; }
+    .landing-v2 .workflow-card p { color:var(--soft); font-size:.92rem; }
+    .landing-v2 .proof-section { background:#0d1111; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .landing-v2 .proof-grid { display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); align-items:center; gap:48px; }
+    .landing-v2 .proof-copy h3 { margin:16px 0; color:var(--ink); font-size:clamp(2rem,4vw,4rem); line-height:.98; }
+    .landing-v2 .proof-copy p { color:var(--soft); font-size:1rem; }
+    .landing-v2 .proof-list { display:grid; gap:12px; margin-top:24px; list-style:none; }
+    .landing-v2 .proof-list li { display:flex; align-items:center; gap:10px; color:#dcddd7; font-size:.92rem; }
+    .landing-v2 .proof-list i { color:var(--lime); }
+    .landing-v2 .proof-frame { padding:12px; border:1px solid var(--line); border-radius:16px; background:#151817; }
+    .landing-v2 .proof-frame img { width:100%; border-radius:9px; }
+    .landing-v2 .proof-grid.reverse .proof-copy { order:2; }
+    .landing-v2 .proof-grid.reverse .proof-frame { order:1; }
+    .landing-v2 .mini-proof-grid { display:grid; grid-template-columns:1.15fr .85fr; gap:14px; }
+    .landing-v2 .mini-proof { position:relative; overflow:hidden; min-height:300px; padding:26px; border:1px solid var(--line); border-radius:16px; background:#121616; }
+    .landing-v2 .mini-proof h3 { position:relative; z-index:1; max-width:260px; color:var(--ink); font-size:1.8rem; }
+    .landing-v2 .mini-proof p { position:relative; z-index:1; max-width:290px; margin-top:12px; color:var(--soft); font-size:.9rem; }
+    .landing-v2 .mini-proof img { position:absolute; right:-18px; bottom:-32px; width:72%; border-radius:9px; box-shadow:0 18px 35px rgba(0,0,0,.35); }
+    .landing-v2 .mini-proof.tall img { right:16px; width:46%; }
+    .landing-v2 .gallery { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .landing-v2 .gallery figure { margin:0; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:#111414; }
+    .landing-v2 .gallery img { width:100%; aspect-ratio:1.45; object-fit:cover; transition:transform .4s ease; }
+    .landing-v2 .gallery figure:hover img { transform:scale(1.045); }
+    .landing-v2 .gallery figcaption { padding:10px 12px 12px; color:#aeb0aa; font-size:.73rem; }
+    .landing-v2 .mobile-strip { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; align-items:end; }
+    .landing-v2 .mobile-strip figure { overflow:hidden; margin:0; border:1px solid var(--line); border-radius:16px; background:#101313; }
+    .landing-v2 .mobile-strip img { width:100%; aspect-ratio: .48; object-fit:cover; }
+    .landing-v2 .final-cta { padding:26px 0 104px; }
+    .landing-v2 .final-cta-inner { display:flex; align-items:center; justify-content:space-between; gap:28px; padding:clamp(28px,5vw,58px); border:1px solid rgba(212,243,74,.3); border-radius:18px; background:linear-gradient(125deg,rgba(212,243,74,.1),rgba(109,228,208,.05) 55%,#111515); }
+    .landing-v2 .final-cta h2 { color:var(--ink); font-size:clamp(2rem,4vw,4rem); line-height:.98; }
+    .landing-v2 .final-cta p { margin-top:12px; color:var(--soft); }
+    .landing-v2 .landing-footer { padding:24px 0 48px; border-top:1px solid var(--line); color:#777873; font-size:.82rem; }
+    @media (max-width: 900px) { .landing-v2 .landing-hero-grid, .landing-v2 .proof-grid, .landing-v2 .mini-proof-grid { grid-template-columns:1fr; } .landing-v2 .proof-grid.reverse .proof-copy, .landing-v2 .proof-grid.reverse .proof-frame { order:initial; } .landing-v2 .gallery { grid-template-columns:repeat(3,1fr); } }
+    @media (max-width: 640px) { .landing-v2 .container { width:min(100% - 32px,1240px); } .landing-v2 .landing-nav-links { display:none; } .landing-v2 .landing-nav-inner { min-height:68px; } .landing-v2 .landing-nav-actions .landing-button-quiet { display:none; } .landing-v2 .landing-hero h1 { font-size:clamp(3.2rem,16vw,5rem); } .landing-v2 .hero-shot::after { right:8px; bottom:10px; } .landing-v2 .workflow-grid, .landing-v2 .gallery { grid-template-columns:1fr; } .landing-v2 .mobile-strip { grid-template-columns:repeat(3,1fr); } .landing-v2 .mobile-strip figure:nth-child(n+4) { display:none; } .landing-v2 .final-cta-inner { align-items:flex-start; flex-direction:column; } }
   </style>
 </head>
-<body>
+<body class="landing-v2">
   <%- include('partials/loader') %>
 
-  <nav>
-    <div class="nav-inner">
-      <div class="brand"><span class="brand-mark"></span> Track<span>U</span></div>
-      <div class="nav-actions">
-        <a href="/login" class="btn btn-login">Login</a>
-        <a href="/signup" class="btn btn-primary">Get Started</a>
+  <nav class="landing-nav">
+    <div class="container landing-nav-inner">
+      <a href="/" class="landing-brand"><span class="landing-brand-mark"></span>TrackU</a>
+      <div class="landing-nav-links">
+        <a href="#workflow">How it works</a>
+        <a href="#proof">Progress</a>
+        <a href="#gallery">Product tour</a>
+      </div>
+      <div class="landing-nav-actions">
+        <a href="/login" class="landing-button landing-button-quiet">Log in</a>
+        <a href="/signup" class="landing-button landing-button-primary">Start free <i class="bi bi-arrow-up-right"></i></a>
       </div>
     </div>
   </nav>
 
   <main>
-    <section class="hero">
-      <div class="container hero-panel">
-        <div class="hero-copy">
-          <div class="eyebrow">Focus, planner, analytics</div>
-          <h1>Focus is your <span class="highlight">edge</span>.</h1>
-          <p>Build consistent study and work habits with live planning, deep-focus tracking, and clear progress data that helps you stay on course every day.</p>
-
-          <div class="cta-row">
-            <a href="/signup" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Start free</a>
-            <a href="#features" class="btn btn-login"><i class="bi bi-play-circle"></i> Explore features</a>
+    <section class="landing-hero">
+      <div class="container landing-hero-grid">
+        <div>
+          <span class="kicker">A calmer way to get consistent</span>
+          <h1>Make your <em>focus</em> visible.</h1>
+          <p class="landing-hero-copy">Track the work, plan the day, and see your momentum build. TrackU brings your tasks, focus sessions, progress, and rewards into one clear place.</p>
+          <div class="landing-hero-actions">
+            <a href="/signup" class="landing-button landing-button-primary">Create your free account <i class="bi bi-arrow-right"></i></a>
+            <a href="#workflow" class="landing-button landing-button-quiet">See how it works</a>
           </div>
-
-          <div class="hero-stats">
-            <div class="stat-pill">
-              <strong>1200+</strong>
-              <span>Habit logs</span>
-            </div>
-            <div class="stat-pill">
-              <strong>365d</strong>
-              <span>History view</span>
-            </div>
-            <div class="stat-pill">
-              <strong>7x</strong>
-              <span>Clarity</span>
-            </div>
-          </div>
+          <p class="landing-hero-note"><i class="bi bi-check-circle-fill"></i> Built for study, creative work, and ambitious routines.</p>
         </div>
-
-        <div class="hero-visual-wrap">
-          <div class="screen-card">
-            <img src="/images/6.png" alt="TrackU dashboard interface" loading="eager" fetchpriority="high" />
-          </div>
-          <div class="floating-pill">
-            <strong>+38%</strong>
-            <span>Focus this week</span>
-          </div>
+        <div class="hero-shot">
+          <img src="/images/1.png" alt="TrackU dashboard with daily tasks and focus timer" loading="eager" fetchpriority="high" />
         </div>
       </div>
     </section>
 
-    <section id="features">
+    <section class="landing-section" id="workflow">
       <div class="container">
-        <div class="section-head">
-          <span class="section-label">Everything in one workflow</span>
-          <h2>Turn effort into momentum.</h2>
-          <p>Track what matters, reduce guesswork, and turn consistency into a system you can keep using every single day.</p>
+        <div class="section-intro">
+          <span class="kicker">One workflow, less friction</span>
+          <h2>Start with today. Build the bigger picture.</h2>
+          <p>The product follows the way focused work actually happens: decide what matters, do the work, then learn from the pattern.</p>
         </div>
-
-        <div class="feature-grid">
-          <article class="feature-card">
-            <div class="icon"><i class="bi bi-calendar3"></i></div>
-            <h3>Daily planner</h3>
-            <p>Keep your priorities visible with task lists, notes, and structured planning that syncs to your day.</p>
-            <ul>
-              <li>Task flow</li>
-              <li>Daily notes</li>
-              <li>Quick review</li>
-            </ul>
-          </article>
-
-          <article class="feature-card">
-            <div class="icon"><i class="bi bi-stopwatch"></i></div>
-            <h3>Focus timer</h3>
-            <p>Hold attention longer with clear, distraction-free time tracking and deep-work rhythm management.</p>
-            <ul>
-              <li>Session tracking</li>
-              <li>Flow state</li>
-              <li>Real time output</li>
-            </ul>
-          </article>
-
-          <article class="feature-card">
-            <div class="icon"><i class="bi bi-bar-chart-line"></i></div>
-            <h3>Smart analytics</h3>
-            <p>See trends, identify your strongest days, and make better decisions with data you can trust.</p>
-            <ul>
-              <li>Goal insights</li>
-              <li>Productivity trends</li>
-              <li>Long-view reporting</li>
-            </ul>
-          </article>
+        <div class="workflow-grid">
+          <article class="workflow-card"><span class="workflow-number">01 / PLAN</span><h3>Put the next thing in view.</h3><p>Use a daily task list and notes to turn an open-ended day into a manageable one.</p></article>
+          <article class="workflow-card"><span class="workflow-number">02 / FOCUS</span><h3>Give the work a beginning.</h3><p>Start a live session when you begin. Your time stays clear, persistent, and easy to trust.</p></article>
+          <article class="workflow-card"><span class="workflow-number">03 / REVIEW</span><h3>Let consistency compound.</h3><p>Calendar views, analytics, streaks, and achievements make progress visible without adding noise.</p></article>
         </div>
       </div>
     </section>
 
-    <section>
-      <div class="container showcase-layout">
-        <div class="showcase-card">
-          <span class="section-label">Consistency</span>
-          <h3>Know exactly where your energy is going.</h3>
-          <p>Use the heatmap to monitor your focus journey over time, spot gaps early, and stay in rhythm with your goals.</p>
-          <ul class="check-list">
-            <li><i class="bi bi-check-circle-fill"></i> Daily goal tracking and streak visibility</li>
-            <li><i class="bi bi-check-circle-fill"></i> Dark contribution calendar for long-term progress</li>
-            <li><i class="bi bi-check-circle-fill"></i> Better understanding of your premium focus days</li>
-          </ul>
-        </div>
-
-        <div class="showcase-image">
-          <img src="/images/2.png" alt="Focus heatmap calendar" loading="lazy" />
-        </div>
+    <section class="landing-section proof-section" id="proof">
+      <div class="container proof-grid">
+        <div class="proof-copy"><span class="kicker">Your day, made actionable</span><h3>Planning and focus belong together.</h3><p>Keep priorities beside the timer so the next action is always close. A focused session becomes a real, measurable part of the day.</p><ul class="proof-list"><li><i class="bi bi-check2"></i> Tasks, notes, and sessions in one workspace</li><li><i class="bi bi-check2"></i> Running time survives refreshes</li><li><i class="bi bi-check2"></i> A live view of today’s progress</li></ul></div>
+        <div class="proof-frame"><img src="/images/5.png" alt="TrackU daily planner and focus workspace" loading="lazy" /></div>
       </div>
     </section>
 
-    <section>
+    <section class="landing-section">
+      <div class="container proof-grid reverse">
+        <div class="proof-copy"><span class="kicker">See the pattern</span><h3>Progress you can actually read.</h3><p>Move from a single focused day to the shape of your month. Calendar and analytics views turn your effort into decisions you can use.</p><ul class="proof-list"><li><i class="bi bi-check2"></i> Daily contribution calendar</li><li><i class="bi bi-check2"></i> Monthly and long-range analytics</li><li><i class="bi bi-check2"></i> Goal progress with useful context</li></ul></div>
+        <div class="proof-frame"><img src="/images/2.png" alt="TrackU calendar showing daily focus progress" loading="lazy" /></div>
+      </div>
+    </section>
+
+    <section class="landing-section proof-section">
+      <div class="container mini-proof-grid">
+        <article class="mini-proof tall"><span class="kicker">Motivation</span><h3>Make milestones feel real.</h3><p>Streaks and achievements reward the habit, not just the finish line.</p><img src="/images/achi1.webp" alt="TrackU achievement unlocked screen" loading="lazy" /></article>
+      </div>
+    </section>
+
+    <section class="landing-section" id="gallery">
       <div class="container">
-        <div class="section-head">
-          <span class="section-label">Data that motivates</span>
-          <h2>Metrics built to help you improve.</h2>
-        </div>
-
-        <div class="metrics-grid">
-          <div class="metric-box">
-            <strong>14.8h</strong>
-            <span>Avg Focus / Week</span>
-          </div>
-          <div class="metric-box">
-            <strong>82%</strong>
-            <span>Goal Rate</span>
-          </div>
-          <div class="metric-box">
-            <strong>24</strong>
-            <span>Sessions</span>
-          </div>
-          <div class="metric-box">
-            <strong>11</strong>
-            <span>Active streaks</span>
-          </div>
+        <div class="section-intro"><span class="kicker">A closer look</span><h2>Everything has a place.</h2><p>Explore the surfaces that make TrackU useful from the first task of the morning to the end-of-week review.</p></div>
+        <div class="gallery">
+          <figure><img src="/images/3.png" alt="TrackU focus overview" loading="lazy"><figcaption>Focus overview</figcaption></figure>
+          <figure><img src="/images/4.png" alt="TrackU daily progress view" loading="lazy"><figcaption>Daily progress</figcaption></figure>
+          <figure><img src="/images/6.png" alt="TrackU focus session interface" loading="lazy"><figcaption>Focus session</figcaption></figure>
+          <figure><img src="/images/7.png" alt="TrackU dashboard details" loading="lazy"><figcaption>Dashboard detail</figcaption></figure>
+          <figure><img src="/images/8.png" alt="TrackU productivity view" loading="lazy"><figcaption>Productivity view</figcaption></figure>
+          <figure><img src="/images/9.png" alt="TrackU mobile progress screen" loading="lazy"><figcaption>Mobile progress</figcaption></figure>
+          <figure><img src="/images/10.png" alt="TrackU goal tracking screen" loading="lazy"><figcaption>Goal tracking</figcaption></figure>
+          <figure><img src="/images/11.png" alt="TrackU mobile dashboard" loading="lazy"><figcaption>Mobile dashboard</figcaption></figure>
+          <figure><img src="/images/achi2.webp" alt="TrackU achievement progress" loading="lazy"><figcaption>Achievement progress</figcaption></figure>
+          <figure><img src="/images/achi3.webp" alt="TrackU achievement collection" loading="lazy"><figcaption>Achievement collection</figcaption></figure>
+          <figure><img src="/images/game2.webp" alt="TrackU productivity game detail" loading="lazy"><figcaption>Game detail</figcaption></figure>
         </div>
       </div>
     </section>
 
-    <section>
-      <div class="container showcase-layout">
-        <div class="showcase-image">
-          <img src="/images/6.png" alt="Analytics chart" loading="lazy" />
-        </div>
-
-        <div class="showcase-card">
-          <span class="section-label">Built for progress</span>
-          <h3>Turn raw work into a repeatable workflow.</h3>
-          <p>Whether you are studying, building, creating, or learning, the system helps you keep a clear view of your effort and growth.</p>
-          <ul class="check-list">
-            <li><i class="bi bi-check-circle-fill"></i> Clear daily focus tracking</li>
-            <li><i class="bi bi-check-circle-fill"></i> Achievement-based motivation</li>
-            <li><i class="bi bi-check-circle-fill"></i> Simple dashboards built for action</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section>
+    <section class="landing-section proof-section">
       <div class="container">
-        <div class="section-head">
-          <span class="section-label">Why people stay</span>
-          <h2>More than a tracker — a full focus system.</h2>
-        </div>
-
-        <div class="feature-grid">
-          <article class="feature-card">
-            <div class="icon"><i class="bi bi-fire"></i></div>
-            <h3>Streaks</h3>
-            <p>Consistency matters more than perfection. Visible streaks keep your efforts moving forward.</p>
-          </article>
-
-          <article class="feature-card">
-            <div class="icon"><i class="bi bi-trophy"></i></div>
-            <h3>Achievements</h3>
-            <p>Unlock progress milestones and convert effort into visible wins across the week.</p>
-          </article>
-
-          <article class="feature-card">
-            <div class="icon"><i class="bi bi-graph-up-arrow"></i></div>
-            <h3>Long-term trend</h3>
-            <p>Track history, spot your best windows, and improve your routine with harder evidence.</p>
-          </article>
+        <div class="section-intro"><span class="kicker">Made to travel with you</span><h2>Useful at a desk. Clear on a phone.</h2><p>Your routine should not disappear when your screen changes. TrackU keeps the essentials legible wherever the work happens.</p></div>
+        <div class="mobile-strip">
+          <figure><img src="/images/mob5.webp" alt="TrackU mobile planning view" loading="lazy"></figure>
+          <figure><img src="/images/mob8.webp" alt="TrackU mobile profile view" loading="lazy"></figure>
         </div>
       </div>
     </section>
 
-    <section class="cta-block">
-      <div class="container">
-        <div class="cta-card">
-          <div>
-            <h3>Focus on the work. Let the system handle the tracking.</h3>
-            <p>Build a routine that rewards consistency and helps you improve every day.</p>
-          </div>
-          <a href="/signup" class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Create account</a>
-        </div>
-      </div>
+    <section class="final-cta">
+      <div class="container"><div class="final-cta-inner"><div><span class="kicker">Begin with one focused day</span><h2>Make the next hour count.</h2><p>Start free and give your effort somewhere useful to go.</p></div><a href="/signup" class="landing-button landing-button-primary">Start using TrackU <i class="bi bi-arrow-up-right"></i></a></div></div>
     </section>
   </main>
 
-  <footer>
-    <div class="container">
-      <p>© 2025 TrackU. Built for disciplined, intentional work.</p>
-    </div>
-  </footer>
+  <footer class="landing-footer"><div class="container"><p>TrackU — focus made measurable.</p></div></footer>
 </body>
 </html>
